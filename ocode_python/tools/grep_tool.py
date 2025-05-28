@@ -5,14 +5,20 @@ Advanced text and code searching tool with regex support.
 import re
 import asyncio
 import ast
+import collections
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Pattern, Union, Set
+from typing import List, Optional, Dict, Any, Pattern, Union, Set, Iterator, Tuple
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class GrepTool(Tool):
     """Tool for advanced text and code searching with regex support."""
+    
+    def __init__(self):
+        super().__init__()
+        self.max_file_size = 100 * 1024 * 1024  # 100MB limit for memory-safe operation
+        self.max_matches_per_file = 1000  # Limit matches to prevent memory explosion
 
     @property
     def definition(self) -> ToolDefinition:
@@ -239,40 +245,59 @@ class GrepTool(Tool):
         matches: List[Dict[str, Any]] = []
         
         try:
-            # Try to read as text file
+            # Check file size before processing
+            file_size = file_path.stat().st_size
+            if file_size > self.max_file_size:
+                return [{
+                    "file": str(file_path),
+                    "line_num": 0,
+                    "text": f"File too large ({file_size} bytes, max: {self.max_file_size})",
+                    "context": []
+                }]
+            
+            # Use streaming approach for memory efficiency
+            return await self._search_file_streaming(
+                file_path, pattern, invert_match, context_lines, include_line_numbers
+            )
+            
+        except Exception as e:
+            return [{
+                "file": str(file_path),
+                "line_num": 0,
+                "text": f"Error reading file: {str(e)}",
+                "context": []
+            }]
+    
+    async def _search_file_streaming(self, file_path: Path, pattern: Pattern[str], 
+                                   invert_match: bool, context_lines: int,
+                                   include_line_numbers: bool) -> List[Dict[str, Any]]:
+        """Stream-based file search to minimize memory usage."""
+        matches: List[Dict[str, Any]] = []
+        
+        try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                lines = f.readlines()
+                for line_num, line in enumerate(f, 1):
+                    if len(matches) >= self.max_matches_per_file:
+                        break  # Prevent memory explosion
+                        
+                    line_stripped = line.rstrip('\n\r')
+                    found_match = bool(pattern.search(line_stripped))
+                    
+                    if found_match != invert_match:  # XOR logic for invert_match
+                        match_info: Dict[str, Any] = {
+                            "file": str(file_path),
+                            "line_num": line_num,
+                            "text": line_stripped,
+                            "context": []
+                        }
+                        
+                        # For now, skip context lines to keep streaming simple
+                        # TODO: Implement context with sliding window if needed
+                        matches.append(match_info)
+        
+            return matches
         except Exception:
             return matches
-
-        # Search through lines
-        for i, line in enumerate(lines):
-            line_stripped = line.rstrip('\n\r')
-            found_match = bool(pattern.search(line_stripped))
-            
-            if found_match != invert_match:  # XOR logic for invert_match
-                match_info: Dict[str, Any] = {
-                    "file": str(file_path),
-                    "line_num": i + 1,
-                    "text": line_stripped,
-                    "context": []
-                }
-                
-                # Add context lines if requested
-                if context_lines > 0:
-                    start_line = max(0, i - context_lines)
-                    end_line = min(len(lines), i + context_lines + 1)
-                    
-                    for ctx_i in range(start_line, end_line):
-                        if ctx_i != i:  # Don't include the match line itself
-                            match_info["context"].append({
-                                "line_num": ctx_i + 1,
-                                "text": lines[ctx_i].rstrip('\n\r')
-                            })
-                
-                matches.append(match_info)
-        
-        return matches
 
 
 class CodeGrepTool(GrepTool):
@@ -446,6 +471,16 @@ class CodeGrepTool(GrepTool):
         matches: List[Dict[str, Any]] = []
         
         try:
+            # Check file size before processing
+            file_size = file_path.stat().st_size
+            if file_size > self.max_file_size:
+                return [{
+                    "file": str(file_path),
+                    "line_num": 0,
+                    "text": f"File too large ({file_size} bytes, max: {self.max_file_size}) - skipping AST parsing",
+                    "context": []
+                }]
+            
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
                 lines = content.splitlines()

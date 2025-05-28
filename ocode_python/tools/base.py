@@ -3,8 +3,11 @@ Base classes for OCode tools.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Coroutine
+from typing import Any, Dict, List, Optional, Coroutine, Union
 from dataclasses import dataclass
+import logging
+import traceback
+from enum import Enum
 
 @dataclass
 class ToolParameter:
@@ -65,6 +68,150 @@ class ToolResult:
             return self.output
         else:
             return f"Error: {self.error}"
+
+
+class ErrorType(Enum):
+    """Standard error types for consistent error handling."""
+    VALIDATION_ERROR = "validation_error"
+    PERMISSION_ERROR = "permission_error"
+    FILE_NOT_FOUND = "file_not_found"
+    TIMEOUT_ERROR = "timeout_error"
+    RESOURCE_ERROR = "resource_error"
+    NETWORK_ERROR = "network_error"
+    SECURITY_ERROR = "security_error"
+    INTERNAL_ERROR = "internal_error"
+
+
+class ToolError(Exception):
+    """Base exception for tool-specific errors."""
+    
+    def __init__(self, message: str, error_type: ErrorType = ErrorType.INTERNAL_ERROR, 
+                 details: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.error_type = error_type
+        self.details = details or {}
+
+
+class ErrorHandler:
+    """Centralized error handling utilities for tools."""
+    
+    @staticmethod
+    def handle_exception(e: Exception, context: str = "") -> ToolResult:
+        """Convert any exception to a standardized ToolResult."""
+        if isinstance(e, ToolError):
+            error_msg = str(e)
+            metadata = {
+                "error_type": e.error_type.value,
+                "context": context,
+                **e.details
+            }
+        elif isinstance(e, FileNotFoundError):
+            error_msg = f"File not found: {str(e)}"
+            metadata = {"error_type": ErrorType.FILE_NOT_FOUND.value, "context": context}
+        elif isinstance(e, PermissionError):
+            error_msg = f"Permission denied: {str(e)}"
+            metadata = {"error_type": ErrorType.PERMISSION_ERROR.value, "context": context}
+        elif isinstance(e, TimeoutError):
+            error_msg = f"Operation timed out: {str(e)}"
+            metadata = {"error_type": ErrorType.TIMEOUT_ERROR.value, "context": context}
+        elif isinstance(e, (OSError, IOError)):
+            error_msg = f"I/O error: {str(e)}"
+            metadata = {"error_type": ErrorType.RESOURCE_ERROR.value, "context": context}
+        else:
+            error_msg = f"Unexpected error: {str(e)}"
+            metadata = {
+                "error_type": ErrorType.INTERNAL_ERROR.value,
+                "context": context,
+                "exception_type": type(e).__name__
+            }
+        
+        # Log error with stack trace for debugging
+        logging.error(f"Tool error in {context}: {error_msg}", exc_info=True)
+        
+        return ToolResult(
+            success=False,
+            output="",
+            error=error_msg,
+            metadata=metadata
+        )
+    
+    @staticmethod
+    def validate_required_params(kwargs: Dict[str, Any], required_params: List[str]) -> Optional[ToolResult]:
+        """Validate that required parameters are present."""
+        missing_params = [param for param in required_params if param not in kwargs or kwargs[param] is None]
+        
+        if missing_params:
+            return ToolResult(
+                success=False,
+                output="",
+                error=f"Missing required parameters: {', '.join(missing_params)}",
+                metadata={
+                    "error_type": ErrorType.VALIDATION_ERROR.value,
+                    "missing_params": missing_params
+                }
+            )
+        return None
+    
+    @staticmethod  
+    def validate_string_param(value: Any, param_name: str, min_length: int = 0, 
+                             max_length: int = 10000, pattern: Optional[str] = None) -> Optional[ToolResult]:
+        """Validate string parameter with length and pattern constraints."""
+        if not isinstance(value, str):
+            return ErrorHandler.create_error_result(
+                f"Parameter '{param_name}' must be a string, got {type(value).__name__}",
+                ErrorType.VALIDATION_ERROR,
+                {"param_name": param_name, "actual_type": type(value).__name__}
+            )
+        
+        if len(value) < min_length:
+            return ErrorHandler.create_error_result(
+                f"Parameter '{param_name}' must be at least {min_length} characters, got {len(value)}",
+                ErrorType.VALIDATION_ERROR,
+                {"param_name": param_name, "actual_length": len(value), "min_length": min_length}
+            )
+        
+        if len(value) > max_length:
+            return ErrorHandler.create_error_result(
+                f"Parameter '{param_name}' must be at most {max_length} characters, got {len(value)}",
+                ErrorType.VALIDATION_ERROR,
+                {"param_name": param_name, "actual_length": len(value), "max_length": max_length}
+            )
+        
+        if pattern:
+            import re
+            if not re.match(pattern, value):
+                return ErrorHandler.create_error_result(
+                    f"Parameter '{param_name}' does not match required pattern",
+                    ErrorType.VALIDATION_ERROR,
+                    {"param_name": param_name, "pattern": pattern}
+                )
+        
+        return None
+    
+    @staticmethod
+    def create_success_result(output: str, metadata: Optional[Dict[str, Any]] = None) -> ToolResult:
+        """Create a standardized success result."""
+        return ToolResult(
+            success=True,
+            output=output,
+            metadata=metadata or {}
+        )
+    
+    @staticmethod
+    def create_error_result(error_msg: str, error_type: ErrorType = ErrorType.INTERNAL_ERROR,
+                           metadata: Optional[Dict[str, Any]] = None) -> ToolResult:
+        """Create a standardized error result."""
+        result_metadata = {"error_type": error_type.value}
+        if metadata:
+            result_metadata.update(metadata)
+            
+        return ToolResult(
+            success=False,
+            output="",
+            error=error_msg,
+            metadata=result_metadata
+        )
+
 
 class Tool(ABC):
     """

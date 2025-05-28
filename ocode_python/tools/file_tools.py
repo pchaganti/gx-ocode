@@ -5,12 +5,81 @@ File manipulation tools.
 import os
 import asyncio
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
+import re
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import Tool, ToolDefinition, ToolParameter, ToolResult, ErrorHandler, ErrorType, ToolError
+
+
+class PathValidator:
+    """Utility class for validating and sanitizing file paths."""
+    
+    def __init__(self, allowed_base_paths: Optional[List[str]] = None, max_path_length: int = 4096):
+        self.allowed_base_paths = allowed_base_paths or [os.getcwd()]
+        self.max_path_length = max_path_length
+    
+    def validate_path(self, path: str, allow_creation: bool = False) -> Tuple[bool, str, Optional[Path]]:
+        """
+        Validate a file path for security and correctness.
+        
+        Returns: (is_valid, error_message, resolved_path)
+        """
+        try:
+            # Basic validation
+            if not path or len(path) > self.max_path_length:
+                return False, f"Invalid path length: {len(path) if path else 0}", None
+            
+            # Check for suspicious patterns
+            suspicious_patterns = [
+                r"\.\.[\\/]",  # Directory traversal
+                r"[\x00-\x1f]",  # Control characters
+                r"^[\\/]proc[\\/]",  # /proc access
+                r"^[\\/]sys[\\/]",  # /sys access  
+                r"^[\\/]dev[\\/]",  # /dev access
+                r"[\\/]etc[\\/]passwd",  # passwd file
+                r"[\\/]etc[\\/]shadow",  # shadow file
+            ]
+            
+            for pattern in suspicious_patterns:
+                if re.search(pattern, path, re.IGNORECASE):
+                    return False, f"Path contains suspicious pattern: {pattern}", None
+            
+            # Resolve the path
+            try:
+                resolved_path = Path(path).resolve()
+            except (OSError, ValueError) as e:
+                return False, f"Path resolution failed: {e}", None
+            
+            # Check if path is within allowed base paths
+            path_is_allowed = False
+            for base_path in self.allowed_base_paths:
+                try:
+                    resolved_base = Path(base_path).resolve()
+                    # Check if the resolved path is within the base path
+                    resolved_path.relative_to(resolved_base)
+                    path_is_allowed = True
+                    break
+                except ValueError:
+                    continue
+            
+            if not path_is_allowed:
+                return False, f"Path is outside allowed directories: {self.allowed_base_paths}", None
+            
+            # Check if path exists (if not allowing creation)
+            if not allow_creation and not resolved_path.exists():
+                return False, f"Path does not exist: {resolved_path}", None
+            
+            return True, "", resolved_path
+            
+        except Exception as e:
+            return False, f"Path validation error: {e}", None
 
 class FileReadTool(Tool):
     """Tool for reading file contents."""
+    
+    def __init__(self):
+        super().__init__()
+        self.path_validator = PathValidator()
 
     @property
     def definition(self) -> ToolDefinition:
@@ -50,49 +119,65 @@ class FileReadTool(Tool):
         return None
 
     async def execute(self, **kwargs: Any) -> ToolResult:  # type: ignore[override]
-        """Read file contents."""
+        """Read file contents with enhanced security validation."""
         try:
+            # Validate required parameters
+            validation_error = ErrorHandler.validate_required_params(kwargs, ['path'])
+            if validation_error:
+                return validation_error
+            
             path = kwargs.get('path')
             encoding = kwargs.get('encoding', 'utf-8')
-            file_path = Path(path)
+            
+            # Validate path security
+            is_valid, error_msg, validated_path = self.path_validator.validate_path(path, allow_creation=False)
+            if not is_valid:
+                return ErrorHandler.create_error_result(
+                    f"Path validation failed: {error_msg}",
+                    ErrorType.SECURITY_ERROR,
+                    {"path": path}
+                )
 
             # Try to find the file with common extensions if it doesn't exist
-            resolved_path = self._try_common_extensions(file_path)
+            resolved_path = self._try_common_extensions(validated_path)
             if not resolved_path:
-                return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"File does not exist: {path} (tried with common extensions: .md, .txt, .rst, .markdown)"
+                return ErrorHandler.create_error_result(
+                    f"File does not exist: {path} (tried with common extensions: .md, .txt, .rst, .markdown)",
+                    ErrorType.FILE_NOT_FOUND,
+                    {"path": path, "attempted_extensions": [".md", ".txt", ".rst", ".markdown"]}
                 )
 
             if not resolved_path.is_file():
-                return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"Path is not a file: {resolved_path}"
+                return ErrorHandler.create_error_result(
+                    f"Path is not a file: {resolved_path}",
+                    ErrorType.VALIDATION_ERROR,
+                    {"path": str(resolved_path), "path_type": "directory" if resolved_path.is_dir() else "other"}
                 )
 
-            with open(resolved_path, 'r', encoding=encoding) as f:
+            # Check file size before reading to prevent memory issues
+            file_size = resolved_path.stat().st_size
+            max_file_size = 50 * 1024 * 1024  # 50MB limit
+            if file_size > max_file_size:
+                return ErrorHandler.create_error_result(
+                    f"File too large: {file_size} bytes (max: {max_file_size})",
+                    ErrorType.RESOURCE_ERROR,
+                    {"file_size": file_size, "max_size": max_file_size}
+                )
+
+            with open(resolved_path, 'r', encoding=encoding, errors='replace') as f:
                 content = f.read()
 
-            return ToolResult(
-                success=True,
-                output=content,
-                metadata={"file_size": resolved_path.stat().st_size}
+            return ErrorHandler.create_success_result(
+                content,
+                {
+                    "file_size": file_size,
+                    "encoding": encoding,
+                    "resolved_path": str(resolved_path)
+                }
             )
 
-        except UnicodeDecodeError:
-            return ToolResult(
-                success=False,
-                output="",
-                error=f"Could not decode file with encoding '{encoding}'"
-            )
         except Exception as e:
-            return ToolResult(
-                success=False,
-                output="",
-                error=f"Failed to read file: {str(e)}"
-            )
+            return ErrorHandler.handle_exception(e, f"FileReadTool.execute(path={kwargs.get('path')})")
 
 class FileWriteTool(Tool):
     """Tool for writing file contents."""

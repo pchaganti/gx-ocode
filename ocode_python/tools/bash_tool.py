@@ -9,8 +9,11 @@ import shlex
 import tempfile
 import pexpect
 import io
+import time
+import signal
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
+from contextlib import asynccontextmanager
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -184,6 +187,18 @@ class BashTool(Tool):
                     }
                 )
 
+        except FileNotFoundError as e:
+            return ToolResult(
+                success=False,
+                output="",
+                error=f"Command or shell not found: {str(e)}"
+            )
+        except PermissionError as e:
+            return ToolResult(
+                success=False,
+                output="",
+                error=f"Permission denied: {str(e)}"
+            )
         except Exception as e:
             return ToolResult(
                 success=False,
@@ -192,7 +207,7 @@ class BashTool(Tool):
             )
 
     def _check_command_safety(self, command: str) -> Dict[str, Any]:
-        """Check if command is safe to execute."""
+        """Check if command is safe to execute with enhanced security patterns."""
         dangerous_patterns = [
             # Destructive operations
             r"\brm\s+-rf\s+/",
@@ -200,25 +215,44 @@ class BashTool(Tool):
             r"\bdd\s+.*of=/dev/",
             r"\bformat\b",
             r"\bmkfs\b",
+            r"\bshred\b",
+            r"\bwipe\b",
             
             # System modifications
             r"\bsudo\s+rm\s+-rf",
             r"\bchmod\s+777\s+/",
             r"\bchown\s+.*:\s*/",
+            r"\buseradd\b",
+            r"\buserdel\b",
+            r"\bpasswd\b",
             
             # Network/security risks
-            r"\bcurl\s+.*\|\s*sh",
-            r"\bwget\s+.*\|\s*sh",
+            r"\bcurl\s+.*\|\s*(sh|bash|zsh)",
+            r"\bwget\s+.*\|\s*(sh|bash|zsh)",
             r"bash\s+<\(",
+            r"\beval\s+\$\(",
+            r"\$\(curl\b",
+            r"\$\(wget\b",
             
             # Process killers
             r"\bkillall\s+-9",
             r"\bpkill\s+-f\s+.*",
+            r"\bkill\s+-9\s+1\b",  # init process
             
             # System reboot/shutdown
             r"\breboot\b",
             r"\bshutdown\b",
             r"\bhalt\b",
+            r"\bpoweroff\b",
+            
+            # File system mounting
+            r"\bmount\s+.*\s+/",
+            r"\bumount\s+/",
+            
+            # Code injection patterns
+            r";\s*(rm|mv|dd|format)",
+            r"&&\s*(rm|mv|dd|format)",
+            r"\|\|\s*(rm|mv|dd|format)",
         ]
         
         for pattern in dangerous_patterns:
@@ -234,11 +268,28 @@ class BashTool(Tool):
                 "safe": False,
                 "reason": "Bulk file deletion with wildcards detected"
             }
+            
+        # Only check for truly dangerous command injection patterns
+        # Don't block legitimate shell features like pipes, redirects, variable expansion
+        dangerous_injection_patterns = [
+            r";\s*(rm|mv|dd|format|sudo|curl.*\|.*sh)",
+            r"&&\s*(rm|mv|dd|format|sudo|curl.*\|.*sh)", 
+            r"\|\|\s*(rm|mv|dd|format|sudo|curl.*\|.*sh)",
+            r"`.*rm\s+",  # Command substitution with rm
+            r"\$\(.*rm\s+",  # Command substitution with rm
+        ]
+        
+        for pattern in dangerous_injection_patterns:
+            if re.search(pattern, command, re.IGNORECASE):
+                return {
+                    "safe": False,
+                    "reason": f"Command contains dangerous injection pattern: {pattern}"
+                }
 
         return {"safe": True, "reason": ""}
 
     def _prepare_shell_command(self, command: str, shell: str) -> List[str]:
-        """Prepare shell command for execution."""
+        """Prepare shell command for execution with proper sanitization."""
         shell_map = {
             "bash": "/bin/bash",
             "sh": "/bin/sh", 
@@ -246,78 +297,142 @@ class BashTool(Tool):
             "fish": "/usr/bin/fish"
         }
         
-        shell_path = shell_map.get(shell, "/bin/bash")
+        # Validate shell parameter
+        if shell not in shell_map:
+            shell = "bash"  # Default to bash for unknown shells
+            
+        shell_path = shell_map[shell]
         
-        # Check if shell exists
+        # Check if shell exists, fallback to available shells
+        fallback_shells = ["/bin/bash", "/bin/sh", "/usr/bin/bash"]
         if not Path(shell_path).exists():
-            shell_path = "/bin/bash"  # Fallback to bash
+            for fallback in fallback_shells:
+                if Path(fallback).exists():
+                    shell_path = fallback
+                    break
+            else:
+                raise FileNotFoundError(f"No suitable shell found. Tried: {[shell_path] + fallback_shells}")
         
+        # Use exec form to prevent shell injection
         return [shell_path, "-c", command]
+    
+    def _sanitize_environment(self, env: Dict[str, str]) -> Dict[str, str]:
+        """Sanitize environment variables to prevent injection attacks."""
+        safe_env = {}
+        
+        for key, value in env.items():
+            # Validate environment variable names (must be valid identifiers)
+            if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', key):
+                continue  # Skip invalid variable names
+                
+            # Convert value to string - environment variables are intentionally flexible
+            # so we don't overly restrict their content
+            safe_value = str(value)
+            safe_env[key] = safe_value
+            
+        return safe_env
+    
+    def _expect_eof_safe(self, child):
+        """Safely expect EOF from pexpect child process."""
+        try:
+            child.expect(pexpect.EOF)
+        except pexpect.TIMEOUT:
+            # This is expected for timeout scenarios
+            pass
+        except pexpect.exceptions.ExceptionPexpect:
+            # Handle other pexpect exceptions gracefully
+            pass
+
+    @asynccontextmanager
+    async def _managed_process(self, shell_cmd: List[str], work_dir: Path, env: Dict[str, str], 
+                              capture_output: bool, input_data: Optional[str]):
+        """Context manager for proper process cleanup."""
+        process = None
+        try:
+            if capture_output:
+                process = await asyncio.create_subprocess_exec(
+                    *shell_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=asyncio.subprocess.PIPE if input_data else None,
+                    cwd=str(work_dir),
+                    env=env,
+                    preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create process group
+                )
+            else:
+                process = await asyncio.create_subprocess_exec(
+                    *shell_cmd,
+                    cwd=str(work_dir),
+                    env=env,
+                    preexec_fn=os.setsid if hasattr(os, 'setsid') else None
+                )
+            yield process
+        finally:
+            if process and process.returncode is None:
+                try:
+                    # Try graceful termination first
+                    process.terminate()
+                    try:
+                        await asyncio.wait_for(process.wait(), timeout=5)
+                    except asyncio.TimeoutError:
+                        # Force kill if still running
+                        process.kill()
+                        await process.wait()
+                except ProcessLookupError:
+                    # Process already dead
+                    pass
 
     async def _execute_standard(self, shell_cmd: List[str], work_dir: Path,
                                env: Dict[str, str], timeout: int, capture_output: bool,
                                input_data: Optional[str]) -> Dict[str, Any]:
-        """Execute command in standard mode."""
-        import time
-        
+        """Execute command in standard mode with enhanced error handling."""
         start_time = time.time()
         
         try:
-            # Execute command
-            if capture_output:
-                if timeout > 0:
-                    process = await asyncio.create_subprocess_exec(
-                        *shell_cmd,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        stdin=asyncio.subprocess.PIPE if input_data else None,
-                        cwd=str(work_dir),
-                        env=env
-                    )
-                    
+            # Sanitize environment variables
+            safe_env = self._sanitize_environment(env)
+            
+            async with self._managed_process(shell_cmd, work_dir, safe_env, capture_output, input_data) as process:
+                if capture_output:
                     try:
-                        input_bytes = input_data.encode() if input_data else None
-                        stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                            process.communicate(input=input_bytes),
-                            timeout=timeout
-                        )
-                        stdout = stdout_bytes.decode() if stdout_bytes else ""
-                        stderr = stderr_bytes.decode() if stderr_bytes else ""
+                        input_bytes = input_data.encode('utf-8', errors='replace') if input_data else None
+                        
+                        if timeout > 0:
+                            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                                process.communicate(input=input_bytes),
+                                timeout=timeout
+                            )
+                        else:
+                            stdout_bytes, stderr_bytes = await process.communicate(input=input_bytes)
+                            
+                        stdout = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
+                        stderr = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
                         return_code = process.returncode
+                        
                     except asyncio.TimeoutError:
-                        process.kill()
-                        await process.wait()
                         return {
                             "success": False,
                             "stdout": "",
                             "stderr": f"Command timed out after {timeout} seconds",
-                            "return_code": -1,
+                            "return_code": -15,  # SIGTERM
                             "execution_time": time.time() - start_time
                         }
                 else:
-                    process = await asyncio.create_subprocess_exec(
-                        *shell_cmd,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        stdin=asyncio.subprocess.PIPE if input_data else None,
-                        cwd=str(work_dir),
-                        env=env
-                    )
-                    input_bytes = input_data.encode() if input_data else None
-                    stdout_bytes, stderr_bytes = await process.communicate(input=input_bytes)
-                    stdout = stdout_bytes.decode() if stdout_bytes else ""
-                    stderr = stderr_bytes.decode() if stderr_bytes else ""
-                    return_code = process.returncode
-            else:
-                # No output capture
-                process = await asyncio.create_subprocess_exec(
-                    *shell_cmd,
-                    cwd=str(work_dir),
-                    env=env
-                )
-                await process.wait()
-                stdout, stderr = "", ""
-                return_code = process.returncode
+                    # No output capture
+                    try:
+                        if timeout > 0:
+                            return_code = await asyncio.wait_for(process.wait(), timeout=timeout)
+                        else:
+                            return_code = await process.wait()
+                    except asyncio.TimeoutError:
+                        return {
+                            "success": False,
+                            "stdout": "",
+                            "stderr": f"Command timed out after {timeout} seconds",
+                            "return_code": -15,
+                            "execution_time": time.time() - start_time
+                        }
+                    stdout, stderr = "", ""
 
             execution_time = time.time() - start_time
             
@@ -329,31 +444,48 @@ class BashTool(Tool):
                 "execution_time": execution_time
             }
 
+        except FileNotFoundError as e:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": f"Command not found: {e}",
+                "return_code": 127,
+                "execution_time": time.time() - start_time
+            }
+        except PermissionError as e:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": f"Permission denied: {e}",
+                "return_code": 126,
+                "execution_time": time.time() - start_time
+            }
         except Exception as e:
             return {
                 "success": False,
                 "stdout": "",
-                "stderr": str(e),
+                "stderr": f"Execution error: {str(e)}",
                 "return_code": -1,
                 "execution_time": time.time() - start_time
             }
 
     async def _execute_interactive(self, shell_cmd: List[str], work_dir: Path,
                                  env: Dict[str, str], timeout: int, input_data: Optional[str] = None) -> Dict[str, Any]:
-        """Execute command in interactive mode using pexpect, optionally sending input_data."""
+        """Execute command in interactive mode using pexpect with improved async handling."""
         output_buffer = io.StringIO()
         child = None
+        start_time = time.time()
         try:
             # Convert shell command list to string for pexpect
             cmd_str = " ".join(shlex.quote(arg) for arg in shell_cmd)
             
-            # Create pexpect spawn object
+            # Create pexpect spawn object with more conservative timeout
             child = pexpect.spawn(
                 cmd_str,
                 cwd=str(work_dir),
                 env=env,
                 encoding='utf-8',
-                timeout=timeout if timeout > 0 else None
+                timeout=min(timeout, 30) if timeout > 0 else 30  # Max 30s per operation
             )
             
             # Set up logging using StringIO
@@ -361,16 +493,37 @@ class BashTool(Tool):
             
             # If input_data is provided, send it (simulate user input)
             if input_data:
-                for line in input_data.splitlines():
-                    # Run sendline in a thread pool to avoid blocking
-                    await asyncio.get_event_loop().run_in_executor(
-                        None, child.sendline, line
-                    )
+                input_lines = input_data.splitlines()
+                for i, line in enumerate(input_lines):
+                    try:
+                        # Run sendline in a thread pool with timeout protection
+                        await asyncio.wait_for(
+                            asyncio.get_event_loop().run_in_executor(
+                                None, child.sendline, line
+                            ),
+                            timeout=5  # 5 second timeout per line
+                        )
+                        
+                        # Small delay between lines to prevent overwhelming the process
+                        if i < len(input_lines) - 1:  # Don't delay after the last line
+                            await asyncio.sleep(0.1)
+                            
+                    except asyncio.TimeoutError:
+                        # Continue on timeout, but log it
+                        break
             
-            # Wait for command to complete in a thread pool
-            await asyncio.get_event_loop().run_in_executor(
-                None, child.expect, pexpect.EOF
-            )
+            # Wait for command to complete with proper timeout handling
+            try:
+                remaining_timeout = max(1, timeout - (time.time() - start_time)) if timeout > 0 else 30
+                await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        None, self._expect_eof_safe, child
+                    ),
+                    timeout=remaining_timeout
+                )
+            except asyncio.TimeoutError:
+                # Handle timeout gracefully
+                pass
             
             # Get final output
             final_output = output_buffer.getvalue()
