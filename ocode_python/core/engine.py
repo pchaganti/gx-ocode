@@ -121,23 +121,81 @@ Available tools:
         """Use LLM to determine if and which tools should be used for the query."""
         tool_names = [tool.definition.name for tool in self.tool_registry.get_all_tools()]
         
-        analysis_prompt = f"""Given this user query: "{query}"
+        analysis_prompt = f"""<role>You are an expert AI assistant specialized in selecting appropriate tools for coding and file management tasks.</role>
 
-Available tools: {', '.join(tool_names)}
+<task>Analyze the user query and determine which tools should be used to complete the task effectively.</task>
 
-Respond with ONLY a JSON object with:
+<query>"{query}"</query>
+
+<available_tools>
+{', '.join(tool_names)}
+</available_tools>
+
+<tool_categories>
+File Operations: file_read, file_write, file_list, file_edit, copy, move, remove, find
+Text Processing: head, tail, wc, sort, uniq, grep, diff
+Git Operations: git_status, git_commit, git_diff
+System: bash, which, curl
+Analysis: architect, agent, think
+Memory: memory_read, memory_write
+Notebooks: notebook_read, notebook_edit
+</tool_categories>
+
+<examples>
+Query: "Remember my name is John"
+Response: {{"should_use_tools": true, "suggested_tools": ["memory_write"], "reasoning": "Store personal information in memory", "context_complexity": "simple"}}
+
+Query: "List files in the current directory"
+Response: {{"should_use_tools": true, "suggested_tools": ["ls"], "reasoning": "Direct file listing request", "context_complexity": "simple"}}
+
+Query: "Show me the first 5 lines of README.md"
+Response: {{"should_use_tools": true, "suggested_tools": ["head"], "reasoning": "View beginning of specific file", "context_complexity": "simple"}}
+
+Query: "Count lines, words, and characters in the main.py file"
+Response: {{"should_use_tools": true, "suggested_tools": ["wc"], "reasoning": "Text statistics for specific file", "context_complexity": "simple"}}
+
+Query: "Compare two configuration files"
+Response: {{"should_use_tools": true, "suggested_tools": ["diff"], "reasoning": "File comparison task", "context_complexity": "simple"}}
+
+Query: "Find all Python files in the project"
+Response: {{"should_use_tools": true, "suggested_tools": ["find"], "reasoning": "Search for files by pattern", "context_complexity": "simple"}}
+
+Query: "Download the latest data from the API endpoint"
+Response: {{"should_use_tools": true, "suggested_tools": ["curl"], "reasoning": "HTTP request to fetch data", "context_complexity": "simple"}}
+
+Query: "Sort the contents of data.txt and remove duplicates"
+Response: {{"should_use_tools": true, "suggested_tools": ["sort", "uniq"], "reasoning": "Text processing pipeline", "context_complexity": "simple"}}
+
+Query: "Copy the config file to backup directory"
+Response: {{"should_use_tools": true, "suggested_tools": ["copy"], "reasoning": "File copy operation", "context_complexity": "simple"}}
+
+Query: "Check if git is installed on this system"
+Response: {{"should_use_tools": true, "suggested_tools": ["which"], "reasoning": "Locate executable in PATH", "context_complexity": "simple"}}
+
+Query: "Analyze the architecture of this codebase and suggest improvements"
+Response: {{"should_use_tools": true, "suggested_tools": ["architect", "grep", "find"], "reasoning": "Complex code analysis requiring multiple tools", "context_complexity": "full"}}
+
+Query: "What is Python and how does it work?"
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General knowledge question, no tools needed", "context_complexity": "simple"}}
+</examples>
+
+<thinking>
+Let me analyze this query step by step:
+1. What is the user trying to accomplish?
+2. Does this require interacting with files, system, or external resources?
+3. Which specific tools would be most appropriate?
+4. Is this a simple direct action or complex multi-step process?
+</thinking>
+
+<instructions>
+Respond with ONLY a JSON object following this exact format:
 {{
     "should_use_tools": true/false,
     "suggested_tools": ["tool1", "tool2"] or [],
-    "reasoning": "brief explanation",
+    "reasoning": "brief explanation of tool selection",
     "context_complexity": "simple" or "full"
 }}
-
-Examples:
-- "Remember my name is John" -> {{"should_use_tools": true, "suggested_tools": ["memory_write"], "reasoning": "Store personal information", "context_complexity": "simple"}}
-- "List files" -> {{"should_use_tools": true, "suggested_tools": ["ls"], "reasoning": "Direct file listing request", "context_complexity": "simple"}}
-- "Analyze the architecture of this codebase" -> {{"should_use_tools": true, "suggested_tools": ["architect", "grep"], "reasoning": "Complex code analysis", "context_complexity": "full"}}
-- "What is Python?" -> {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General knowledge question", "context_complexity": "simple"}}"""
+</instructions>"""
 
         # Simple API call for analysis
         from .api_client import CompletionRequest
