@@ -121,9 +121,9 @@ Available tools:
         """Use LLM to determine if and which tools should be used for the query."""
         tool_names = [tool.definition.name for tool in self.tool_registry.get_all_tools()]
         
-        analysis_prompt = f"""<role>You are an expert AI assistant specialized in selecting appropriate tools for coding and file management tasks.</role>
+        analysis_prompt = f"""<role>You are an expert AI assistant specialized in distinguishing between general knowledge questions and actionable tasks that require tools.</role>
 
-<task>Analyze the user query and determine which tools should be used to complete the task effectively.</task>
+<task>Analyze the user query and determine if it requires tools or can be answered directly with knowledge.</task>
 
 <query>"{query}"</query>
 
@@ -131,60 +131,83 @@ Available tools:
 {', '.join(tool_names)}
 </available_tools>
 
+<decision_criteria>
+USE TOOLS (should_use_tools: true) when the query:
+- Requests interaction with files, directories, or filesystem
+- Needs to execute system commands or check system state
+- Requires downloading data from external sources
+- Asks to store or retrieve information from memory
+- Involves analyzing or modifying code in the current project
+- Needs to perform git operations
+- Requests text processing on specific files
+
+DO NOT USE TOOLS (should_use_tools: false) when the query:
+- Asks for general programming concepts or language explanations
+- Requests theoretical knowledge or definitions
+- Seeks best practices, patterns, or general advice
+- Asks "what is", "how does", "why", "when to use" about general topics
+- Requests explanations of algorithms, data structures, or concepts
+- Asks for comparisons between technologies or approaches
+- Seeks tutorials or learning guidance
+</decision_criteria>
+
 <tool_categories>
 File Operations: file_read, file_write, file_list, file_edit, copy, move, remove, find
 Text Processing: head, tail, wc, sort, uniq, grep, diff
 Git Operations: git_status, git_commit, git_diff
 System: bash, which, curl
-Analysis: architect, agent, think
+Analysis: architect, agent (for project-specific analysis only)
 Memory: memory_read, memory_write
 Notebooks: notebook_read, notebook_edit
 </tool_categories>
 
 <examples>
-Query: "Remember my name is John"
-Response: {{"should_use_tools": true, "suggested_tools": ["memory_write"], "reasoning": "Store personal information in memory", "context_complexity": "simple"}}
-
 Query: "List files in the current directory"
-Response: {{"should_use_tools": true, "suggested_tools": ["ls"], "reasoning": "Direct file listing request", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["ls"], "reasoning": "Direct file system interaction required", "context_complexity": "simple"}}
 
 Query: "Show me the first 5 lines of README.md"
-Response: {{"should_use_tools": true, "suggested_tools": ["head"], "reasoning": "View beginning of specific file", "context_complexity": "simple"}}
-
-Query: "Count lines, words, and characters in the main.py file"
-Response: {{"should_use_tools": true, "suggested_tools": ["wc"], "reasoning": "Text statistics for specific file", "context_complexity": "simple"}}
-
-Query: "Compare two configuration files"
-Response: {{"should_use_tools": true, "suggested_tools": ["diff"], "reasoning": "File comparison task", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["head"], "reasoning": "Reading specific file content", "context_complexity": "simple"}}
 
 Query: "Find all Python files in the project"
-Response: {{"should_use_tools": true, "suggested_tools": ["find"], "reasoning": "Search for files by pattern", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["find"], "reasoning": "Filesystem search operation", "context_complexity": "simple"}}
 
-Query: "Download the latest data from the API endpoint"
-Response: {{"should_use_tools": true, "suggested_tools": ["curl"], "reasoning": "HTTP request to fetch data", "context_complexity": "simple"}}
+Query: "Remember my email is john@example.com"
+Response: {{"should_use_tools": true, "suggested_tools": ["memory_write"], "reasoning": "Store personal information", "context_complexity": "simple"}}
 
-Query: "Sort the contents of data.txt and remove duplicates"
-Response: {{"should_use_tools": true, "suggested_tools": ["sort", "uniq"], "reasoning": "Text processing pipeline", "context_complexity": "simple"}}
+Query: "Download data from https://api.example.com"
+Response: {{"should_use_tools": true, "suggested_tools": ["curl"], "reasoning": "External HTTP request needed", "context_complexity": "simple"}}
 
-Query: "Copy the config file to backup directory"
-Response: {{"should_use_tools": true, "suggested_tools": ["copy"], "reasoning": "File copy operation", "context_complexity": "simple"}}
-
-Query: "Check if git is installed on this system"
-Response: {{"should_use_tools": true, "suggested_tools": ["which"], "reasoning": "Locate executable in PATH", "context_complexity": "simple"}}
-
-Query: "Analyze the architecture of this codebase and suggest improvements"
-Response: {{"should_use_tools": true, "suggested_tools": ["architect", "grep", "find"], "reasoning": "Complex code analysis requiring multiple tools", "context_complexity": "full"}}
+Query: "Analyze the architecture of THIS codebase"
+Response: {{"should_use_tools": true, "suggested_tools": ["architect", "find"], "reasoning": "Project-specific code analysis", "context_complexity": "full"}}
 
 Query: "What is Python and how does it work?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General knowledge question, no tools needed", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming language explanation", "context_complexity": "simple"}}
+
+Query: "Explain object-oriented programming"
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming concept explanation", "context_complexity": "simple"}}
+
+Query: "What are the differences between REST and GraphQL?"
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General technology comparison", "context_complexity": "simple"}}
+
+Query: "How do I implement a binary search algorithm?"
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General algorithm explanation", "context_complexity": "simple"}}
+
+Query: "What are Python best practices for error handling?"
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General best practices question", "context_complexity": "simple"}}
+
+Query: "When should I use async/await in Python?"
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General usage guidance question", "context_complexity": "simple"}}
+
+Query: "Explain how machine learning works"
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General ML concept explanation", "context_complexity": "simple"}}
 </examples>
 
 <thinking>
-Let me analyze this query step by step:
-1. What is the user trying to accomplish?
-2. Does this require interacting with files, system, or external resources?
-3. Which specific tools would be most appropriate?
-4. Is this a simple direct action or complex multi-step process?
+Key questions to ask:
+1. Is this asking for general knowledge/concepts OR specific file/system actions?
+2. Does it mention specific files, directories, URLs, or system operations?
+3. Is it theoretical ("what is", "how does", "explain") or actionable ("show me", "find", "download")?
+4. Would answering this require accessing the user's actual files or system?
 </thinking>
 
 <instructions>
@@ -192,7 +215,7 @@ Respond with ONLY a JSON object following this exact format:
 {{
     "should_use_tools": true/false,
     "suggested_tools": ["tool1", "tool2"] or [],
-    "reasoning": "brief explanation of tool selection",
+    "reasoning": "brief explanation of decision",
     "context_complexity": "simple" or "full"
 }}
 </instructions>"""
@@ -451,8 +474,24 @@ Examples:
             query_analysis = self.context_manager._categorize_query(query)
             use_simple_context = query_analysis.get('context_strategy') == 'minimal'
 
-        # System message with tools
-        if use_simple_context:
+        # System message - adapt based on whether tools will be used
+        should_use_tools = llm_analysis.get("should_use_tools", True) if llm_analysis else True
+        
+        if not should_use_tools:
+            # Direct knowledge response system prompt
+            system_content = """You are an expert AI coding assistant with deep knowledge of programming languages, software engineering concepts, algorithms, and best practices.
+
+Provide clear, comprehensive explanations using your knowledge. Since this is a general knowledge question, you should answer directly without using any tools.
+
+Focus on:
+- Clear explanations with examples
+- Practical insights and best practices  
+- Code examples when relevant
+- Step-by-step breakdowns for complex topics
+- Comparisons and trade-offs when appropriate
+
+Be educational and thorough in your response."""
+        elif use_simple_context:
             # Simple system prompt for direct tool calls with examples
             system_content = """You are an AI assistant with access to function calling tools. Use them when appropriate.
 
@@ -460,6 +499,7 @@ Examples:
 - User: "Remember my name is John" -> Call memory_write function
 - User: "List files" -> Call ls function  
 - User: "What's in my memory?" -> Call memory_read function
+- User: "Show first 5 lines of file.txt" -> Call head function
 
 When a user asks you to perform an action, call the appropriate function."""
         else:
@@ -706,6 +746,9 @@ When a user asks you to perform an action, call the appropriate function."""
                 else:
                     # For complex context, include all tools
                     tools = self.tool_registry.get_tool_definitions()
+            else:
+                if self.verbose:
+                    print("💭 Direct knowledge response - no tools needed")
             
             # Make API request
             request = CompletionRequest(
