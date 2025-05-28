@@ -100,6 +100,7 @@ class PermissionManager:
         ]
 
         for pattern in default_blocked:
+            self.blocked_paths.add(pattern)
             self.add_rule(
                 PermissionRule(
                     operation=OperationType.FILE_WRITE,
@@ -145,6 +146,7 @@ class PermissionManager:
         ]
 
         for cmd in dangerous_commands:
+            self.blocked_commands.add(cmd)
             self.add_rule(
                 PermissionRule(
                     operation=OperationType.SHELL_EXEC,
@@ -178,9 +180,11 @@ class PermissionManager:
             "wget",
             "test",
             "pytest",
+            "sleep",
         ]
 
         for cmd in safe_commands:
+            self.allowed_commands.add(cmd)
             self.add_rule(
                 PermissionRule(
                     operation=OperationType.SHELL_EXEC,

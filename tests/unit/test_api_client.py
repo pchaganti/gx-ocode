@@ -108,33 +108,39 @@ class TestOllamaAPIClient:
             b'{"done": true}\n',
         ]
 
+        # Create a proper async iterator
+        async def async_iter(items):
+            for item in items:
+                yield item
+
         # Mock aiohttp session and response
         mock_response = AsyncMock()
-        mock_response.content = AsyncMock()
-        mock_response.content.__aiter__ = AsyncMock(return_value=iter(response_lines))
+        mock_response.content = async_iter(response_lines)
         mock_response.raise_for_status = Mock()
 
         mock_session = AsyncMock()
-        mock_session.post = AsyncMock()
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=None)
+        mock_session.closed = False
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+        mock_session.post = Mock(return_value=mock_context_manager)
 
-        client.session = mock_session
+        # Patch the ClientSession to return our mock
+        with patch('aiohttp.ClientSession') as mock_client_session:
+            mock_client_session.return_value = mock_session
 
-        request = CompletionRequest(
-            model="test-model", messages=[{"role": "user", "content": "Hello"}]
-        )
+            request = CompletionRequest(
+                model="test-model", messages=[{"role": "user", "content": "Hello"}]
+            )
 
-        chunks = []
-        async for chunk in client.stream_chat(request):
-            chunks.append(chunk)
+            chunks = []
+            async for chunk in client.stream_chat(request):
+                chunks.append(chunk)
 
-        assert len(chunks) == 3
-        assert chunks[0].content == "Hello"
-        assert chunks[1].content == " world"
-        assert chunks[2].done
+            assert len(chunks) == 3
+            assert chunks[0].content == "Hello"
+            assert chunks[1].content == " world"
+            assert chunks[2].done
 
     @pytest.mark.asyncio
     async def test_stream_chat_connection_error(self):
@@ -172,17 +178,20 @@ class TestOllamaAPIClient:
         mock_response.raise_for_status = Mock()
 
         mock_session = AsyncMock()
-        mock_session.get = AsyncMock()
-        mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        mock_session.closed = False
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+        mock_session.get = Mock(return_value=mock_context_manager)
 
-        client.session = mock_session
+        with patch('aiohttp.ClientSession') as mock_client_session:
+            mock_client_session.return_value = mock_session
 
-        models = await client.list_models()
+            models = await client.list_models()
 
-        assert len(models) == 2
-        assert models[0]["name"] == "llama3:8b"
-        assert models[1]["name"] == "codellama:7b"
+            assert len(models) == 2
+            assert models[0]["name"] == "llama3:8b"
+            assert models[1]["name"] == "codellama:7b"
 
     @pytest.mark.asyncio
     async def test_check_health_success(self):
@@ -208,11 +217,14 @@ class TestOllamaAPIClient:
         client = OllamaAPIClient()
 
         mock_session = AsyncMock()
+        mock_session.closed = False
         mock_session.get = AsyncMock(side_effect=Exception("Connection failed"))
-        client.session = mock_session
 
-        is_healthy = await client.check_health()
-        assert not is_healthy
+        with patch('aiohttp.ClientSession') as mock_client_session:
+            mock_client_session.return_value = mock_session
+
+            is_healthy = await client.check_health()
+            assert not is_healthy
 
     @pytest.mark.asyncio
     async def test_pull_model_success(self):
@@ -225,28 +237,33 @@ class TestOllamaAPIClient:
             b'{"status": "success"}\n',
         ]
 
+        # Create a proper async iterator
+        async def async_iter(items):
+            for item in items:
+                yield item
+
         mock_response = AsyncMock()
-        mock_response.content = AsyncMock()
-        mock_response.content.__aiter__ = AsyncMock(return_value=iter(progress_lines))
+        mock_response.content = async_iter(progress_lines)
         mock_response.raise_for_status = Mock()
 
         mock_session = AsyncMock()
-        mock_session.post = AsyncMock()
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=None)
+        mock_session.closed = False
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+        mock_session.post = Mock(return_value=mock_context_manager)
 
-        client.session = mock_session
+        with patch('aiohttp.ClientSession') as mock_client_session:
+            mock_client_session.return_value = mock_session
 
-        progress_updates = []
-        async for progress in client.pull_model("test-model"):
-            progress_updates.append(progress)
+            progress_updates = []
+            async for progress in client.pull_model("test-model"):
+                progress_updates.append(progress)
 
-        assert len(progress_updates) == 3
-        assert progress_updates[0]["status"] == "pulling manifest"
-        assert progress_updates[1]["status"] == "downloading"
-        assert progress_updates[2]["status"] == "success"
+            assert len(progress_updates) == 3
+            assert progress_updates[0]["status"] == "pulling manifest"
+            assert progress_updates[1]["status"] == "downloading"
+            assert progress_updates[2]["status"] == "success"
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_success(self):
@@ -260,17 +277,18 @@ class TestOllamaAPIClient:
         mock_response.raise_for_status = Mock()
 
         mock_session = AsyncMock()
-        mock_session.post = AsyncMock()
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
-        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=None)
+        mock_session.closed = False
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+        mock_session.post = Mock(return_value=mock_context_manager)
 
-        client.session = mock_session
+        with patch('aiohttp.ClientSession') as mock_client_session:
+            mock_client_session.return_value = mock_session
 
-        embedding = await client.generate_embeddings("test-model", "Hello world")
+            embedding = await client.generate_embeddings("test-model", "Hello world")
 
-        assert embedding == [0.1, 0.2, 0.3, 0.4, 0.5]
+            assert embedding == [0.1, 0.2, 0.3, 0.4, 0.5]
 
 
 @pytest.mark.unit

@@ -57,7 +57,7 @@ class TestProcessMonitorTool:
         """Test tool definition."""
         assert tool.definition.name == "ps"
         assert tool.definition.category == "System Operations"
-        assert len(tool.definition.parameters) == 6
+        assert len(tool.definition.parameters) == 7
 
     @pytest.mark.asyncio
     async def test_list_action(self, tool):

@@ -7,6 +7,50 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+# Default configuration
+DEFAULT_CONFIG = {
+    "model": "llama3.2:latest",
+    "temperature": 0.1,
+    "top_p": 0.9,
+    "max_tokens": 4096,
+    "max_context_files": 20,
+    "context_window": 8192,
+    "output_format": "text",
+    "verbose": False,
+    "auto_save_sessions": True,
+    "session_cleanup_days": 30,
+    "max_concurrent_tools": 5,
+    "tool_timeout": 300,
+    "ollama_host": "http://localhost:11434",
+    "permissions": {
+        "allow_file_read": True,
+        "allow_file_write": True,
+        "allow_shell_exec": False,
+        "allow_git_ops": True,
+        "allowed_paths": [],
+        "blocked_paths": ["/etc", "/bin", "/usr/bin", "/sbin"],
+    },
+    "ignore_patterns": [
+        ".git",
+        ".ocode",
+        "__pycache__",
+        ".pytest_cache",
+        "node_modules",
+        ".venv",
+        "venv",
+        ".env",
+        "*.pyc",
+        "*.pyo",
+        "*.egg-info",
+        ".DS_Store",
+        "*.log",
+        "*.tmp",
+        ".idea",
+        ".vscode",
+    ],
+    "mcp_servers": {},
+}
+
 
 class ConfigManager:
     """
@@ -30,49 +74,8 @@ class ConfigManager:
         self.project_root = project_root or Path.cwd()
         self._config_cache: Optional[Dict[str, Any]] = None
 
-        # Default configuration
-        self.defaults = {
-            "model": "llama3.2:latest",
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "max_tokens": 4096,
-            "max_context_files": 20,
-            "context_window": 8192,
-            "output_format": "text",
-            "verbose": False,
-            "auto_save_sessions": True,
-            "session_cleanup_days": 30,
-            "max_concurrent_tools": 5,
-            "tool_timeout": 300,
-            "ollama_host": "http://localhost:11434",
-            "permissions": {
-                "allow_file_read": True,
-                "allow_file_write": True,
-                "allow_shell_exec": False,
-                "allow_git_ops": True,
-                "allowed_paths": [],
-                "blocked_paths": ["/etc", "/bin", "/usr/bin", "/sbin"],
-            },
-            "ignore_patterns": [
-                ".git",
-                ".ocode",
-                "__pycache__",
-                ".pytest_cache",
-                "node_modules",
-                ".venv",
-                "venv",
-                ".env",
-                "*.pyc",
-                "*.pyo",
-                "*.egg-info",
-                ".DS_Store",
-                "*.log",
-                "*.tmp",
-                ".idea",
-                ".vscode",
-            ],
-            "mcp_servers": {},
-        }
+        # Use the global default configuration
+        self.defaults = DEFAULT_CONFIG.copy()
 
     def _get_config_paths(self) -> List[Path]:
         """Get all possible configuration file paths in priority order."""

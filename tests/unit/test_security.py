@@ -324,8 +324,9 @@ class TestSecureShellExecutor:
         manager = PermissionManager()
         executor = SecureShellExecutor(manager)
 
+        # Use sleep command which should be allowed
         success, stdout, stderr = await executor.execute(
-            "python -c 'import time; time.sleep(10)'", timeout=1
+            "sleep 10", timeout=1
         )
 
         assert not success
