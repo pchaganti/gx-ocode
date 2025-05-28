@@ -89,7 +89,8 @@ class OCodeEngine:
         self.response_complete: bool = False  # Track if current response is complete
         self.auto_continue: bool = True  # Enable automatic continuation
 
-        # System prompt
+        # System prompt and caching
+        self._tool_descriptions_cache: Optional[str] = None
         self.system_prompt = self._build_system_prompt()
 
     def _build_system_prompt(self) -> str:
@@ -260,6 +261,9 @@ Before responding, consider:
         Returns:
             str: Formatted tool descriptions grouped by category
         """
+        # Return cached descriptions if available
+        if self._tool_descriptions_cache is not None:
+            return self._tool_descriptions_cache
         categories = {
             "File Operations": ["file_read", "file_write", "file_edit", "ls", "find", "head", "tail"],
             "Code Analysis": ["architect", "grep", "wc", "diff"],
@@ -282,7 +286,17 @@ Before responding, consider:
                     output.append(f"  - {tool.definition.name}: {tool.definition.description}")
             output.append("")  # Add blank line between categories
         
-        return "\n".join(output).strip()
+        # Cache the result for future use
+        self._tool_descriptions_cache = "\n".join(output).strip()
+        return self._tool_descriptions_cache
+    
+    def invalidate_tool_cache(self) -> None:
+        """Invalidate the tool descriptions cache.
+        
+        Call this method if tools are dynamically added or removed
+        to ensure the descriptions are regenerated on next access.
+        """
+        self._tool_descriptions_cache = None
 
     def _add_examples_to_system_prompt(self, base_prompt: str) -> str:
         """Add concrete examples to the system prompt.
