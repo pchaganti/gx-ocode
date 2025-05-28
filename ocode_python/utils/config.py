@@ -5,7 +5,8 @@ Configuration management for OCode.
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, List, Optional, Union
+
 
 class ConfigManager:
     """
@@ -50,15 +51,27 @@ class ConfigManager:
                 "allow_shell_exec": False,
                 "allow_git_ops": True,
                 "allowed_paths": [],
-                "blocked_paths": ["/etc", "/bin", "/usr/bin", "/sbin"]
+                "blocked_paths": ["/etc", "/bin", "/usr/bin", "/sbin"],
             },
             "ignore_patterns": [
-                ".git", ".ocode", "__pycache__", ".pytest_cache",
-                "node_modules", ".venv", "venv", ".env",
-                "*.pyc", "*.pyo", "*.egg-info", ".DS_Store",
-                "*.log", "*.tmp", ".idea", ".vscode"
+                ".git",
+                ".ocode",
+                "__pycache__",
+                ".pytest_cache",
+                "node_modules",
+                ".venv",
+                "venv",
+                ".env",
+                "*.pyc",
+                "*.pyo",
+                "*.egg-info",
+                ".DS_Store",
+                "*.log",
+                "*.tmp",
+                ".idea",
+                ".vscode",
             ],
-            "mcp_servers": {}
+            "mcp_servers": {},
         }
 
     def _get_config_paths(self) -> List[Path]:
@@ -84,7 +97,7 @@ class ConfigManager:
             return {}
 
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return data if isinstance(data, dict) else {}
         except (json.JSONDecodeError, OSError) as e:
@@ -104,8 +117,8 @@ class ConfigManager:
             "OCODE_MAX_CONTEXT_FILES": ("max_context_files", int),
             "OCODE_CONTEXT_WINDOW": ("context_window", int),
             "OCODE_OUTPUT_FORMAT": "output_format",
-            "OCODE_VERBOSE": ("verbose", lambda x: x.lower() in ('true', '1', 'yes')),
-            "OLLAMA_HOST": "ollama_host"
+            "OCODE_VERBOSE": ("verbose", lambda x: x.lower() in ("true", "1", "yes")),
+            "OLLAMA_HOST": "ollama_host",
         }
 
         for env_var, config_key in env_mappings.items():
@@ -128,7 +141,11 @@ class ConfigManager:
 
         for config in reversed(configs):  # Start with lowest priority
             for key, value in config.items():
-                if isinstance(value, dict) and key in result and isinstance(result[key], dict):
+                if (
+                    isinstance(value, dict)
+                    and key in result
+                    and isinstance(result[key], dict)
+                ):
                     # Recursively merge nested dictionaries
                     result[key] = self._merge_configs(result[key], value)
                 else:
@@ -177,7 +194,7 @@ class ConfigManager:
         config = self.get_all()
 
         # Support dot notation for nested keys
-        keys = key.split('.')
+        keys = key.split(".")
         value = config
 
         for k in keys:
@@ -215,7 +232,7 @@ class ConfigManager:
         existing_config = self._load_config_file(config_file)
 
         # Set the value (support dot notation)
-        keys = key.split('.')
+        keys = key.split(".")
         target = existing_config
 
         for k in keys[:-1]:
@@ -227,7 +244,7 @@ class ConfigManager:
 
         # Save the config
         try:
-            with open(config_file, 'w', encoding='utf-8') as f:
+            with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(existing_config, f, indent=2)
 
             # Clear cache to force reload
@@ -262,8 +279,8 @@ class ConfigManager:
                 "allow_file_write": True,
                 "allow_shell_exec": False,
                 "allow_git_ops": True,
-                "allowed_paths": [str(self.project_root)]
-            }
+                "allowed_paths": [str(self.project_root)],
+            },
         }
 
         # Apply overrides
@@ -271,7 +288,7 @@ class ConfigManager:
             project_config = self._merge_configs(project_config, overrides)
 
         # Save config
-        with open(config_file, 'w', encoding='utf-8') as f:
+        with open(config_file, "w", encoding="utf-8") as f:
             json.dump(project_config, f, indent=2)
 
         # Clear cache
@@ -323,7 +340,7 @@ class ConfigManager:
             "defaults": self.defaults,
             "files": {},
             "environment": self._get_env_config(),
-            "final": self.get_all()
+            "final": self.get_all(),
         }
 
         # Check each config file
@@ -332,6 +349,7 @@ class ConfigManager:
                 sources["files"][str(path)] = self._load_config_file(path)
 
         return sources
+
 
 def main() -> None:
     """Example usage of ConfigManager."""
@@ -353,6 +371,7 @@ def main() -> None:
             print(f"  - {error}")
     else:
         print("\n✓ Configuration is valid")
+
 
 if __name__ == "__main__":
     main()

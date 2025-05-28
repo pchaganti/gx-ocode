@@ -1,11 +1,12 @@
 """Unit tests for PingTool."""
 
-import pytest
 import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from ocode_python.tools.ping_tool import PingTool
+import pytest
+
 from ocode_python.tools.base import ToolResult
+from ocode_python.tools.ping_tool import PingTool
 
 
 class TestPingTool:
@@ -20,10 +21,12 @@ class TestPingTool:
         """Test tool definition."""
         definition = ping_tool.definition
         assert definition.name == "ping"
-        assert definition.description == "Test network connectivity to a host using ping"
+        assert (
+            definition.description == "Test network connectivity to a host using ping"
+        )
         assert definition.category == "System Operations"
         assert len(definition.parameters) == 4
-        
+
         # Check parameters
         param_names = [p.name for p in definition.parameters]
         assert "host" in param_names
@@ -52,7 +55,7 @@ class TestPingTool:
             'host"test"',
             "host'test'",
         ]
-        
+
         for host in dangerous_hosts:
             result = await ping_tool.execute(host=host)
             assert not result.success
@@ -72,7 +75,7 @@ class TestPingTool:
             "[::1]",  # IPv6 with brackets
             "2001:db8::1",  # IPv6
         ]
-        
+
         for host in valid_hosts:
             # Just test validation, not actual execution
             assert ping_tool._is_valid_host(host), f"Host {host} should be valid"
@@ -84,20 +87,20 @@ class TestPingTool:
         result = await ping_tool.execute(host="localhost", count=0)
         assert not result.success
         assert "Count must be between 1 and 10" in result.error
-        
+
         result = await ping_tool.execute(host="localhost", count=20)
         assert not result.success
         assert "Count must be between 1 and 10" in result.error
-        
+
         # Test invalid timeout
         result = await ping_tool.execute(host="localhost", timeout=0)
         assert not result.success
         assert "Timeout must be between 1 and 30" in result.error
-        
+
         result = await ping_tool.execute(host="localhost", timeout=60)
         assert not result.success
         assert "Timeout must be between 1 and 30" in result.error
-        
+
         # Test invalid interval
         result = await ping_tool.execute(host="localhost", interval=0.1)
         assert not result.success
@@ -109,20 +112,22 @@ class TestPingTool:
         # Mock the subprocess execution
         mock_process = MagicMock()
         mock_process.returncode = 0
+
         async def mock_communicate():
             return (
-            b"PING localhost (127.0.0.1): 56 data bytes\n"
-            b"64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.055 ms\n"
-            b"\n--- localhost ping statistics ---\n"
-            b"1 packets transmitted, 1 packets received, 0.0% packet loss\n"
-            b"round-trip min/avg/max/stddev = 0.055/0.055/0.055/0.000 ms\n",
-            b""
+                b"PING localhost (127.0.0.1): 56 data bytes\n"
+                b"64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.055 ms\n"
+                b"\n--- localhost ping statistics ---\n"
+                b"1 packets transmitted, 1 packets received, 0.0% packet loss\n"
+                b"round-trip min/avg/max/stddev = 0.055/0.055/0.055/0.000 ms\n",
+                b"",
             )
+
         mock_process.communicate = mock_communicate
-        
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await ping_tool.execute(host="localhost", count=1)
-            
+
             assert result.success
             assert "PING localhost" in result.output
             assert result.metadata is not None
@@ -136,18 +141,20 @@ class TestPingTool:
         # Mock the subprocess execution with failure
         mock_process = MagicMock()
         mock_process.returncode = 1
+
         async def mock_communicate():
             return (
-            b"PING unreachable.host (1.2.3.4): 56 data bytes\n"
-            b"\n--- unreachable.host ping statistics ---\n"
-            b"4 packets transmitted, 0 packets received, 100.0% packet loss\n",
-            b""
+                b"PING unreachable.host (1.2.3.4): 56 data bytes\n"
+                b"\n--- unreachable.host ping statistics ---\n"
+                b"4 packets transmitted, 0 packets received, 100.0% packet loss\n",
+                b"",
             )
+
         mock_process.communicate = mock_communicate
-        
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await ping_tool.execute(host="unreachable.host", count=4)
-            
+
             assert not result.success
             assert result.metadata is not None
             assert result.metadata["packets_transmitted"] == 4
@@ -157,17 +164,17 @@ class TestPingTool:
     def test_build_ping_command(self, ping_tool):
         """Test platform-specific command building."""
         # Test macOS command
-        with patch('platform.system', return_value='Darwin'):
+        with patch("platform.system", return_value="Darwin"):
             cmd = ping_tool._build_ping_command("localhost", 4, 5, 1.0)
             assert cmd == ["ping", "-c", "4", "-W", "5000", "-i", "1.0", "localhost"]
-        
+
         # Test Linux command
-        with patch('platform.system', return_value='Linux'):
+        with patch("platform.system", return_value="Linux"):
             cmd = ping_tool._build_ping_command("localhost", 4, 5, 1.0)
             assert cmd == ["ping", "-c", "4", "-W", "5", "-i", "1.0", "localhost"]
-        
+
         # Test Windows command
-        with patch('platform.system', return_value='Windows'):
+        with patch("platform.system", return_value="Windows"):
             cmd = ping_tool._build_ping_command("localhost", 4, 5, 1.0)
             assert cmd == ["ping", "-n", "4", "-w", "5000", "localhost"]
 
@@ -182,7 +189,7 @@ class TestPingTool:
 --- google.com ping statistics ---
 3 packets transmitted, 3 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = 14.456/15.456/16.789/0.967 ms"""
-        
+
         stats = ping_tool._parse_ping_output(output)
         assert stats["packets_transmitted"] == 3
         assert stats["packets_received"] == 3

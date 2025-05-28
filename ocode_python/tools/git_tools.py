@@ -5,10 +5,12 @@ Git integration tools.
 import asyncio
 import subprocess
 from pathlib import Path
-from typing import Optional, List, Any
-from git import Repo, InvalidGitRepositoryError
+from typing import Any, List, Optional
+
+from git import InvalidGitRepositoryError, Repo
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+
 
 class GitStatusTool(Tool):
     """Tool for checking git repository status."""
@@ -25,9 +27,9 @@ class GitStatusTool(Tool):
                     type="string",
                     description="Repository path (default: current directory)",
                     required=False,
-                    default="."
+                    default=".",
                 )
-            ]
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:  # type: ignore[override]
@@ -46,11 +48,7 @@ class GitStatusTool(Tool):
             untracked_files = repo.untracked_files
 
             # Build status report
-            status_lines = [
-                f"Branch: {branch}",
-                f"Commit: {commit}",
-                ""
-            ]
+            status_lines = [f"Branch: {branch}", f"Commit: {commit}", ""]
 
             if staged_files:
                 status_lines.append("Staged files:")
@@ -78,22 +76,17 @@ class GitStatusTool(Tool):
                     "commit": commit,
                     "staged_count": len(staged_files),
                     "modified_count": len(modified_files),
-                    "untracked_count": len(untracked_files)
-                }
+                    "untracked_count": len(untracked_files),
+                },
             )
 
         except InvalidGitRepositoryError:
-            return ToolResult(
-                success=False,
-                output="",
-                error="Not a git repository"
-            )
+            return ToolResult(success=False, output="", error="Not a git repository")
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Git status failed: {str(e)}"
+                success=False, output="", error=f"Git status failed: {str(e)}"
             )
+
 
 class GitCommitTool(Tool):
     """Tool for creating git commits."""
@@ -108,22 +101,22 @@ class GitCommitTool(Tool):
                     name="message",
                     type="string",
                     description="Commit message",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="files",
                     type="array",
                     description="Files to add to commit (default: all modified files)",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="path",
                     type="string",
                     description="Repository path (default: current directory)",
                     required=False,
-                    default="."
-                )
-            ]
+                    default=".",
+                ),
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -151,9 +144,7 @@ class GitCommitTool(Tool):
             # Check if there are changes to commit
             if not repo.index.diff("HEAD"):
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error="No changes to commit"
+                    success=False, output="", error="No changes to commit"
                 )
 
             # Create commit
@@ -165,22 +156,17 @@ class GitCommitTool(Tool):
                 metadata={
                     "commit_hash": commit.hexsha,
                     "message": message,
-                    "files_changed": len(commit.stats.files)
-                }
+                    "files_changed": len(commit.stats.files),
+                },
             )
 
         except InvalidGitRepositoryError:
-            return ToolResult(
-                success=False,
-                output="",
-                error="Not a git repository"
-            )
+            return ToolResult(success=False, output="", error="Not a git repository")
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Git commit failed: {str(e)}"
+                success=False, output="", error=f"Git commit failed: {str(e)}"
             )
+
 
 class GitDiffTool(Tool):
     """Tool for showing git diffs."""
@@ -195,29 +181,29 @@ class GitDiffTool(Tool):
                     name="file",
                     type="string",
                     description="Specific file to show diff for",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="staged",
                     type="boolean",
                     description="Show staged changes instead of working directory",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="commit",
                     type="string",
                     description="Compare against specific commit",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="path",
                     type="string",
                     description="Repository path (default: current directory)",
                     required=False,
-                    default="."
-                )
-            ]
+                    default=".",
+                ),
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -246,9 +232,7 @@ class GitDiffTool(Tool):
 
             if not diff:
                 return ToolResult(
-                    success=True,
-                    output="No differences found",
-                    metadata={"changes": 0}
+                    success=True, output="No differences found", metadata={"changes": 0}
                 )
 
             # Format diff output
@@ -256,18 +240,18 @@ class GitDiffTool(Tool):
             for change in diff:
                 diff_lines.append(f"diff --git a/{change.a_path} b/{change.b_path}")
 
-                if change.change_type == 'A':
+                if change.change_type == "A":
                     diff_lines.append("new file")
-                elif change.change_type == 'D':
+                elif change.change_type == "D":
                     diff_lines.append("deleted file")
-                elif change.change_type == 'M':
+                elif change.change_type == "M":
                     diff_lines.append("modified file")
-                elif change.change_type == 'R':
+                elif change.change_type == "R":
                     diff_lines.append(f"renamed from {change.a_path}")
 
                 # Show actual diff content
                 try:
-                    diff_text = change.diff.decode('utf-8')
+                    diff_text = change.diff.decode("utf-8")
                     diff_lines.append(diff_text)
                 except:
                     diff_lines.append("(binary file)")
@@ -279,22 +263,17 @@ class GitDiffTool(Tool):
                 output="\n".join(diff_lines).strip(),
                 metadata={
                     "changes": len(diff),
-                    "files": [change.a_path for change in diff]
-                }
+                    "files": [change.a_path for change in diff],
+                },
             )
 
         except InvalidGitRepositoryError:
-            return ToolResult(
-                success=False,
-                output="",
-                error="Not a git repository"
-            )
+            return ToolResult(success=False, output="", error="Not a git repository")
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Git diff failed: {str(e)}"
+                success=False, output="", error=f"Git diff failed: {str(e)}"
             )
+
 
 class GitBranchTool(Tool):
     """Tool for git branch operations."""
@@ -309,22 +288,22 @@ class GitBranchTool(Tool):
                     name="action",
                     type="string",
                     description="Action: 'list', 'create', 'checkout', 'delete'",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="branch_name",
                     type="string",
                     description="Branch name (required for create/checkout/delete)",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="path",
                     type="string",
                     description="Repository path (default: current directory)",
                     required=False,
-                    default="."
-                )
-            ]
+                    default=".",
+                ),
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -348,8 +327,8 @@ class GitBranchTool(Tool):
                     output="\n".join(branches),
                     metadata={
                         "current_branch": current_branch,
-                        "branch_count": len(repo.branches)
-                    }
+                        "branch_count": len(repo.branches),
+                    },
                 )
 
             elif action == "create":
@@ -357,14 +336,14 @@ class GitBranchTool(Tool):
                     return ToolResult(
                         success=False,
                         output="",
-                        error="Branch name required for create action"
+                        error="Branch name required for create action",
                     )
 
                 new_branch = repo.create_head(branch_name)
                 return ToolResult(
                     success=True,
                     output=f"Created branch '{branch_name}'",
-                    metadata={"branch_name": branch_name}
+                    metadata={"branch_name": branch_name},
                 )
 
             elif action == "checkout":
@@ -372,14 +351,14 @@ class GitBranchTool(Tool):
                     return ToolResult(
                         success=False,
                         output="",
-                        error="Branch name required for checkout action"
+                        error="Branch name required for checkout action",
                     )
 
                 repo.git.checkout(branch_name)
                 return ToolResult(
                     success=True,
                     output=f"Switched to branch '{branch_name}'",
-                    metadata={"branch_name": branch_name}
+                    metadata={"branch_name": branch_name},
                 )
 
             elif action == "delete":
@@ -387,32 +366,26 @@ class GitBranchTool(Tool):
                     return ToolResult(
                         success=False,
                         output="",
-                        error="Branch name required for delete action"
+                        error="Branch name required for delete action",
                     )
 
                 repo.delete_head(branch_name, force=True)
                 return ToolResult(
                     success=True,
                     output=f"Deleted branch '{branch_name}'",
-                    metadata={"branch_name": branch_name}
+                    metadata={"branch_name": branch_name},
                 )
 
             else:
                 return ToolResult(
                     success=False,
                     output="",
-                    error=f"Invalid action: {action}. Use 'list', 'create', 'checkout', or 'delete'"
+                    error=f"Invalid action: {action}. Use 'list', 'create', 'checkout', or 'delete'",
                 )
 
         except InvalidGitRepositoryError:
-            return ToolResult(
-                success=False,
-                output="",
-                error="Not a git repository"
-            )
+            return ToolResult(success=False, output="", error="Not a git repository")
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Git branch operation failed: {str(e)}"
+                success=False, output="", error=f"Git branch operation failed: {str(e)}"
             )

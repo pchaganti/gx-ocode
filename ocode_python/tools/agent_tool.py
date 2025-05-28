@@ -5,10 +5,10 @@ Agent tool for launching sub-agents and task delegation in OCode.
 import asyncio
 import json
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional, Union
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -16,6 +16,7 @@ from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 @dataclass
 class AgentTask:
     """Represents a task for a sub-agent."""
+
     id: str
     type: str
     description: str
@@ -26,7 +27,7 @@ class AgentTask:
     created_at: str = ""
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
-    
+
     def __post_init__(self):
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
@@ -35,6 +36,7 @@ class AgentTask:
 @dataclass
 class SubAgent:
     """Represents a specialized sub-agent."""
+
     id: str
     name: str
     type: str
@@ -43,7 +45,7 @@ class SubAgent:
     status: str = "idle"  # idle, busy, error
     tasks_completed: int = 0
     created_at: str = ""
-    
+
     def __post_init__(self):
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
@@ -51,13 +53,13 @@ class SubAgent:
 
 class AgentTool(Tool):
     """Tool for creating and managing specialized sub-agents for task delegation."""
-    
+
     def __init__(self):
         super().__init__()
         self.agents: Dict[str, SubAgent] = {}
         self.tasks: Dict[str, AgentTask] = {}
         self.task_queue: List[str] = []
-    
+
     @property
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
@@ -68,57 +70,57 @@ class AgentTool(Tool):
                     name="action",
                     type="string",
                     description="Action to perform: 'create', 'list', 'delegate', 'status', 'results', 'terminate', 'queue'",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="agent_type",
                     type="string",
                     description="Type of agent: 'coder', 'tester', 'reviewer', 'documenter', 'analyzer', 'fixer', 'researcher'",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="agent_id",
                     type="string",
                     description="ID of specific agent to work with",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="task_description",
                     type="string",
                     description="Description of task to delegate",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="task_parameters",
                     type="object",
                     description="Parameters for the task",
                     required=False,
-                    default={}
+                    default={},
                 ),
                 ToolParameter(
                     name="priority",
                     type="string",
                     description="Task priority: 'low', 'medium', 'high', 'urgent'",
                     required=False,
-                    default="medium"
+                    default="medium",
                 ),
                 ToolParameter(
                     name="timeout",
                     type="number",
                     description="Task timeout in seconds",
                     required=False,
-                    default=300
+                    default=300,
                 ),
                 ToolParameter(
                     name="max_agents",
                     type="number",
                     description="Maximum number of agents to create",
                     required=False,
-                    default=5
-                )
-            ]
+                    default=5,
+                ),
+            ],
         )
-    
+
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute agent management actions."""
         try:
@@ -131,20 +133,25 @@ class AgentTool(Tool):
             priority = kwargs.get("priority", "medium")
             timeout = kwargs.get("timeout", 300)
             max_agents = kwargs.get("max_agents", 5)
-            
+
             if not action:
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error="action parameter is required"
+                    success=False, output="", error="action parameter is required"
                 )
-    
+
             if action == "create":
                 return await self._create_agent(agent_type, max_agents)
             elif action == "list":
                 return await self._list_agents()
             elif action == "delegate":
-                return await self._delegate_task(agent_id, agent_type, task_description, task_parameters, priority, timeout)
+                return await self._delegate_task(
+                    agent_id,
+                    agent_type,
+                    task_description,
+                    task_parameters,
+                    priority,
+                    timeout,
+                )
             elif action == "status":
                 return await self._get_status(agent_id)
             elif action == "results":
@@ -155,115 +162,155 @@ class AgentTool(Tool):
                 return await self._show_task_queue()
             else:
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"Unknown action: {action}"
+                    success=False, output="", error=f"Unknown action: {action}"
                 )
-        
+
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Error in agent operation: {str(e)}"
+                success=False, output="", error=f"Error in agent operation: {str(e)}"
             )
-    
-    async def _create_agent(self, agent_type: Optional[str], max_agents: int) -> ToolResult:
+
+    async def _create_agent(
+        self, agent_type: Optional[str], max_agents: int
+    ) -> ToolResult:
         """Create a new specialized sub-agent."""
         if len(self.agents) >= max_agents:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Maximum number of agents ({max_agents}) already created"
+                error=f"Maximum number of agents ({max_agents}) already created",
             )
-        
+
         if not agent_type:
             return ToolResult(
                 success=False,
                 output="",
-                error="agent_type is required for creating an agent"
+                error="agent_type is required for creating an agent",
             )
-        
+
         agent_configs = {
             "coder": {
                 "name": "Code Writer Agent",
                 "description": "Specialized agent for writing, implementing, and refactoring code",
-                "capabilities": ["write_code", "refactor", "implement_features", "fix_bugs", "optimize_code"]
+                "capabilities": [
+                    "write_code",
+                    "refactor",
+                    "implement_features",
+                    "fix_bugs",
+                    "optimize_code",
+                ],
             },
             "tester": {
                 "name": "Test Agent",
                 "description": "Specialized agent for writing and running tests",
-                "capabilities": ["write_tests", "run_tests", "coverage_analysis", "test_automation", "quality_assurance"]
+                "capabilities": [
+                    "write_tests",
+                    "run_tests",
+                    "coverage_analysis",
+                    "test_automation",
+                    "quality_assurance",
+                ],
             },
             "reviewer": {
                 "name": "Code Review Agent",
                 "description": "Specialized agent for code review and quality analysis",
-                "capabilities": ["code_review", "static_analysis", "best_practices", "security_review", "performance_review"]
+                "capabilities": [
+                    "code_review",
+                    "static_analysis",
+                    "best_practices",
+                    "security_review",
+                    "performance_review",
+                ],
             },
             "documenter": {
                 "name": "Documentation Agent",
                 "description": "Specialized agent for creating and maintaining documentation",
-                "capabilities": ["write_docs", "api_docs", "readme_generation", "code_comments", "user_guides"]
+                "capabilities": [
+                    "write_docs",
+                    "api_docs",
+                    "readme_generation",
+                    "code_comments",
+                    "user_guides",
+                ],
             },
             "analyzer": {
                 "name": "Analysis Agent",
                 "description": "Specialized agent for code and architecture analysis",
-                "capabilities": ["dependency_analysis", "architecture_review", "metrics_calculation", "pattern_detection", "complexity_analysis"]
+                "capabilities": [
+                    "dependency_analysis",
+                    "architecture_review",
+                    "metrics_calculation",
+                    "pattern_detection",
+                    "complexity_analysis",
+                ],
             },
             "fixer": {
                 "name": "Bug Fix Agent",
                 "description": "Specialized agent for identifying and fixing bugs",
-                "capabilities": ["bug_detection", "error_fixing", "debugging", "issue_resolution", "patch_generation"]
+                "capabilities": [
+                    "bug_detection",
+                    "error_fixing",
+                    "debugging",
+                    "issue_resolution",
+                    "patch_generation",
+                ],
             },
             "researcher": {
                 "name": "Research Agent",
                 "description": "Specialized agent for research and information gathering",
-                "capabilities": ["technology_research", "best_practices_research", "solution_discovery", "documentation_search", "api_exploration"]
-            }
+                "capabilities": [
+                    "technology_research",
+                    "best_practices_research",
+                    "solution_discovery",
+                    "documentation_search",
+                    "api_exploration",
+                ],
+            },
         }
-        
+
         if agent_type not in agent_configs:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Unknown agent type: {agent_type}. Available types: {', '.join(agent_configs.keys())}"
+                error=f"Unknown agent type: {agent_type}. Available types: {', '.join(agent_configs.keys())}",
             )
-        
+
         config = agent_configs[agent_type]
         agent_id = str(uuid.uuid4())[:8]
-        
+
         agent = SubAgent(
             id=agent_id,
             name=config["name"],
             type=agent_type,
             description=config["description"],
-            capabilities=config["capabilities"]
+            capabilities=config["capabilities"],
         )
-        
+
         self.agents[agent_id] = agent
-        
+
         output = f"Created {agent.name} (ID: {agent_id})\n"
         output += f"Type: {agent.type}\n"
         output += f"Description: {agent.description}\n"
         output += f"Capabilities: {', '.join(agent.capabilities)}\n"
-        
+
         return ToolResult(
             success=True,
             output=output,
-            metadata={"agent_id": agent_id, "agent": asdict(agent)}
+            metadata={"agent_id": agent_id, "agent": asdict(agent)},
         )
-    
+
     async def _list_agents(self) -> ToolResult:
         """List all created agents and their status."""
         if not self.agents:
             return ToolResult(
                 success=True,
                 output="No agents created yet. Use action='create' to create an agent.",
-                metadata={"agents": []}
+                metadata={"agents": []},
             )
-        
+
         output = f"Active Agents ({len(self.agents)}):\n"
         output += "=" * 40 + "\n"
-        
+
         agents_data = []
         for agent in self.agents.values():
             output += f"ID: {agent.id}\n"
@@ -273,42 +320,48 @@ class AgentTool(Tool):
             output += f"Tasks Completed: {agent.tasks_completed}\n"
             output += f"Created: {agent.created_at}\n"
             output += "-" * 40 + "\n"
-            
+
             agents_data.append(asdict(agent))
-        
-        return ToolResult(
-            success=True,
-            output=output,
-            metadata={"agents": agents_data}
-        )
-    
-    async def _delegate_task(self, agent_id: Optional[str], agent_type: Optional[str],
-                            task_description: Optional[str], task_parameters: Dict[str, Any],
-                            priority: str, timeout: int) -> ToolResult:
+
+        return ToolResult(success=True, output=output, metadata={"agents": agents_data})
+
+    async def _delegate_task(
+        self,
+        agent_id: Optional[str],
+        agent_type: Optional[str],
+        task_description: Optional[str],
+        task_parameters: Dict[str, Any],
+        priority: str,
+        timeout: int,
+    ) -> ToolResult:
         """Delegate a task to an agent."""
         if not task_description:
             return ToolResult(
                 success=False,
                 output="",
-                error="task_description is required for task delegation"
+                error="task_description is required for task delegation",
             )
-        
+
         # Find or create appropriate agent
         target_agent = None
-        
+
         if agent_id:
             # Use specific agent
             if agent_id not in self.agents:
                 return ToolResult(
                     success=False,
                     output="",
-                    error=f"Agent with ID {agent_id} not found"
+                    error=f"Agent with ID {agent_id} not found",
                 )
             target_agent = self.agents[agent_id]
-        
+
         elif agent_type:
             # Find agent of specific type or create one
-            type_agents = [a for a in self.agents.values() if a.type == agent_type and a.status == "idle"]
+            type_agents = [
+                a
+                for a in self.agents.values()
+                if a.type == agent_type and a.status == "idle"
+            ]
             if type_agents:
                 target_agent = type_agents[0]  # Use first available agent of type
             else:
@@ -319,7 +372,7 @@ class AgentTool(Tool):
                     target_agent = self.agents[new_agent_id]
                 else:
                     return create_result
-        
+
         else:
             # Use any available agent or create a general one
             idle_agents = [a for a in self.agents.values() if a.status == "idle"]
@@ -333,35 +386,35 @@ class AgentTool(Tool):
                     target_agent = self.agents[new_agent_id]
                 else:
                     return create_result
-        
+
         # Create task
         task_id = str(uuid.uuid4())[:8]
         task = AgentTask(
             id=task_id,
             type=target_agent.type,
             description=task_description,
-            parameters=task_parameters
+            parameters=task_parameters,
         )
-        
+
         self.tasks[task_id] = task
         self.task_queue.append(task_id)
-        
+
         # Simulate task execution
         result = await self._execute_task(task, target_agent, timeout)
-        
+
         output = f"Task delegated to {target_agent.name} (ID: {target_agent.id})\n"
         output += f"Task ID: {task_id}\n"
         output += f"Description: {task_description}\n"
         output += f"Priority: {priority}\n"
         output += f"Status: {task.status}\n"
-        
+
         if task.status == "completed":
             output += f"\nTask completed successfully!\n"
             if task.result:
                 output += f"Result: {task.result}\n"
         elif task.status == "failed":
             output += f"\nTask failed: {task.error}\n"
-        
+
         return ToolResult(
             success=task.status != "failed",
             output=output,
@@ -369,18 +422,20 @@ class AgentTool(Tool):
                 "task_id": task_id,
                 "agent_id": target_agent.id,
                 "task": asdict(task),
-                "agent": asdict(target_agent)
-            }
+                "agent": asdict(target_agent),
+            },
         )
-    
-    async def _execute_task(self, task: AgentTask, agent: SubAgent, timeout: int) -> Dict[str, Any]:
+
+    async def _execute_task(
+        self, task: AgentTask, agent: SubAgent, timeout: int
+    ) -> Dict[str, Any]:
         """Simulate task execution by a sub-agent."""
         try:
             # Update status
             task.status = "running"
             task.started_at = datetime.now().isoformat()
             agent.status = "busy"
-            
+
             # Simulate different types of task execution
             if agent.type == "coder":
                 result = await self._simulate_coding_task(task)
@@ -398,31 +453,31 @@ class AgentTool(Tool):
                 result = await self._simulate_research_task(task)
             else:
                 result = "Task completed by generic agent"
-            
+
             # Complete task
             task.status = "completed"
             task.result = result
             task.completed_at = datetime.now().isoformat()
             agent.status = "idle"
             agent.tasks_completed += 1
-            
+
             return {"success": True, "result": result}
-            
+
         except Exception as e:
             # Handle task failure
             task.status = "failed"
             task.error = str(e)
             task.completed_at = datetime.now().isoformat()
             agent.status = "idle"
-            
+
             return {"success": False, "error": str(e)}
-    
+
     async def _simulate_coding_task(self, task: AgentTask) -> str:
         """Simulate a coding task."""
         await asyncio.sleep(0.1)  # Simulate processing time
-        
+
         task_type = task.parameters.get("type", "general")
-        
+
         if task_type == "implementation":
             return f"Implemented feature: {task.description}\n- Added necessary functions\n- Included error handling\n- Added type hints"
         elif task_type == "refactoring":
@@ -431,43 +486,43 @@ class AgentTool(Tool):
             return f"Optimized code: {task.description}\n- Improved performance\n- Reduced memory usage\n- Enhanced efficiency"
         else:
             return f"Completed coding task: {task.description}\n- Code written and tested\n- Best practices applied\n- Documentation added"
-    
+
     async def _simulate_testing_task(self, task: AgentTask) -> str:
         """Simulate a testing task."""
         await asyncio.sleep(0.1)
-        
+
         return f"Test suite created for: {task.description}\n- Unit tests written\n- Integration tests added\n- Coverage analysis completed\n- All tests passing"
-    
+
     async def _simulate_review_task(self, task: AgentTask) -> str:
         """Simulate a code review task."""
         await asyncio.sleep(0.1)
-        
+
         return f"Code review completed for: {task.description}\n- Security analysis passed\n- Performance review completed\n- Best practices verified\n- Minor improvements suggested"
-    
+
     async def _simulate_documentation_task(self, task: AgentTask) -> str:
         """Simulate a documentation task."""
         await asyncio.sleep(0.1)
-        
+
         return f"Documentation created for: {task.description}\n- API documentation generated\n- README updated\n- Code comments added\n- User guide created"
-    
+
     async def _simulate_analysis_task(self, task: AgentTask) -> str:
         """Simulate an analysis task."""
         await asyncio.sleep(0.1)
-        
+
         return f"Analysis completed for: {task.description}\n- Architecture reviewed\n- Dependencies analyzed\n- Metrics calculated\n- Report generated"
-    
+
     async def _simulate_fixing_task(self, task: AgentTask) -> str:
         """Simulate a bug fixing task."""
         await asyncio.sleep(0.1)
-        
+
         return f"Bug fix completed for: {task.description}\n- Root cause identified\n- Fix implemented\n- Tests updated\n- Regression testing passed"
-    
+
     async def _simulate_research_task(self, task: AgentTask) -> str:
         """Simulate a research task."""
         await asyncio.sleep(0.1)
-        
+
         return f"Research completed for: {task.description}\n- Best practices identified\n- Solutions evaluated\n- Recommendations provided\n- Implementation guide created"
-    
+
     async def _get_status(self, agent_id: Optional[str]) -> ToolResult:
         """Get status of agent(s) and their tasks."""
         if agent_id:
@@ -476,63 +531,68 @@ class AgentTool(Tool):
                 return ToolResult(
                     success=False,
                     output="",
-                    error=f"Agent with ID {agent_id} not found"
+                    error=f"Agent with ID {agent_id} not found",
                 )
-            
+
             agent = self.agents[agent_id]
-            agent_tasks = [t for t in self.tasks.values() if t.id in [tid for tid in self.task_queue]]
-            
+            agent_tasks = [
+                t
+                for t in self.tasks.values()
+                if t.id in [tid for tid in self.task_queue]
+            ]
+
             output = f"Agent Status: {agent.name} (ID: {agent_id})\n"
             output += f"Status: {agent.status}\n"
             output += f"Tasks Completed: {agent.tasks_completed}\n"
             output += f"Created: {agent.created_at}\n\n"
-            
+
             if agent_tasks:
                 output += f"Recent Tasks:\n"
                 for task in agent_tasks[-3:]:  # Show last 3 tasks
                     output += f"- {task.description} ({task.status})\n"
-            
+
             return ToolResult(
                 success=True,
                 output=output,
-                metadata={"agent": asdict(agent), "tasks": [asdict(t) for t in agent_tasks]}
+                metadata={
+                    "agent": asdict(agent),
+                    "tasks": [asdict(t) for t in agent_tasks],
+                },
             )
-        
+
         else:
             # Status of all agents
             if not self.agents:
                 return ToolResult(
                     success=True,
                     output="No agents created yet.",
-                    metadata={"agents": [], "tasks": []}
+                    metadata={"agents": [], "tasks": []},
                 )
-            
+
             output = f"System Status:\n"
             output += f"Total Agents: {len(self.agents)}\n"
             output += f"Total Tasks: {len(self.tasks)}\n"
             output += f"Tasks in Queue: {len(self.task_queue)}\n\n"
-            
+
             for agent in self.agents.values():
                 output += f"{agent.name} (ID: {agent.id}): {agent.status} - {agent.tasks_completed} tasks completed\n"
-            
+
             return ToolResult(
                 success=True,
                 output=output,
                 metadata={
                     "agents": [asdict(a) for a in self.agents.values()],
-                    "tasks": [asdict(t) for t in self.tasks.values()]
-                }
+                    "tasks": [asdict(t) for t in self.tasks.values()],
+                },
             )
-    
+
     async def _get_results(self, agent_id: Optional[str]) -> ToolResult:
         """Get results from completed tasks."""
         if agent_id and agent_id not in self.agents:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Agent with ID {agent_id} not found"
+                success=False, output="", error=f"Agent with ID {agent_id} not found"
             )
-        
+
         # Filter tasks by agent if specified
         relevant_tasks = []
         if agent_id:
@@ -540,14 +600,14 @@ class AgentTool(Tool):
             relevant_tasks = [t for t in self.tasks.values() if t.type == agent.type]
         else:
             relevant_tasks = list(self.tasks.values())
-        
+
         completed_tasks = [t for t in relevant_tasks if t.status == "completed"]
         failed_tasks = [t for t in relevant_tasks if t.status == "failed"]
-        
+
         output = f"Task Results Summary:\n"
         output += f"Completed: {len(completed_tasks)}\n"
         output += f"Failed: {len(failed_tasks)}\n\n"
-        
+
         if completed_tasks:
             output += "Recent Completed Tasks:\n"
             for task in completed_tasks[-5:]:  # Show last 5 completed tasks
@@ -555,7 +615,7 @@ class AgentTool(Tool):
                 output += f"Result: {task.result}\n"
                 output += f"Completed: {task.completed_at}\n"
                 output += "-" * 30 + "\n"
-        
+
         if failed_tasks:
             output += "\nFailed Tasks:\n"
             for task in failed_tasks[-3:]:  # Show last 3 failed tasks
@@ -563,44 +623,40 @@ class AgentTool(Tool):
                 output += f"Error: {task.error}\n"
                 output += f"Failed: {task.completed_at}\n"
                 output += "-" * 30 + "\n"
-        
+
         return ToolResult(
             success=True,
             output=output,
             metadata={
                 "completed_tasks": [asdict(t) for t in completed_tasks],
-                "failed_tasks": [asdict(t) for t in failed_tasks]
-            }
+                "failed_tasks": [asdict(t) for t in failed_tasks],
+            },
         )
-    
+
     async def _terminate_agent(self, agent_id: Optional[str]) -> ToolResult:
         """Terminate an agent."""
         if not agent_id:
             return ToolResult(
-                success=False,
-                output="",
-                error="agent_id is required for termination"
+                success=False, output="", error="agent_id is required for termination"
             )
-        
+
         if agent_id not in self.agents:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Agent with ID {agent_id} not found"
+                success=False, output="", error=f"Agent with ID {agent_id} not found"
             )
-        
+
         agent = self.agents[agent_id]
-        
+
         if agent.status == "busy":
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Cannot terminate agent {agent_id}: currently busy with a task"
+                error=f"Cannot terminate agent {agent_id}: currently busy with a task",
             )
-        
+
         # Remove agent
         del self.agents[agent_id]
-        
+
         # Clean up related tasks (optional - could keep for history)
         # agent_tasks = [tid for tid, task in self.tasks.items() if task.type == agent.type]
         # for task_id in agent_tasks:
@@ -608,28 +664,24 @@ class AgentTool(Tool):
         #         self.task_queue.remove(task_id)
         #     if task_id in self.tasks:
         #         del self.tasks[task_id]
-        
+
         output = f"Agent terminated: {agent.name} (ID: {agent_id})\n"
         output += f"Tasks completed: {agent.tasks_completed}\n"
-        
+
         return ToolResult(
-            success=True,
-            output=output,
-            metadata={"terminated_agent": asdict(agent)}
+            success=True, output=output, metadata={"terminated_agent": asdict(agent)}
         )
-    
+
     async def _show_task_queue(self) -> ToolResult:
         """Show current task queue."""
         if not self.task_queue:
             return ToolResult(
-                success=True,
-                output="Task queue is empty.",
-                metadata={"queue": []}
+                success=True, output="Task queue is empty.", metadata={"queue": []}
             )
-        
+
         output = f"Task Queue ({len(self.task_queue)} tasks):\n"
         output += "=" * 40 + "\n"
-        
+
         queue_data = []
         for i, task_id in enumerate(self.task_queue[-10:], 1):  # Show last 10 tasks
             if task_id in self.tasks:
@@ -639,11 +691,7 @@ class AgentTool(Tool):
                 output += f"   Type: {task.type}\n"
                 output += f"   Created: {task.created_at}\n"
                 output += "-" * 40 + "\n"
-                
+
                 queue_data.append(asdict(task))
-        
-        return ToolResult(
-            success=True,
-            output=output,
-            metadata={"queue": queue_data}
-        )
+
+        return ToolResult(success=True, output=output, metadata={"queue": queue_data})

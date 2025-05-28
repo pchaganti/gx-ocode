@@ -5,11 +5,12 @@ MCP Server implementation for OCode.
 import asyncio
 import sys
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-from .protocol import MCPServer, MCPResource, MCPTool, MCPPrompt
-from ..tools.base import ToolRegistry
 from ..core.context_manager import ContextManager
+from ..tools.base import ToolRegistry
+from .protocol import MCPPrompt, MCPResource, MCPServer, MCPTool
+
 
 class OCodeMCPServer(MCPServer):
     """
@@ -45,7 +46,7 @@ class OCodeMCPServer(MCPServer):
                         uri=uri,
                         name=str(file_path.relative_to(self.project_root)),
                         description=f"Project file: {file_path.name}",
-                        mime_type=mime_type
+                        mime_type=mime_type,
                     )
 
                     self.register_resource(resource)
@@ -58,26 +59,26 @@ class OCodeMCPServer(MCPServer):
                 uri="ocode://project/structure",
                 name="Project Structure",
                 description="Complete project directory structure",
-                mime_type="application/json"
+                mime_type="application/json",
             ),
             MCPResource(
                 uri="ocode://project/dependencies",
                 name="Project Dependencies",
                 description="Project dependency graph",
-                mime_type="application/json"
+                mime_type="application/json",
             ),
             MCPResource(
                 uri="ocode://project/symbols",
                 name="Symbol Index",
                 description="Index of all symbols in the project",
-                mime_type="application/json"
+                mime_type="application/json",
             ),
             MCPResource(
                 uri="ocode://git/status",
                 name="Git Status",
                 description="Current git repository status",
-                mime_type="application/json"
-            )
+                mime_type="application/json",
+            ),
         ]
 
         for resource in special_resources:
@@ -92,13 +93,13 @@ class OCodeMCPServer(MCPServer):
             input_schema: Dict[str, Any] = {
                 "type": "object",
                 "properties": {},
-                "required": []
+                "required": [],
             }
 
             for param in definition.parameters:
                 input_schema["properties"][param.name] = {
                     "type": param.type,
-                    "description": param.description
+                    "description": param.description,
                 }
 
                 if param.default is not None:
@@ -110,7 +111,7 @@ class OCodeMCPServer(MCPServer):
             mcp_tool = MCPTool(
                 name=definition.name,
                 description=definition.description,
-                input_schema=input_schema
+                input_schema=input_schema,
             )
 
             self.register_tool(mcp_tool)
@@ -122,42 +123,82 @@ class OCodeMCPServer(MCPServer):
                 name="code_review",
                 description="Review code for quality, bugs, and improvements",
                 arguments=[
-                    {"name": "file_path", "description": "Path to file to review", "required": True},
-                    {"name": "focus", "description": "Specific areas to focus on", "required": False}
-                ]
+                    {
+                        "name": "file_path",
+                        "description": "Path to file to review",
+                        "required": True,
+                    },
+                    {
+                        "name": "focus",
+                        "description": "Specific areas to focus on",
+                        "required": False,
+                    },
+                ],
             ),
             MCPPrompt(
                 name="refactor_code",
                 description="Refactor code to improve quality and maintainability",
                 arguments=[
-                    {"name": "file_path", "description": "Path to file to refactor", "required": True},
-                    {"name": "goal", "description": "Refactoring goal", "required": True}
-                ]
+                    {
+                        "name": "file_path",
+                        "description": "Path to file to refactor",
+                        "required": True,
+                    },
+                    {
+                        "name": "goal",
+                        "description": "Refactoring goal",
+                        "required": True,
+                    },
+                ],
             ),
             MCPPrompt(
                 name="generate_tests",
                 description="Generate unit tests for code",
                 arguments=[
-                    {"name": "file_path", "description": "Path to file to test", "required": True},
-                    {"name": "test_framework", "description": "Testing framework to use", "required": False}
-                ]
+                    {
+                        "name": "file_path",
+                        "description": "Path to file to test",
+                        "required": True,
+                    },
+                    {
+                        "name": "test_framework",
+                        "description": "Testing framework to use",
+                        "required": False,
+                    },
+                ],
             ),
             MCPPrompt(
                 name="explain_code",
                 description="Explain how code works",
                 arguments=[
-                    {"name": "file_path", "description": "Path to file to explain", "required": True},
-                    {"name": "detail_level", "description": "Level of detail (basic/detailed/expert)", "required": False}
-                ]
+                    {
+                        "name": "file_path",
+                        "description": "Path to file to explain",
+                        "required": True,
+                    },
+                    {
+                        "name": "detail_level",
+                        "description": "Level of detail (basic/detailed/expert)",
+                        "required": False,
+                    },
+                ],
             ),
             MCPPrompt(
                 name="debug_issue",
                 description="Help debug a code issue",
                 arguments=[
-                    {"name": "error_message", "description": "Error message or description", "required": True},
-                    {"name": "context_files", "description": "Relevant file paths", "required": False}
-                ]
-            )
+                    {
+                        "name": "error_message",
+                        "description": "Error message or description",
+                        "required": True,
+                    },
+                    {
+                        "name": "context_files",
+                        "description": "Relevant file paths",
+                        "required": False,
+                    },
+                ],
+            ),
         ]
 
         for prompt in prompts:
@@ -166,9 +207,17 @@ class OCodeMCPServer(MCPServer):
     def _should_ignore_file(self, file_path: Path) -> bool:
         """Check if file should be ignored as a resource."""
         ignore_patterns = {
-            '.git', '.ocode', '__pycache__', '.pytest_cache',
-            'node_modules', '.venv', 'venv', '.env',
-            '.DS_Store', '.idea', '.vscode'
+            ".git",
+            ".ocode",
+            "__pycache__",
+            ".pytest_cache",
+            "node_modules",
+            ".venv",
+            "venv",
+            ".env",
+            ".DS_Store",
+            ".idea",
+            ".vscode",
         }
 
         # Check if any part of path matches ignore patterns
@@ -177,7 +226,7 @@ class OCodeMCPServer(MCPServer):
                 return True
 
         # Check file extensions
-        if file_path.suffix in {'.pyc', '.pyo', '.log', '.tmp'}:
+        if file_path.suffix in {".pyc", ".pyo", ".log", ".tmp"}:
             return True
 
         # Check file size (ignore very large files)
@@ -194,33 +243,33 @@ class OCodeMCPServer(MCPServer):
         suffix = file_path.suffix.lower()
 
         mime_types = {
-            '.py': 'text/x-python',
-            '.js': 'text/javascript',
-            '.ts': 'text/typescript',
-            '.jsx': 'text/jsx',
-            '.tsx': 'text/tsx',
-            '.html': 'text/html',
-            '.css': 'text/css',
-            '.scss': 'text/scss',
-            '.json': 'application/json',
-            '.yaml': 'text/yaml',
-            '.yml': 'text/yaml',
-            '.toml': 'text/toml',
-            '.md': 'text/markdown',
-            '.txt': 'text/plain',
-            '.xml': 'text/xml',
-            '.sql': 'text/sql',
-            '.sh': 'text/x-shellscript',
-            '.go': 'text/x-go',
-            '.rs': 'text/x-rust',
-            '.java': 'text/x-java',
-            '.c': 'text/x-c',
-            '.cpp': 'text/x-c++',
-            '.h': 'text/x-c',
-            '.hpp': 'text/x-c++',
+            ".py": "text/x-python",
+            ".js": "text/javascript",
+            ".ts": "text/typescript",
+            ".jsx": "text/jsx",
+            ".tsx": "text/tsx",
+            ".html": "text/html",
+            ".css": "text/css",
+            ".scss": "text/scss",
+            ".json": "application/json",
+            ".yaml": "text/yaml",
+            ".yml": "text/yaml",
+            ".toml": "text/toml",
+            ".md": "text/markdown",
+            ".txt": "text/plain",
+            ".xml": "text/xml",
+            ".sql": "text/sql",
+            ".sh": "text/x-shellscript",
+            ".go": "text/x-go",
+            ".rs": "text/x-rust",
+            ".java": "text/x-java",
+            ".c": "text/x-c",
+            ".cpp": "text/x-c++",
+            ".h": "text/x-c",
+            ".hpp": "text/x-c++",
         }
 
-        return mime_types.get(suffix, 'text/plain')
+        return mime_types.get(suffix, "text/plain")
 
     async def _handle_read_resource(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle resource read requests."""
@@ -245,11 +294,7 @@ class OCodeMCPServer(MCPServer):
             structure = await self._generate_project_structure()
             return {
                 "contents": [
-                    {
-                        "uri": uri,
-                        "mimeType": "application/json",
-                        "text": structure
-                    }
+                    {"uri": uri, "mimeType": "application/json", "text": structure}
                 ]
             }
 
@@ -262,12 +307,13 @@ class OCodeMCPServer(MCPServer):
             }
 
             import json
+
             return {
                 "contents": [
                     {
                         "uri": uri,
                         "mimeType": "application/json",
-                        "text": json.dumps(dependencies, indent=2)
+                        "text": json.dumps(dependencies, indent=2),
                     }
                 ]
             }
@@ -281,12 +327,13 @@ class OCodeMCPServer(MCPServer):
             }
 
             import json
+
             return {
                 "contents": [
                     {
                         "uri": uri,
                         "mimeType": "application/json",
-                        "text": json.dumps(symbols, indent=2)
+                        "text": json.dumps(symbols, indent=2),
                     }
                 ]
             }
@@ -295,6 +342,7 @@ class OCodeMCPServer(MCPServer):
             # Get git status
             try:
                 from git import Repo
+
                 repo = Repo(self.project_root, search_parent_directories=True)
 
                 status = {
@@ -302,16 +350,17 @@ class OCodeMCPServer(MCPServer):
                     "commit": repo.head.commit.hexsha,
                     "modified_files": [item.a_path for item in repo.index.diff(None)],
                     "staged_files": [item.a_path for item in repo.index.diff("HEAD")],
-                    "untracked_files": repo.untracked_files
+                    "untracked_files": repo.untracked_files,
                 }
 
                 import json
+
                 return {
                     "contents": [
                         {
                             "uri": uri,
                             "mimeType": "application/json",
-                            "text": json.dumps(status, indent=2)
+                            "text": json.dumps(status, indent=2),
                         }
                     ]
                 }
@@ -321,7 +370,7 @@ class OCodeMCPServer(MCPServer):
                         {
                             "uri": uri,
                             "mimeType": "application/json",
-                            "text": f'{{"error": "Not a git repository: {str(e)}"}}'
+                            "text": f'{{"error": "Not a git repository: {str(e)}"}}',
                         }
                     ]
                 }
@@ -342,20 +391,12 @@ class OCodeMCPServer(MCPServer):
 
         # Read file content
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             mime_type = self._get_mime_type(file_path)
 
-            return {
-                "contents": [
-                    {
-                        "uri": uri,
-                        "mimeType": mime_type,
-                        "text": content
-                    }
-                ]
-            }
+            return {"contents": [{"uri": uri, "mimeType": mime_type, "text": content}]}
         except UnicodeDecodeError:
             # Handle binary files
             return {
@@ -363,7 +404,7 @@ class OCodeMCPServer(MCPServer):
                     {
                         "uri": uri,
                         "mimeType": "application/octet-stream",
-                        "blob": f"<binary file: {file_path.name}>"
+                        "blob": f"<binary file: {file_path.name}>",
                     }
                 ]
             }
@@ -372,7 +413,9 @@ class OCodeMCPServer(MCPServer):
         """Generate project structure as JSON."""
         import json
 
-        def build_tree(path: Path, max_depth: int = 5, current_depth: int = 0) -> Dict[str, Any]:
+        def build_tree(
+            path: Path, max_depth: int = 5, current_depth: int = 0
+        ) -> Dict[str, Any]:
             if current_depth >= max_depth:
                 return {"name": path.name, "type": "truncated"}
 
@@ -381,22 +424,20 @@ class OCodeMCPServer(MCPServer):
                     "name": path.name,
                     "type": "file",
                     "size": path.stat().st_size,
-                    "mime_type": self._get_mime_type(path)
+                    "mime_type": self._get_mime_type(path),
                 }
             elif path.is_dir() and not self._should_ignore_file(path):
                 children = []
                 try:
                     for child in sorted(path.iterdir()):
                         if not self._should_ignore_file(child):
-                            children.append(build_tree(child, max_depth, current_depth + 1))
+                            children.append(
+                                build_tree(child, max_depth, current_depth + 1)
+                            )
                 except PermissionError:
                     pass
 
-                return {
-                    "name": path.name,
-                    "type": "directory",
-                    "children": children
-                }
+                return {"name": path.name, "type": "directory", "children": children}
             else:
                 return {"name": path.name, "type": "ignored"}
 
@@ -416,23 +457,15 @@ class OCodeMCPServer(MCPServer):
 
         if result.success:
             return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": result.output
-                    }
-                ],
-                "isError": False
+                "content": [{"type": "text", "text": result.output}],
+                "isError": False,
             }
         else:
             return {
                 "content": [
-                    {
-                        "type": "text",
-                        "text": result.error or "Tool execution failed"
-                    }
+                    {"type": "text", "text": result.error or "Tool execution failed"}
                 ],
-                "isError": True
+                "isError": True,
             }
 
     async def _handle_get_prompt(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -538,34 +571,33 @@ Be thorough and provide actionable solutions."""
         return {
             "description": prompt.description,
             "messages": [
-                {
-                    "role": "user",
-                    "content": {
-                        "type": "text",
-                        "text": prompt_text
-                    }
-                }
-            ]
+                {"role": "user", "content": {"type": "text", "text": prompt_text}}
+            ],
         }
+
 
 async def main():
     """Start OCode MCP server."""
     import argparse
 
     parser = argparse.ArgumentParser(description="OCode MCP Server")
-    parser.add_argument("--project-root", type=Path, default=Path.cwd(),
-                       help="Project root directory")
+    parser.add_argument(
+        "--project-root", type=Path, default=Path.cwd(), help="Project root directory"
+    )
 
     args = parser.parse_args()
 
     server = OCodeMCPServer(args.project_root)
 
-    print(f"Starting OCode MCP Server for project: {args.project_root}", file=sys.stderr)
+    print(
+        f"Starting OCode MCP Server for project: {args.project_root}", file=sys.stderr
+    )
     print(f"Registered {len(server.resources)} resources", file=sys.stderr)
     print(f"Registered {len(server.tools)} tools", file=sys.stderr)
     print(f"Registered {len(server.prompts)} prompts", file=sys.stderr)
 
     await server.start_stdio()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

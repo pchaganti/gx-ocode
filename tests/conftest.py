@@ -5,17 +5,18 @@ Pytest configuration and fixtures for OCode tests.
 import asyncio
 import os
 import tempfile
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock
-from typing import Generator, AsyncGenerator
+from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from ocode_python.core.api_client import OllamaAPIClient
 from ocode_python.core.context_manager import ContextManager
 from ocode_python.core.engine import OCodeEngine
 from ocode_python.tools.base import ToolRegistry
-from ocode_python.utils.config import ConfigManager
 from ocode_python.utils.auth import AuthenticationManager
+from ocode_python.utils.config import ConfigManager
 from ocode_python.utils.security import PermissionManager
 
 
@@ -39,9 +40,10 @@ def mock_project_dir(temp_dir: Path) -> Path:
     """Create a mock project directory with sample files."""
     project_dir = temp_dir / "test_project"
     project_dir.mkdir()
-    
+
     # Create sample Python files
-    (project_dir / "main.py").write_text('''
+    (project_dir / "main.py").write_text(
+        '''
 """Main module."""
 
 def main():
@@ -50,9 +52,11 @@ def main():
     
 if __name__ == "__main__":
     main()
-''')
-    
-    (project_dir / "utils.py").write_text('''
+'''
+    )
+
+    (project_dir / "utils.py").write_text(
+        '''
 """Utility functions."""
 
 def add(a, b):
@@ -80,10 +84,12 @@ class Calculator:
     
     def multiply(self, a, b):
         return a * b
-''')
-    
+'''
+    )
+
     # Create test file
-    (project_dir / "test_utils.py").write_text('''
+    (project_dir / "test_utils.py").write_text(
+        '''
 """Tests for utils module."""
 
 import pytest
@@ -99,13 +105,15 @@ def test_calculator():
     calc = Calculator()
     assert calc.calculate("add", 2, 3) == 5
     assert calc.calculate("multiply", 2, 3) == 6
-''')
-    
+'''
+    )
+
     # Create package structure
     package_dir = project_dir / "mypackage"
     package_dir.mkdir()
     (package_dir / "__init__.py").write_text('"""My package."""')
-    (package_dir / "module.py").write_text('''
+    (package_dir / "module.py").write_text(
+        '''
 """Package module."""
 
 from typing import List
@@ -113,10 +121,12 @@ from typing import List
 def process_items(items: List[str]) -> List[str]:
     """Process list of items."""
     return [item.upper() for item in items]
-''')
-    
+'''
+    )
+
     # Create configuration files
-    (project_dir / "pyproject.toml").write_text('''
+    (project_dir / "pyproject.toml").write_text(
+        """
 [build-system]
 requires = ["setuptools", "wheel"]
 
@@ -125,13 +135,16 @@ testpaths = ["tests"]
 
 [tool.black]
 line-length = 88
-''')
-    
-    (project_dir / "requirements.txt").write_text('''
+"""
+    )
+
+    (project_dir / "requirements.txt").write_text(
+        """
 pytest>=7.0
 black>=23.0
-''')
-    
+"""
+    )
+
     return project_dir
 
 
@@ -149,8 +162,8 @@ def mock_config() -> dict:
             "allow_file_read": True,
             "allow_file_write": True,
             "allow_shell_exec": False,
-            "allow_git_ops": True
-        }
+            "allow_git_ops": True,
+        },
     }
 
 
@@ -159,24 +172,24 @@ def mock_ollama_client():
     """Mock Ollama API client."""
     client = Mock(spec=OllamaAPIClient)
     client.check_health = AsyncMock(return_value=True)
-    client.list_models = AsyncMock(return_value=[
-        {"name": "test-model", "size": 1000000}
-    ])
-    
+    client.list_models = AsyncMock(
+        return_value=[{"name": "test-model", "size": 1000000}]
+    )
+
     async def mock_stream_chat(request):
         """Mock streaming chat response."""
         from ocode_python.core.api_client import StreamChunk
-        
+
         chunks = [
             StreamChunk(content="Hello, "),
             StreamChunk(content="this is "),
             StreamChunk(content="a test response."),
-            StreamChunk(done=True)
+            StreamChunk(done=True),
         ]
-        
+
         for chunk in chunks:
             yield chunk
-    
+
     client.stream_chat = mock_stream_chat
     return client
 
@@ -186,9 +199,10 @@ def config_manager(temp_dir: Path, mock_config: dict):
     """Create a test configuration manager."""
     config_file = temp_dir / "test_config.json"
     import json
-    with open(config_file, 'w') as f:
+
+    with open(config_file, "w") as f:
         json.dump(mock_config, f)
-    
+
     manager = ConfigManager(temp_dir)
     manager._config_cache = mock_config
     return manager
@@ -227,13 +241,13 @@ async def ocode_engine(mock_project_dir: Path, mock_ollama_client, mock_config: 
         model="test-model",
         output_format="text",
         verbose=False,
-        root_path=mock_project_dir
+        root_path=mock_project_dir,
     )
-    
+
     # Replace API client with mock
     engine.api_client = mock_ollama_client
     engine.config._config_cache = mock_config
-    
+
     return engine
 
 
@@ -255,7 +269,7 @@ class MathUtils:
             return 1
         return n * MathUtils.factorial(n-1)
 ''',
-        "javascript": '''
+        "javascript": """
 function fibonacci(n) {
     if (n <= 1) return n;
     return fibonacci(n-1) + fibonacci(n-2);
@@ -267,12 +281,12 @@ class MathUtils {
         return n * MathUtils.factorial(n-1);
     }
 }
-''',
-        "invalid_python": '''
+""",
+        "invalid_python": """
 def broken_function(
     # Missing closing parenthesis and colon
     return "This is broken"
-'''
+""",
     }
 
 
@@ -280,14 +294,22 @@ def broken_function(
 def mock_git_repo(mock_project_dir: Path):
     """Create a mock git repository."""
     import subprocess
-    
+
     # Initialize git repo
     subprocess.run(["git", "init"], cwd=mock_project_dir, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=mock_project_dir, check=True)
-    subprocess.run(["git", "config", "user.name", "Test User"], cwd=mock_project_dir, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=mock_project_dir,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"], cwd=mock_project_dir, check=True
+    )
     subprocess.run(["git", "add", "."], cwd=mock_project_dir, check=True)
-    subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=mock_project_dir, check=True)
-    
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"], cwd=mock_project_dir, check=True
+    )
+
     return mock_project_dir
 
 
@@ -295,18 +317,18 @@ def mock_git_repo(mock_project_dir: Path):
 def mock_environment():
     """Mock environment variables for tests."""
     old_env = os.environ.copy()
-    
+
     test_env = {
         "OCODE_MODEL": "test-model",
         "OLLAMA_HOST": "http://localhost:11434",
         "OCODE_VERBOSE": "false",
-        "OCODE_TEST_MODE": "true"
+        "OCODE_TEST_MODE": "true",
     }
-    
+
     os.environ.update(test_env)
-    
+
     yield test_env
-    
+
     # Restore original environment
     os.environ.clear()
     os.environ.update(old_env)
@@ -317,11 +339,11 @@ def captured_output():
     """Capture stdout/stderr for CLI testing."""
     import io
     import sys
-    from contextlib import redirect_stdout, redirect_stderr
-    
+    from contextlib import redirect_stderr, redirect_stdout
+
     stdout_capture = io.StringIO()
     stderr_capture = io.StringIO()
-    
+
     class OutputCapture:
         def __enter__(self):
             self.stdout_redirect = redirect_stdout(stdout_capture)
@@ -329,23 +351,24 @@ def captured_output():
             self.stdout_redirect.__enter__()
             self.stderr_redirect.__enter__()
             return self
-        
+
         def __exit__(self, *args):
             self.stderr_redirect.__exit__(*args)
             self.stdout_redirect.__exit__(*args)
-        
+
         @property
         def stdout(self):
             return stdout_capture.getvalue()
-        
+
         @property
         def stderr(self):
             return stderr_capture.getvalue()
-    
+
     return OutputCapture()
 
 
 # Async test helpers
+
 
 async def async_test_helper(coro):
     """Helper for running async code in tests."""
@@ -355,10 +378,10 @@ async def async_test_helper(coro):
 # Skip markers for optional dependencies
 pytest.mark.requires_git = pytest.mark.skipif(
     not Path("/usr/bin/git").exists() and not Path("/usr/local/bin/git").exists(),
-    reason="Git not available"
+    reason="Git not available",
 )
 
 pytest.mark.requires_docker = pytest.mark.skipif(
     not Path("/usr/bin/docker").exists() and not Path("/usr/local/bin/docker").exists(),
-    reason="Docker not available"
+    reason="Docker not available",
 )

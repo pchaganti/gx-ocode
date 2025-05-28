@@ -22,101 +22,96 @@ class DiffTool(Tool):
                     name="file1",
                     type="string",
                     description="Path to the first file",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="file2",
                     type="string",
                     description="Path to the second file",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="unified",
                     type="boolean",
                     description="Use unified diff format (default: true)",
                     required=False,
-                    default=True
+                    default=True,
                 ),
                 ToolParameter(
                     name="context_lines",
                     type="number",
                     description="Number of context lines to show (default: 3)",
                     required=False,
-                    default=3
-                )
-            ]
+                    default=3,
+                ),
+            ],
         )
 
-    async def execute(self, file1: str, file2: str, unified: bool = True, context_lines: int = 3, **kwargs) -> ToolResult:
+    async def execute(
+        self,
+        file1: str,
+        file2: str,
+        unified: bool = True,
+        context_lines: int = 3,
+        **kwargs,
+    ) -> ToolResult:
         """Execute diff command."""
         try:
             path1 = Path(file1)
             path2 = Path(file2)
-            
+
             # Check if files exist
             if not path1.exists():
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"File not found: {file1}"
+                    success=False, output="", error=f"File not found: {file1}"
                 )
-            
+
             if not path2.exists():
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"File not found: {file2}"
+                    success=False, output="", error=f"File not found: {file2}"
                 )
-            
+
             # Read file contents
             try:
-                with open(path1, 'r', encoding='utf-8', errors='replace') as f:
+                with open(path1, "r", encoding="utf-8", errors="replace") as f:
                     lines1 = f.readlines()
             except Exception as e:
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"Error reading {file1}: {str(e)}"
+                    success=False, output="", error=f"Error reading {file1}: {str(e)}"
                 )
-            
+
             try:
-                with open(path2, 'r', encoding='utf-8', errors='replace') as f:
+                with open(path2, "r", encoding="utf-8", errors="replace") as f:
                     lines2 = f.readlines()
             except Exception as e:
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"Error reading {file2}: {str(e)}"
+                    success=False, output="", error=f"Error reading {file2}: {str(e)}"
                 )
-            
+
             # Generate diff
             if unified:
-                diff_lines = list(difflib.unified_diff(
-                    lines1,
-                    lines2,
-                    fromfile=file1,
-                    tofile=file2,
-                    n=context_lines
-                ))
+                diff_lines = list(
+                    difflib.unified_diff(
+                        lines1, lines2, fromfile=file1, tofile=file2, n=context_lines
+                    )
+                )
             else:
-                diff_lines = list(difflib.context_diff(
-                    lines1,
-                    lines2,
-                    fromfile=file1,
-                    tofile=file2,
-                    n=context_lines
-                ))
-            
+                diff_lines = list(
+                    difflib.context_diff(
+                        lines1, lines2, fromfile=file1, tofile=file2, n=context_lines
+                    )
+                )
+
             if not diff_lines:
                 return ToolResult(
                     success=True,
                     output="Files are identical",
-                    metadata={"identical": True, "file1": file1, "file2": file2}
+                    metadata={"identical": True, "file1": file1, "file2": file2},
                 )
-            
+
             # Join diff lines and remove extra newlines
-            output = ''.join(diff_lines).rstrip('\n')
-            
+            output = "".join(diff_lines).rstrip("\n")
+
             return ToolResult(
                 success=True,
                 output=output,
@@ -124,13 +119,11 @@ class DiffTool(Tool):
                     "identical": False,
                     "file1": file1,
                     "file2": file2,
-                    "diff_lines": len(diff_lines)
-                }
+                    "diff_lines": len(diff_lines),
+                },
             )
-            
+
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Error comparing files: {str(e)}"
+                success=False, output="", error=f"Error comparing files: {str(e)}"
             )

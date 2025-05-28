@@ -5,20 +5,22 @@ OCode Engine - Main processing engine for AI-powered coding assistance.
 import asyncio
 import json
 import time
-from typing import AsyncGenerator, Dict, List, Optional, Any
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from .api_client import OllamaAPIClient, CompletionRequest, Message, StreamChunk
+from ..tools.base import Tool, ToolRegistry, ToolResult
+from ..utils.auth import AuthenticationManager
+from ..utils.config import ConfigManager
+from .api_client import CompletionRequest, Message, OllamaAPIClient, StreamChunk
 from .context_manager import ContextManager, ProjectContext
 from .session import SessionManager
-from ..tools.base import ToolRegistry, ToolResult, Tool
-from ..utils.config import ConfigManager
-from ..utils.auth import AuthenticationManager
+
 
 @dataclass
 class ProcessingMetrics:
     """Metrics for processing performance."""
+
     start_time: float
     end_time: Optional[float] = None
     tokens_processed: int = 0
@@ -31,6 +33,7 @@ class ProcessingMetrics:
         if self.end_time:
             return self.end_time - self.start_time
         return time.time() - self.start_time
+
 
 class OCodeEngine:
     """
@@ -49,7 +52,7 @@ class OCodeEngine:
         root_path: Optional[Path] = None,
         confirmation_callback=None,
         max_continuations: int = 10,  # Increased default
-        chunk_size: int = 8192        # Increased default
+        chunk_size: int = 8192,  # Increased default
     ) -> None:
         """
         Initialize OCode engine.
@@ -95,7 +98,7 @@ class OCodeEngine:
 
     def _build_system_prompt(self) -> str:
         """Build a comprehensive system prompt with deep guidance.
-        
+
         Constructs a detailed system prompt that includes:
         - Core role and capabilities definition
         - Query analysis framework for understanding user intent
@@ -103,13 +106,13 @@ class OCodeEngine:
         - Workflow patterns for different task types
         - Error handling and communication guidelines
         - Thinking framework for systematic analysis
-        
+
         Returns:
             str: A complete system prompt with structured guidance
         """
         # Get available tools dynamically
         tool_descriptions = self._get_tool_descriptions_by_category()
-        
+
         return f"""<role>
 You are an expert AI coding assistant with deep knowledge of software engineering, programming languages, and development workflows. You specialize in intelligent task analysis, strategic tool usage, and providing comprehensive coding assistance.
 </role>
@@ -245,48 +248,50 @@ Before responding, consider:
 
     def _get_tool_descriptions_by_category(self) -> str:
         """Organize tool descriptions by functional category.
-        
+
         Dynamically groups tools based on their category metadata,
         ensuring the categorization stays accurate as tools are added
         or modified without requiring manual updates to this method.
-        
+
         Returns:
             str: Formatted tool descriptions grouped by category
         """
         # Return cached descriptions if available
         if self._tool_descriptions_cache is not None:
             return self._tool_descriptions_cache
-            
+
         # Dynamically group tools by their category
         categories: Dict[str, List[Tool]] = {}
-        
+
         for tool in self.tool_registry.get_all_tools():
             # Get category from tool definition, default to "General" if not specified
-            category = getattr(tool.definition, 'category', 'General')
-            
+            category = getattr(tool.definition, "category", "General")
+
             if category not in categories:
                 categories[category] = []
             categories[category].append(tool)
-        
+
         # Sort categories for consistent output
         sorted_categories = sorted(categories.items())
-        
+
         output = []
         for category, tools in sorted_categories:
             output.append(f"**{category}:**")
             # Sort tools within category by name for consistency
             sorted_tools = sorted(tools, key=lambda t: t.definition.name)
             for tool in sorted_tools:
-                output.append(f"  - {tool.definition.name}: {tool.definition.description}")
+                output.append(
+                    f"  - {tool.definition.name}: {tool.definition.description}"
+                )
             output.append("")  # Add blank line between categories
-        
+
         # Cache the result for future use
         self._tool_descriptions_cache = "\n".join(output).strip()
         return self._tool_descriptions_cache
-    
+
     def invalidate_tool_cache(self) -> None:
         """Invalidate the tool descriptions cache.
-        
+
         Call this method if tools are dynamically added or removed
         to ensure the descriptions are regenerated on next access.
         """
@@ -294,18 +299,18 @@ Before responding, consider:
 
     def _add_examples_to_system_prompt(self, base_prompt: str) -> str:
         """Add concrete examples to the system prompt.
-        
+
         Appends practical examples that demonstrate:
         - Knowledge queries that require direct responses
         - Simple tool usage for basic operations
         - Complex workflows requiring multiple tools
-        
+
         These examples help guide the AI's decision-making process
         about when to use tools versus direct knowledge.
-        
+
         Args:
             base_prompt: The base system prompt to extend
-            
+
         Returns:
             str: The system prompt with examples appended
         """
@@ -327,42 +332,52 @@ Before responding, consider:
   User: "Set up a complete CI/CD pipeline for this project"
   Response: [Create specialized agents for different aspects]
 </examples>"""
-        
+
         return base_prompt + examples
 
-    def _add_project_context_guidance(self, base_prompt: str, context: ProjectContext) -> str:
+    def _add_project_context_guidance(
+        self, base_prompt: str, context: ProjectContext
+    ) -> str:
         """Add project-specific guidance to the system prompt.
-        
+
         Enhances the system prompt with project-specific information:
         - Detected programming languages in the project
         - Project structure and file organization
         - Best practices for the detected languages
         - Contextual guidance based on project type
-        
+
         This helps tailor responses to the specific project environment.
-        
+
         Args:
             base_prompt: The base system prompt to extend
             context: Project context containing file information
-            
+
         Returns:
             str: The system prompt with project-specific guidance
         """
         if not context:
             return base_prompt
-        
+
         # Detect languages from file extensions in the context
         languages = set()
         ext_to_lang = {
-            '.py': 'Python', '.js': 'JavaScript', '.ts': 'TypeScript', 
-            '.java': 'Java', '.cpp': 'C++', '.c': 'C', '.go': 'Go',
-            '.rb': 'Ruby', '.php': 'PHP', '.rs': 'Rust', '.swift': 'Swift'
+            ".py": "Python",
+            ".js": "JavaScript",
+            ".ts": "TypeScript",
+            ".java": "Java",
+            ".cpp": "C++",
+            ".c": "C",
+            ".go": "Go",
+            ".rb": "Ruby",
+            ".php": "PHP",
+            ".rs": "Rust",
+            ".swift": "Swift",
         }
         for file_path in context.files:
             ext = file_path.suffix.lower()
             if ext in ext_to_lang:
                 languages.add(ext_to_lang[ext])
-            
+
         context_guidance = f"""
 <project_context>
   Current Project: {context.project_root}
@@ -372,7 +387,7 @@ Before responding, consider:
   
   Adapt your responses to this project context and prefer tools that work well with the detected languages and project structure.
 </project_context>"""
-        
+
         return base_prompt + context_guidance
 
     async def _prepare_context(self, query: str) -> ProjectContext:
@@ -381,22 +396,25 @@ Before responding, consider:
             print("🔍 Analyzing project context...")
 
         context = await self.context_manager.build_context(
-            query=query,
-            max_files=self.config.get("max_context_files", 20)
+            query=query, max_files=self.config.get("max_context_files", 20)
         )
 
         if self.verbose:
             print(f"📁 Analyzed {len(context.files)} files")
             if context.git_info:
-                print(f"🌿 Git: {context.git_info.get('branch', 'unknown')} ({context.git_info.get('commit', 'unknown')})")
+                print(
+                    f"🌿 Git: {context.git_info.get('branch', 'unknown')} ({context.git_info.get('commit', 'unknown')})"
+                )
 
         self.current_context = context
         return context
 
     async def _llm_should_use_tools(self, query: str) -> Dict[str, Any]:
         """Use LLM to determine if and which tools should be used for the query."""
-        tool_names = [tool.definition.name for tool in self.tool_registry.get_all_tools()]
-        
+        tool_names = [
+            tool.definition.name for tool in self.tool_registry.get_all_tools()
+        ]
+
         analysis_prompt = f"""<role>You are an expert AI assistant specialized in distinguishing between general knowledge questions and actionable tasks that require tools.</role>
 
 <task>Analyze the user query and determine if it requires tools or can be answered directly with knowledge.</task>
@@ -498,35 +516,36 @@ Respond with ONLY a JSON object following this exact format:
 
         # Simple API call for analysis
         from .api_client import CompletionRequest
+
         request = CompletionRequest(
             model=self.model,
             messages=[{"role": "user", "content": analysis_prompt}],
             stream=False,
-            options={"temperature": 0.0}  # Deterministic for analysis
+            options={"temperature": 0.0},  # Deterministic for analysis
         )
-        
+
         try:
             response_content = ""
             async for chunk in self.api_client.stream_chat(request):
                 if chunk.content:
                     response_content += chunk.content
-            
+
             if self.verbose:
                 print(f"🔍 LLM analysis response: {response_content[:200]}...")
-            
+
             # Parse JSON response - extract JSON from response if wrapped in text
             import json
             import re
-            
+
             # Try to find JSON object in the response
-            json_match = re.search(r'\{.*\}', response_content, re.DOTALL)
+            json_match = re.search(r"\{.*\}", response_content, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
                 result = json.loads(json_str)
                 return result
             else:
                 raise ValueError("No JSON found in response")
-                
+
         except Exception as e:
             if self.verbose:
                 print(f"⚠️ LLM analysis failed: {e}, falling back to heuristics")
@@ -535,12 +554,14 @@ Respond with ONLY a JSON object following this exact format:
                 "should_use_tools": True,
                 "suggested_tools": [],
                 "reasoning": "Fallback analysis",
-                "context_complexity": "full"
+                "context_complexity": "full",
             }
 
-    async def _llm_infer_memory_key(self, query: str, requested_key: str, available_keys: List[str]) -> Optional[str]:
+    async def _llm_infer_memory_key(
+        self, query: str, requested_key: str, available_keys: List[str]
+    ) -> Optional[str]:
         """Use LLM to infer the correct memory key based on user query and available keys."""
-        
+
         analysis_prompt = f"""Given this user query: "{query}"
 The LLM tried to access memory key: "{requested_key}"
 Available memory keys: {available_keys}
@@ -571,148 +592,165 @@ Examples:
   -> {{"action": "show_all", "key": null, "reasoning": "General query should show all entries"}}"""
 
         from .api_client import CompletionRequest
+
         request = CompletionRequest(
             model=self.model,
             messages=[{"role": "user", "content": analysis_prompt}],
             stream=False,
-            options={"temperature": 0.0}
+            options={"temperature": 0.0},
         )
-        
+
         try:
             response_content = ""
             async for chunk in self.api_client.stream_chat(request):
                 if chunk.content:
                     response_content += chunk.content
-            
+
             # Parse JSON response
             import json
             import re
-            
-            json_match = re.search(r'\{.*\}', response_content, re.DOTALL)
+
+            json_match = re.search(r"\{.*\}", response_content, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
                 result = json.loads(json_str)
-                
+
                 if result.get("action") == "exact_key":
                     return result.get("key")
                 elif result.get("action") == "show_all":
                     return "SHOW_ALL"
-                    
+
         except Exception as e:
             if self.verbose:
                 print(f"❌ Error in memory key inference: {e}")
-        
+
         return None
 
     async def _get_available_memory_keys(self, memory_type: str) -> List[str]:
         """Get list of available memory keys for the specified memory type."""
         try:
             # Direct file access to avoid recursion
-            from pathlib import Path
             import json
-            
+            from pathlib import Path
+
             memory_dir = Path.home() / ".ocode" / "memory"
             if memory_type == "persistent":
                 persistent_file = memory_dir / "persistent.json"
                 if persistent_file.exists():
-                    with open(persistent_file, 'r') as f:
+                    with open(persistent_file, "r") as f:
                         data = json.load(f)
                     return [k for k in data.keys() if k not in {"created", "updated"}]
         except Exception as e:
             if self.verbose:
                 print(f"❌ Error getting memory keys: {e}")
-        
+
         return []
 
-    def _should_use_simple_context(self, query: str, llm_analysis: Dict[str, Any]) -> bool:
+    def _should_use_simple_context(
+        self, query: str, llm_analysis: Dict[str, Any]
+    ) -> bool:
         """Determine if query should use simple context based on LLM analysis."""
         return llm_analysis.get("context_complexity", "full") == "simple"
 
-    def _build_context_message(self, context: ProjectContext, query: str, use_simple: bool = False) -> str:
+    def _build_context_message(
+        self, context: ProjectContext, query: str, use_simple: bool = False
+    ) -> str:
         """Build context message with project information."""
         # Categorize the query to provide better context to the AI
         query_analysis = self.context_manager._categorize_query(query)
-        query_category = query_analysis['category']
-        suggested_tools = query_analysis['suggested_tools']
-        confidence = query_analysis['confidence']
-        
+        query_category = query_analysis["category"]
+        suggested_tools = query_analysis["suggested_tools"]
+        confidence = query_analysis["confidence"]
+
         if use_simple:
             # Simple context for direct tool calls - make it explicit
-            if any(keyword in query.lower() for keyword in ['remember', 'save to memory', 'recall']):
+            if any(
+                keyword in query.lower()
+                for keyword in ["remember", "save to memory", "recall"]
+            ):
                 return f"Use the memory_write function to: {query}"
-            elif 'list files' in query.lower() or 'ls' in query.lower():
+            elif "list files" in query.lower() or "ls" in query.lower():
                 return f"Use the ls function to: {query}"
-            elif 'git status' in query.lower() or 'check git' in query.lower():
+            elif "git status" in query.lower() or "check git" in query.lower():
                 return f"Use the git_status function to: {query}"
             else:
                 return query
-        
+
         lines = [
             f"Project: {context.project_root}",
             f"Query: {query}",
             f"Query Type: {query_category} (confidence: {confidence:.1f})",
-            ""
+            "",
         ]
-        
+
         # Add suggested tools if available
         if suggested_tools:
-            lines.extend([
-                f"Suggested Tools: {', '.join(suggested_tools)}",
-                ""
-            ])
-        
+            lines.extend([f"Suggested Tools: {', '.join(suggested_tools)}", ""])
+
         # Add specific guidance based on query type
-        if query_analysis.get('multi_action', False):
-            lines.extend([
-                f"GUIDANCE: This is a multi-action query requiring sequential operations:",
-                f"- Description: {query_analysis.get('description', 'Multiple sequential actions')}",
-                f"- Primary tools: {', '.join(query_analysis.get('primary_tools', []))}",
-                f"- Secondary tools: {', '.join(query_analysis.get('secondary_tools', []))}",
-                f"- Workflow: {query_analysis.get('workflow', 'sequential_actions')}",
-                "",
-                "RECOMMENDATION: Consider delegating this to specialized agents:",
-                "1. Create agents for each major task using the 'agent' tool",
-                "2. Delegate primary task first, then secondary tasks",
-                "3. Or execute tools in sequence if appropriate",
-                ""
-            ])
+        if query_analysis.get("multi_action", False):
+            lines.extend(
+                [
+                    f"GUIDANCE: This is a multi-action query requiring sequential operations:",
+                    f"- Description: {query_analysis.get('description', 'Multiple sequential actions')}",
+                    f"- Primary tools: {', '.join(query_analysis.get('primary_tools', []))}",
+                    f"- Secondary tools: {', '.join(query_analysis.get('secondary_tools', []))}",
+                    f"- Workflow: {query_analysis.get('workflow', 'sequential_actions')}",
+                    "",
+                    "RECOMMENDATION: Consider delegating this to specialized agents:",
+                    "1. Create agents for each major task using the 'agent' tool",
+                    "2. Delegate primary task first, then secondary tasks",
+                    "3. Or execute tools in sequence if appropriate",
+                    "",
+                ]
+            )
         elif query_category == "agent_management":
-            lines.extend([
-                "GUIDANCE: This is an agent management query. Use the 'agent' tool with appropriate actions:",
-                "- To create agents: action='create', agent_type='reviewer'|'coder'|'tester'|etc",
-                "- To list agents: action='list'", 
-                "- To check status: action='status'",
-                "- To delegate tasks: action='delegate', task_description='...'",
-                "Do NOT create Python files or shell scripts for agent management.",
-                ""
-            ])
+            lines.extend(
+                [
+                    "GUIDANCE: This is an agent management query. Use the 'agent' tool with appropriate actions:",
+                    "- To create agents: action='create', agent_type='reviewer'|'coder'|'tester'|etc",
+                    "- To list agents: action='list'",
+                    "- To check status: action='status'",
+                    "- To delegate tasks: action='delegate', task_description='...'",
+                    "Do NOT create Python files or shell scripts for agent management.",
+                    "",
+                ]
+            )
         elif query_category == "tool_listing":
-            lines.extend([
-                "GUIDANCE: User is asking about available tools. Provide a comprehensive list of all tools with descriptions.",
-                ""
-            ])
+            lines.extend(
+                [
+                    "GUIDANCE: User is asking about available tools. Provide a comprehensive list of all tools with descriptions.",
+                    "",
+                ]
+            )
         elif query_category.startswith("workflow_"):
             workflow_type = query_category.replace("workflow_", "")
-            lines.extend([
-                f"GUIDANCE: This is a complex {workflow_type} workflow. Consider using multiple tools in sequence:",
-                f"- Suggested workflow tools: {', '.join(suggested_tools)}",
-                f"- Start with analysis tools, then proceed with implementation",
-                ""
-            ])
+            lines.extend(
+                [
+                    f"GUIDANCE: This is a complex {workflow_type} workflow. Consider using multiple tools in sequence:",
+                    f"- Suggested workflow tools: {', '.join(suggested_tools)}",
+                    f"- Start with analysis tools, then proceed with implementation",
+                    "",
+                ]
+            )
         elif suggested_tools:
-            lines.extend([
-                f"GUIDANCE: For this {query_category} task, consider using: {', '.join(suggested_tools)}",
-                ""
-            ])
+            lines.extend(
+                [
+                    f"GUIDANCE: For this {query_category} task, consider using: {', '.join(suggested_tools)}",
+                    "",
+                ]
+            )
 
         # Add git information
         if context.git_info:
-            lines.extend([
-                "Git Information:",
-                f"  Branch: {context.git_info.get('branch', 'unknown')}",
-                f"  Commit: {context.git_info.get('commit', 'unknown')}",
-                ""
-            ])
+            lines.extend(
+                [
+                    "Git Information:",
+                    f"  Branch: {context.git_info.get('branch', 'unknown')}",
+                    f"  Commit: {context.git_info.get('commit', 'unknown')}",
+                    "",
+                ]
+            )
 
         # Add file summaries
         if context.files:
@@ -720,8 +758,14 @@ Examples:
             for file_path, content in context.files.items():
                 file_info = context.file_info.get(file_path)
                 if file_info:
-                    symbols_info = f" ({len(file_info.symbols)} symbols)" if file_info.symbols else ""
-                    language_info = f" [{file_info.language}]" if file_info.language else ""
+                    symbols_info = (
+                        f" ({len(file_info.symbols)} symbols)"
+                        if file_info.symbols
+                        else ""
+                    )
+                    language_info = (
+                        f" [{file_info.language}]" if file_info.language else ""
+                    )
                     lines.append(f"  {file_path}{language_info}{symbols_info}")
                 else:
                     lines.append(f"  {file_path}")
@@ -730,7 +774,9 @@ Examples:
         # Add symbol index
         if context.symbols:
             lines.append("Available Symbols:")
-            for symbol, files in list(context.symbols.items())[:20]:  # Limit to first 20
+            for symbol, files in list(context.symbols.items())[
+                :20
+            ]:  # Limit to first 20
                 file_list = ", ".join(str(f.name) for f in files[:3])
                 if len(files) > 3:
                     file_list += f" (+{len(files)-3} more)"
@@ -739,7 +785,9 @@ Examples:
 
         return "\n".join(lines)
 
-    def _prepare_messages(self, query: str, context: ProjectContext, llm_analysis: Dict[str, Any] = None) -> List[Dict[str, str]]:
+    def _prepare_messages(
+        self, query: str, context: ProjectContext, llm_analysis: Dict[str, Any] = None
+    ) -> List[Dict[str, str]]:
         """Prepare message history for API call."""
         messages = []
 
@@ -748,11 +796,13 @@ Examples:
             use_simple_context = self._should_use_simple_context(query, llm_analysis)
         else:
             query_analysis = self.context_manager._categorize_query(query)
-            use_simple_context = query_analysis.get('context_strategy') == 'minimal'
+            use_simple_context = query_analysis.get("context_strategy") == "minimal"
 
         # System message - adapt based on whether tools will be used
-        should_use_tools = llm_analysis.get("should_use_tools", True) if llm_analysis else True
-        
+        should_use_tools = (
+            llm_analysis.get("should_use_tools", True) if llm_analysis else True
+        )
+
         if not should_use_tools:
             # Direct knowledge response system prompt
             system_content = """You are an expert AI coding assistant with deep knowledge of programming languages, software engineering concepts, algorithms, and best practices.
@@ -781,16 +831,18 @@ When a user asks you to perform an action, call the appropriate function."""
         else:
             # Full enhanced system prompt with context awareness
             base_prompt = self._build_system_prompt()
-            
+
             # Add examples to the prompt
             enhanced_prompt = self._add_examples_to_system_prompt(base_prompt)
-            
+
             # Add project context guidance if available
             if context:
-                enhanced_prompt = self._add_project_context_guidance(enhanced_prompt, context)
-            
+                enhanced_prompt = self._add_project_context_guidance(
+                    enhanced_prompt, context
+                )
+
             system_content = enhanced_prompt
-        
+
         messages.append({"role": "system", "content": system_content})
 
         # Add conversation history (less for simple context)
@@ -799,7 +851,9 @@ When a user asks you to perform an action, call the appropriate function."""
             messages.append(msg.to_dict())
 
         # Context and current query
-        context_message = self._build_context_message(context, query, use_simple_context)
+        context_message = self._build_context_message(
+            context, query, use_simple_context
+        )
         messages.append({"role": "user", "content": context_message})
 
         if self.verbose and use_simple_context:
@@ -813,7 +867,9 @@ When a user asks you to perform an action, call the appropriate function."""
         # This ensures consistency with tool definitions in the registry
         return function_name.lower()
 
-    async def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> ToolResult:
+    async def _execute_tool_call(
+        self, tool_name: str, arguments: Dict[str, Any]
+    ) -> ToolResult:
         """Execute a tool call and return the result."""
         if self.verbose:
             print(f"🔧 Executing tool: {tool_name}")
@@ -821,8 +877,8 @@ When a user asks you to perform an action, call the appropriate function."""
 
         # Map function name to registry name
         registry_name = self._map_tool_name(tool_name)
-        
-        # Add smart defaults for memory operations  
+
+        # Add smart defaults for memory operations
         if registry_name == "memorywrite":
             # Default to persistent memory for profile-style facts
             if "memory_type" not in arguments:
@@ -830,9 +886,12 @@ When a user asks you to perform an action, call the appropriate function."""
             # Default operation to "set" if not specified
             if "operation" not in arguments:
                 arguments["operation"] = "set"
-            
+
             # Special handling for lobotomize/clear commands
-            if "operation" in arguments and arguments["operation"] in ["lobotomize", "clear"]:
+            if "operation" in arguments and arguments["operation"] in [
+                "lobotomize",
+                "clear",
+            ]:
                 # For destructive operations, remove unnecessary parameters
                 arguments.pop("key", None)
                 arguments.pop("value", None)
@@ -842,25 +901,31 @@ When a user asks you to perform an action, call the appropriate function."""
             if "memory_type" not in arguments:
                 arguments["memory_type"] = "persistent"
             # Override session memory for profile-style questions
-            elif arguments.get("memory_type") == "session" and not arguments.get("session_id"):
+            elif arguments.get("memory_type") == "session" and not arguments.get(
+                "session_id"
+            ):
                 # Default to persistent for general profile questions
                 arguments["memory_type"] = "persistent"
-            
+
             # Smart key inference for memory queries using LLM
             if "key" in arguments and arguments["key"]:
                 # Get keys for the specified memory type, defaulting to persistent
                 memory_type_for_keys = arguments.get("memory_type", "persistent")
                 if memory_type_for_keys == "all":
-                    memory_type_for_keys = "persistent"  # Use persistent keys for 'all' queries
-                
-                available_keys = await self._get_available_memory_keys(memory_type_for_keys)
+                    memory_type_for_keys = (
+                        "persistent"  # Use persistent keys for 'all' queries
+                    )
+
+                available_keys = await self._get_available_memory_keys(
+                    memory_type_for_keys
+                )
                 if available_keys:  # Only if we have keys to work with
                     corrected_key = await self._llm_infer_memory_key(
                         query=self._current_query,
                         requested_key=arguments["key"],
-                        available_keys=available_keys
+                        available_keys=available_keys,
                     )
-                    
+
                     if corrected_key == "SHOW_ALL":
                         arguments.pop("key", None)  # Remove key filter to show all
                         arguments.pop("category", None)  # Also remove category filter
@@ -871,36 +936,38 @@ When a user asks you to perform an action, call the appropriate function."""
                         # For profile queries, prefer persistent over 'all' for cleaner output
                         if arguments.get("memory_type") == "all":
                             arguments["memory_type"] = "persistent"
-            
+
             # Debug logging for memory read calls
             if self.verbose:
                 print(f"Memory read arguments: {arguments}")
-        
+
         try:
             result = await self.tool_registry.execute_tool(registry_name, **arguments)
 
             # Handle confirmation requests for shell commands
-            if (not result.success and 
-                result.error == "confirmation_required" and 
-                result.metadata and 
-                result.metadata.get("requires_confirmation")):
-                
+            if (
+                not result.success
+                and result.error == "confirmation_required"
+                and result.metadata
+                and result.metadata.get("requires_confirmation")
+            ):
+
                 confirmation_payload = result.metadata
                 command = confirmation_payload.get("command", "")
                 reason = confirmation_payload.get("reason", "")
-                
+
                 # Request user confirmation
                 confirmed = await self._request_user_confirmation(command, reason)
-                
+
                 if confirmed:
                     # Re-execute with confirmation
                     arguments["confirmed"] = True
-                    result = await self.tool_registry.execute_tool(tool_name, **arguments)
+                    result = await self.tool_registry.execute_tool(
+                        tool_name, **arguments
+                    )
                 else:
                     result = ToolResult(
-                        success=False,
-                        output="",
-                        error="Command cancelled by user"
+                        success=False, output="", error="Command cancelled by user"
                     )
 
             if self.verbose:
@@ -916,11 +983,9 @@ When a user asks you to perform an action, call the appropriate function."""
                 print(f"💥 Tool {tool_name} crashed: {str(e)}")
 
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Tool execution failed: {str(e)}"
+                success=False, output="", error=f"Tool execution failed: {str(e)}"
             )
-            
+
     async def _request_user_confirmation(self, command: str, reason: str) -> bool:
         """Request user confirmation for potentially dangerous commands."""
         if self.confirmation_callback:
@@ -935,46 +1000,60 @@ When a user asks you to perform an action, call the appropriate function."""
             # In API contexts, the calling application should handle confirmation
             # For now, deny for safety but allow override via confirmed parameter
             if self.verbose:
-                print(f"⚠️  Command requires confirmation but no callback available: {command}")
+                print(
+                    f"⚠️  Command requires confirmation but no callback available: {command}"
+                )
                 print(f"Reason: {reason}")
-                print("API contexts should re-call with confirmed=True after user approval")
+                print(
+                    "API contexts should re-call with confirmed=True after user approval"
+                )
             return False
 
-    def _should_continue_response(self, chunk_done: bool, response_content: str, total_tokens: int = 0, max_tokens: int = 4096) -> bool:
+    def _should_continue_response(
+        self,
+        chunk_done: bool,
+        response_content: str,
+        total_tokens: int = 0,
+        max_tokens: int = 4096,
+    ) -> bool:
         """
         Determine if we should continue the response based on API signals and content analysis.
-        
+
         Args:
             chunk_done: Whether the API indicated the stream is done
             response_content: The actual response content to analyze
             total_tokens: Total tokens generated so far (if available)
             max_tokens: Maximum tokens before forcing continuation
-            
+
         Returns:
             True if we should continue, False if response is complete
         """
         # If we have very little content and API says done, it might be truncated
         if chunk_done and len(response_content.strip()) < 200:
             return True
-            
+
         # If response ends abruptly mid-sentence, continue
         if chunk_done and response_content.strip():
             last_char = response_content.strip()[-1]
-            if last_char not in '.!?':
+            if last_char not in ".!?":
                 # Check if it looks like it was cut off
-                lines = response_content.strip().split('\n')
+                lines = response_content.strip().split("\n")
                 last_line = lines[-1].strip() if lines else ""
-                if len(last_line) > 10 and not last_line.endswith(('.', '!', '?', ':', ')')):
+                if len(last_line) > 10 and not last_line.endswith(
+                    (".", "!", "?", ":", ")")
+                ):
                     return True
-            
+
         # If we've hit token limits, we may need to continue
         if total_tokens > 0 and total_tokens >= max_tokens * 0.9:  # 90% of max tokens
             return True
-            
-        # Default to not continuing 
+
+        # Default to not continuing
         return False
 
-    async def process(self, query: str, continue_previous: bool = False) -> AsyncGenerator[str, None]:
+    async def process(
+        self, query: str, continue_previous: bool = False
+    ) -> AsyncGenerator[str, None]:
         """
         Process a user query and yield response chunks.
 
@@ -986,7 +1065,7 @@ When a user asks you to perform an action, call the appropriate function."""
             Response chunks as they are generated
         """
         metrics = ProcessingMetrics(start_time=time.time())
-        
+
         try:
             # Handle continuation if enabled
             if continue_previous and self.current_response:
@@ -1000,19 +1079,23 @@ When a user asks you to perform an action, call the appropriate function."""
 
             # Analyze if tools should be used
             llm_analysis = await self._llm_should_use_tools(query)
-            
+
             if self.verbose:
                 print(f"🤖 LLM Analysis: {llm_analysis.get('reasoning', '')}")
-                if llm_analysis.get('suggested_tools'):
-                    print(f"🔧 Suggested tools: {', '.join(llm_analysis['suggested_tools'])}")
+                if llm_analysis.get("suggested_tools"):
+                    print(
+                        f"🔧 Suggested tools: {', '.join(llm_analysis['suggested_tools'])}"
+                    )
 
             # Prepare messages for API
             messages = self._prepare_messages(query, context, llm_analysis)
-            
+
             # Add tools to request if tools should be used
             tools = None
             if llm_analysis.get("should_use_tools", False):
-                use_simple_context = self._should_use_simple_context(query, llm_analysis)
+                use_simple_context = self._should_use_simple_context(
+                    query, llm_analysis
+                )
                 if use_simple_context and llm_analysis.get("suggested_tools"):
                     # For simple context, only include suggested tools to avoid confusion
                     suggested_tool_names = llm_analysis.get("suggested_tools", [])
@@ -1027,7 +1110,7 @@ When a user asks you to perform an action, call the appropriate function."""
             else:
                 if self.verbose:
                     print("💭 Direct knowledge response - no tools needed")
-            
+
             # Make API request
             request = CompletionRequest(
                 model=self.model,
@@ -1039,8 +1122,8 @@ When a user asks you to perform an action, call the appropriate function."""
                     "max_tokens": 32768,  # Increased from 4096
                     "top_p": 0.95,
                     "frequency_penalty": 0.0,
-                    "presence_penalty": 0.0
-                }
+                    "presence_penalty": 0.0,
+                },
             )
 
             # Process streaming response with continuation support
@@ -1049,7 +1132,7 @@ When a user asks you to perform an action, call the appropriate function."""
             continuation_count = 0
             max_continuations = self.max_continuations
             last_response_length = 0  # Track response growth to detect loops
-            
+
             while continuation_count <= max_continuations:
                 try:
                     async for chunk in self.api_client.stream_chat(request):
@@ -1058,7 +1141,9 @@ When a user asks you to perform an action, call the appropriate function."""
                             tool_name = self._map_tool_name(chunk.tool_call.name)
                             if self.tool_registry.get_tool(tool_name):
                                 try:
-                                    result = await self._execute_tool_call(tool_name, chunk.tool_call.arguments)
+                                    result = await self._execute_tool_call(
+                                        tool_name, chunk.tool_call.arguments
+                                    )
                                     yield f"\n🔧 Tool: {tool_name}\n{result.output}\n"
                                     metrics.tools_executed += 1
                                     # After tool execution, mark response as complete
@@ -1073,7 +1158,7 @@ When a user asks you to perform an action, call the appropriate function."""
                             # Handle regular content
                             chunk_buffer += chunk.content
                             self.current_response += chunk.content
-                            
+
                             # Yield when buffer is full
                             if len(chunk_buffer) >= chunk_size:
                                 yield chunk_buffer
@@ -1084,42 +1169,63 @@ When a user asks you to perform an action, call the appropriate function."""
                             if chunk_buffer:
                                 yield chunk_buffer
                                 metrics.tokens_processed += len(chunk_buffer.split())
-                            
+
                             # Check if we should continue based on API signals
                             total_tokens = metrics.tokens_processed
                             should_continue = self._should_continue_response(
                                 chunk_done=True,  # API says it's done
                                 response_content=self.current_response,
-                                total_tokens=total_tokens
+                                total_tokens=total_tokens,
                             )
-                            
-                            if should_continue and continuation_count < max_continuations:
+
+                            if (
+                                should_continue
+                                and continuation_count < max_continuations
+                            ):
                                 # Check for infinite loop (no response growth)
                                 current_length = len(self.current_response)
-                                if current_length <= last_response_length + 50:  # Minimal growth threshold
+                                if (
+                                    current_length <= last_response_length + 50
+                                ):  # Minimal growth threshold
                                     if self.verbose:
-                                        print(f"\n⚠️ Stopping continuation: minimal response growth detected")
+                                        print(
+                                            f"\n⚠️ Stopping continuation: minimal response growth detected"
+                                        )
                                     self.response_complete = True
                                     break
-                                
+
                                 last_response_length = current_length
                                 continuation_count += 1
-                                
+
                                 if self.verbose:
-                                    print(f"\n🔄 Auto-continuing response (attempt {continuation_count}/{max_continuations})")
+                                    print(
+                                        f"\n🔄 Auto-continuing response (attempt {continuation_count}/{max_continuations})"
+                                    )
                                     response_len = len(self.current_response.strip())
-                                    last_chars = self.current_response.strip()[-50:] if response_len > 50 else self.current_response.strip()
-                                    print(f"🔄 Response length: {response_len} chars, ending with: ...{last_chars}")
+                                    last_chars = (
+                                        self.current_response.strip()[-50:]
+                                        if response_len > 50
+                                        else self.current_response.strip()
+                                    )
+                                    print(
+                                        f"🔄 Response length: {response_len} chars, ending with: ...{last_chars}"
+                                    )
                                     if response_len < 200:
-                                        print(f"🔄 Reason: Response too short ({response_len} chars)")
+                                        print(
+                                            f"🔄 Reason: Response too short ({response_len} chars)"
+                                        )
                                     elif total_tokens >= 4096 * 0.9:
-                                        print(f"🔄 Reason: Token limit reached ({total_tokens} tokens)")
+                                        print(
+                                            f"🔄 Reason: Token limit reached ({total_tokens} tokens)"
+                                        )
                                     else:
                                         print(f"🔄 Reason: Response appears truncated")
-                                
+
                                 # Prepare continuation request
                                 continuation_query = f"Continue from where you left off. Previous content ended with: {self.current_response[-200:]}"
-                                messages = self._prepare_messages(continuation_query, context, llm_analysis)
+                                messages = self._prepare_messages(
+                                    continuation_query, context, llm_analysis
+                                )
                                 request = CompletionRequest(
                                     model=self.model,
                                     messages=messages,
@@ -1130,8 +1236,8 @@ When a user asks you to perform an action, call the appropriate function."""
                                         "max_tokens": 32768,
                                         "top_p": 0.95,
                                         "frequency_penalty": 0.0,
-                                        "presence_penalty": 0.0
-                                    }
+                                        "presence_penalty": 0.0,
+                                    },
                                 )
                                 # Break out of the inner chunk loop to restart with new request
                                 break
@@ -1139,11 +1245,11 @@ When a user asks you to perform an action, call the appropriate function."""
                                 # No continuation needed, mark as complete
                                 self.response_complete = True
                                 break
-                    
+
                     # If we get here, either we completed or need to continue
                     if self.response_complete:
                         break
-                        
+
                 except Exception as e:
                     if self.verbose:
                         print(f"⚠️ Stream error: {str(e)}")
@@ -1157,7 +1263,9 @@ When a user asks you to perform an action, call the appropriate function."""
         finally:
             metrics.end_time = time.time()
             if self.verbose:
-                print(f"\n📊 Metrics: {metrics.duration:.1f}s, {metrics.tokens_processed} tokens, {metrics.files_analyzed} files, {metrics.tools_executed} tools\n")
+                print(
+                    f"\n📊 Metrics: {metrics.duration:.1f}s, {metrics.tokens_processed} tokens, {metrics.files_analyzed} files, {metrics.tools_executed} tools\n"
+                )
 
     def is_response_complete(self) -> bool:
         """Check if the current response is complete."""
@@ -1181,7 +1289,7 @@ When a user asks you to perform an action, call the appropriate function."""
         return await self.session_manager.save_session(
             messages=self.conversation_history,
             context=self.current_context,
-            session_id=session_id
+            session_id=session_id,
         )
 
     def clear_context(self) -> None:
@@ -1193,11 +1301,14 @@ When a user asks you to perform an action, call the appropriate function."""
         """Get current engine status."""
         return {
             "model": self.model,
-            "context_files": len(self.current_context.files) if self.current_context else 0,
+            "context_files": (
+                len(self.current_context.files) if self.current_context else 0
+            ),
             "conversation_length": len(self.conversation_history),
             "tools_available": len(self.tool_registry.tools),
-            "project_root": str(self.context_manager.root)
+            "project_root": str(self.context_manager.root),
         }
+
 
 async def main() -> None:
     """Example usage of OCodeEngine."""
@@ -1210,6 +1321,7 @@ async def main() -> None:
         print(chunk, end="", flush=True)
 
     print("\n\nEngine status:", engine.get_status())
+
 
 if __name__ == "__main__":
     asyncio.run(main())

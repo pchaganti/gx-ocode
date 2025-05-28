@@ -6,17 +6,23 @@ import ast
 import re
 import sys
 from pathlib import Path
-from typing import List, Set, Optional
+from typing import List, Optional, Set
 
 from .base import (
-    LanguageAnalyzer, Symbol, Import, AnalysisResult, CodeMetrics, SymbolType,
-    language_registry
+    AnalysisResult,
+    CodeMetrics,
+    Import,
+    LanguageAnalyzer,
+    Symbol,
+    SymbolType,
+    language_registry,
 )
+
 
 def safe_unparse(node: ast.AST) -> str:
     """Safely unparse AST node, handling version compatibility."""
     try:
-        if hasattr(ast, 'unparse'):
+        if hasattr(ast, "unparse"):
             result = ast.unparse(node)
             return str(result)
         else:
@@ -25,16 +31,17 @@ def safe_unparse(node: ast.AST) -> str:
     except Exception:
         return "<unknown>"
 
+
 class PythonAnalyzer(LanguageAnalyzer):
     """Python language analyzer using AST parsing."""
 
     @property
     def file_extensions(self) -> List[str]:
-        return ['.py', '.pyw', '.pyi']
+        return [".py", ".pyw", ".pyi"]
 
     @property
     def comment_patterns(self) -> List[str]:
-        return ['#']
+        return ["#"]
 
     def parse_file(self, file_path: Path, content: str) -> AnalysisResult:
         """Parse Python file using AST."""
@@ -53,19 +60,23 @@ class PythonAnalyzer(LanguageAnalyzer):
             imports = visitor.imports
 
         except SyntaxError as e:
-            syntax_errors.append({
-                "message": str(e),
-                "line": e.lineno,
-                "column": e.offset,
-                "type": "syntax_error"
-            })
+            syntax_errors.append(
+                {
+                    "message": str(e),
+                    "line": e.lineno,
+                    "column": e.offset,
+                    "type": "syntax_error",
+                }
+            )
         except Exception as e:
-            syntax_errors.append({
-                "message": f"Parse error: {str(e)}",
-                "line": 0,
-                "column": 0,
-                "type": "parse_error"
-            })
+            syntax_errors.append(
+                {
+                    "message": f"Parse error: {str(e)}",
+                    "line": 0,
+                    "column": 0,
+                    "type": "parse_error",
+                }
+            )
 
         # Calculate metrics
         metrics = self.calculate_metrics(content, symbols)
@@ -80,7 +91,7 @@ class PythonAnalyzer(LanguageAnalyzer):
             imports=imports,
             metrics=metrics,
             dependencies=dependencies,
-            syntax_errors=syntax_errors
+            syntax_errors=syntax_errors,
         )
 
     def extract_symbols(self, content: str) -> List[Symbol]:
@@ -103,6 +114,7 @@ class PythonAnalyzer(LanguageAnalyzer):
         except:
             return []
 
+
 class PythonASTVisitor(ast.NodeVisitor):
     """AST visitor for extracting Python symbols and imports."""
 
@@ -118,7 +130,7 @@ class PythonASTVisitor(ast.NodeVisitor):
         symbol_type = SymbolType.METHOD if self.current_class else SymbolType.FUNCTION
 
         # Get scope
-        scope = '.'.join(self.scope_stack) if self.scope_stack else None
+        scope = ".".join(self.scope_stack) if self.scope_stack else None
 
         # Extract parameters
         parameters = []
@@ -135,9 +147,12 @@ class PythonASTVisitor(ast.NodeVisitor):
 
         # Extract docstring
         docstring = None
-        if (node.body and isinstance(node.body[0], ast.Expr) and
-            isinstance(node.body[0].value, ast.Constant) and
-            isinstance(node.body[0].value.value, str)):
+        if (
+            node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+            and isinstance(node.body[0].value.value, str)
+        ):
             docstring = node.body[0].value.value
 
         # Extract decorators
@@ -146,7 +161,7 @@ class PythonASTVisitor(ast.NodeVisitor):
             decorators.append(safe_unparse(decorator))
 
         # Determine visibility
-        visibility = "private" if node.name.startswith('_') else "public"
+        visibility = "private" if node.name.startswith("_") else "public"
 
         symbol = Symbol(
             name=node.name,
@@ -160,7 +175,7 @@ class PythonASTVisitor(ast.NodeVisitor):
             parameters=parameters,
             return_type=return_type,
             docstring=docstring,
-            decorators=decorators if decorators else None
+            decorators=decorators if decorators else None,
         )
 
         self.symbols.append(symbol)
@@ -173,8 +188,8 @@ class PythonASTVisitor(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
         """Visit async function definition."""
         # Handle async function like regular function
-        scope = '.'.join(self.scope_stack) if self.scope_stack else ''
-        
+        scope = ".".join(self.scope_stack) if self.scope_stack else ""
+
         # Extract parameters
         params = []
         for arg in node.args.args:
@@ -182,37 +197,45 @@ class PythonASTVisitor(ast.NodeVisitor):
             if arg.annotation:
                 param_info["type"] = safe_unparse(arg.annotation)
             params.append(param_info)
-        
+
         # Extract return type
         return_type = None
         if node.returns:
             return_type = safe_unparse(node.returns)
-        
+
         # Extract docstring
         docstring = None
-        if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Constant):
+        if (
+            node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+        ):
             if isinstance(node.body[0].value.value, str):
                 docstring = node.body[0].value.value
-        
+
         # Extract decorators
-        decorators = [safe_unparse(dec) for dec in node.decorator_list] if node.decorator_list else None
-        
+        decorators = (
+            [safe_unparse(dec) for dec in node.decorator_list]
+            if node.decorator_list
+            else None
+        )
+
         symbol = Symbol(
             name=node.name,
             type=SymbolType.FUNCTION,
             line=node.lineno,
             column=node.col_offset,
-            end_line=getattr(node, 'end_lineno', None),
-            end_column=getattr(node, 'end_col_offset', None),
+            end_line=getattr(node, "end_lineno", None),
+            end_column=getattr(node, "end_col_offset", None),
             scope=scope,
             parameters=params if params else None,
             return_type=return_type,
             docstring=docstring,
-            decorators=decorators
+            decorators=decorators,
         )
-        
+
         self.symbols.append(symbol)
-        
+
         # Enter function scope
         self.scope_stack.append(node.name)
         self.generic_visit(node)
@@ -221,13 +244,16 @@ class PythonASTVisitor(ast.NodeVisitor):
     def visit_ClassDef(self, node: ast.ClassDef):
         """Visit class definition."""
         # Get scope
-        scope = '.'.join(self.scope_stack) if self.scope_stack else None
+        scope = ".".join(self.scope_stack) if self.scope_stack else None
 
         # Extract docstring
         docstring = None
-        if (node.body and isinstance(node.body[0], ast.Expr) and
-            isinstance(node.body[0].value, ast.Constant) and
-            isinstance(node.body[0].value.value, str)):
+        if (
+            node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+            and isinstance(node.body[0].value.value, str)
+        ):
             docstring = node.body[0].value.value
 
         # Extract decorators
@@ -236,7 +262,7 @@ class PythonASTVisitor(ast.NodeVisitor):
             decorators.append(safe_unparse(decorator))
 
         # Determine visibility
-        visibility = "private" if node.name.startswith('_') else "public"
+        visibility = "private" if node.name.startswith("_") else "public"
 
         symbol = Symbol(
             name=node.name,
@@ -248,7 +274,7 @@ class PythonASTVisitor(ast.NodeVisitor):
             scope=scope,
             visibility=visibility,
             docstring=docstring,
-            decorators=decorators if decorators else None
+            decorators=decorators if decorators else None,
         )
 
         self.symbols.append(symbol)
@@ -268,8 +294,12 @@ class PythonASTVisitor(ast.NodeVisitor):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     # Determine if it's a constant (all uppercase)
-                    symbol_type = SymbolType.CONSTANT if target.id.isupper() else SymbolType.VARIABLE
-                    visibility = "private" if target.id.startswith('_') else "public"
+                    symbol_type = (
+                        SymbolType.CONSTANT
+                        if target.id.isupper()
+                        else SymbolType.VARIABLE
+                    )
+                    visibility = "private" if target.id.startswith("_") else "public"
 
                     symbol = Symbol(
                         name=target.id,
@@ -278,7 +308,7 @@ class PythonASTVisitor(ast.NodeVisitor):
                         column=node.col_offset,
                         end_line=node.end_lineno,
                         end_column=node.end_col_offset,
-                        visibility=visibility
+                        visibility=visibility,
                     )
 
                     self.symbols.append(symbol)
@@ -289,8 +319,10 @@ class PythonASTVisitor(ast.NodeVisitor):
         """Visit annotated assignment."""
         # Only handle module-level assignments
         if not self.scope_stack and isinstance(node.target, ast.Name):
-            symbol_type = SymbolType.CONSTANT if node.target.id.isupper() else SymbolType.VARIABLE
-            visibility = "private" if node.target.id.startswith('_') else "public"
+            symbol_type = (
+                SymbolType.CONSTANT if node.target.id.isupper() else SymbolType.VARIABLE
+            )
+            visibility = "private" if node.target.id.startswith("_") else "public"
 
             # Get type annotation
             return_type = safe_unparse(node.annotation) if node.annotation else None
@@ -303,7 +335,7 @@ class PythonASTVisitor(ast.NodeVisitor):
                 end_line=node.end_lineno,
                 end_column=node.end_col_offset,
                 visibility=visibility,
-                return_type=return_type
+                return_type=return_type,
             )
 
             self.symbols.append(symbol)
@@ -313,11 +345,7 @@ class PythonASTVisitor(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import):
         """Visit import statement."""
         for alias in node.names:
-            import_obj = Import(
-                module=alias.name,
-                alias=alias.asname,
-                line=node.lineno
-            )
+            import_obj = Import(module=alias.name, alias=alias.asname, line=node.lineno)
             self.imports.append(import_obj)
 
         self.generic_visit(node)
@@ -337,14 +365,12 @@ class PythonASTVisitor(ast.NodeVisitor):
             items.append(alias.name)
 
         import_obj = Import(
-            module=module,
-            items=items,
-            line=node.lineno,
-            is_relative=is_relative
+            module=module, items=items, line=node.lineno, is_relative=is_relative
         )
         self.imports.append(import_obj)
 
         self.generic_visit(node)
+
 
 # Register the Python analyzer
 python_analyzer = PythonAnalyzer()

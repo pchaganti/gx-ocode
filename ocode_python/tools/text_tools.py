@@ -21,40 +21,47 @@ class SortTool(Tool):
                     name="file_path",
                     type="string",
                     description="Path to file to sort (optional, can sort text directly)",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="text",
                     type="string",
                     description="Text to sort (if no file_path provided)",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="reverse",
                     type="boolean",
                     description="Sort in reverse order (-r flag)",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="numeric",
                     type="boolean",
                     description="Sort numerically (-n flag)",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="unique",
                     type="boolean",
                     description="Output only unique lines (-u flag)",
                     required=False,
-                    default=False
-                )
-            ]
+                    default=False,
+                ),
+            ],
         )
 
-    async def execute(self, file_path: Optional[str] = None, text: Optional[str] = None,
-                     reverse: bool = False, numeric: bool = False, unique: bool = False, **kwargs) -> ToolResult:
+    async def execute(
+        self,
+        file_path: Optional[str] = None,
+        text: Optional[str] = None,
+        reverse: bool = False,
+        numeric: bool = False,
+        unique: bool = False,
+        **kwargs,
+    ) -> ToolResult:
         """Execute sort command."""
         try:
             # Get input lines
@@ -62,49 +69,47 @@ class SortTool(Tool):
                 path = Path(file_path)
                 if not path.exists():
                     return ToolResult(
-                        success=False,
-                        output="",
-                        error=f"File not found: {file_path}"
+                        success=False, output="", error=f"File not found: {file_path}"
                     )
-                
+
                 if not path.is_file():
                     return ToolResult(
-                        success=False,
-                        output="",
-                        error=f"Not a file: {file_path}"
+                        success=False, output="", error=f"Not a file: {file_path}"
                     )
-                
-                with open(path, 'r', encoding='utf-8', errors='replace') as f:
+
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
                     lines = f.read().splitlines()
-            
+
             elif text:
                 lines = text.splitlines()
-            
+
             else:
                 return ToolResult(
                     success=False,
                     output="",
-                    error="Must provide either file_path or text to sort"
+                    error="Must provide either file_path or text to sort",
                 )
-            
+
             # Sort lines
             if numeric:
+
                 def sort_key(line):
                     # Try to extract numbers from the beginning of lines
                     try:
                         # Find first sequence of digits (with optional decimal)
                         import re
-                        match = re.match(r'^[+-]?(\d+\.?\d*)', line.strip())
+
+                        match = re.match(r"^[+-]?(\d+\.?\d*)", line.strip())
                         if match:
                             return float(match.group())
-                        return float('inf')  # Non-numeric lines go to end
+                        return float("inf")  # Non-numeric lines go to end
                     except (ValueError, AttributeError):
-                        return float('inf')
-                
+                        return float("inf")
+
                 sorted_lines = sorted(lines, key=sort_key, reverse=reverse)
             else:
                 sorted_lines = sorted(lines, reverse=reverse)
-            
+
             # Remove duplicates if unique flag is set
             if unique:
                 seen = set()
@@ -114,9 +119,9 @@ class SortTool(Tool):
                         seen.add(line)
                         unique_lines.append(line)
                 sorted_lines = unique_lines
-            
-            output = '\n'.join(sorted_lines)
-            
+
+            output = "\n".join(sorted_lines)
+
             return ToolResult(
                 success=True,
                 output=output,
@@ -126,15 +131,13 @@ class SortTool(Tool):
                     "sorted": True,
                     "reverse": reverse,
                     "numeric": numeric,
-                    "unique": unique
-                }
+                    "unique": unique,
+                },
             )
-            
+
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Error sorting: {str(e)}"
+                success=False, output="", error=f"Error sorting: {str(e)}"
             )
 
 
@@ -151,33 +154,39 @@ class UniqTool(Tool):
                     name="file_path",
                     type="string",
                     description="Path to file to process (optional, can process text directly)",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="text",
                     type="string",
                     description="Text to process (if no file_path provided)",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="count",
                     type="boolean",
                     description="Show count of occurrences (-c flag)",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="duplicates_only",
                     type="boolean",
                     description="Show only duplicate lines (-d flag)",
                     required=False,
-                    default=False
-                )
-            ]
+                    default=False,
+                ),
+            ],
         )
 
-    async def execute(self, file_path: Optional[str] = None, text: Optional[str] = None,
-                     count: bool = False, duplicates_only: bool = False, **kwargs) -> ToolResult:
+    async def execute(
+        self,
+        file_path: Optional[str] = None,
+        text: Optional[str] = None,
+        count: bool = False,
+        duplicates_only: bool = False,
+        **kwargs,
+    ) -> ToolResult:
         """Execute uniq command."""
         try:
             # Get input lines
@@ -185,65 +194,63 @@ class UniqTool(Tool):
                 path = Path(file_path)
                 if not path.exists():
                     return ToolResult(
-                        success=False,
-                        output="",
-                        error=f"File not found: {file_path}"
+                        success=False, output="", error=f"File not found: {file_path}"
                     )
-                
+
                 if not path.is_file():
                     return ToolResult(
-                        success=False,
-                        output="",
-                        error=f"Not a file: {file_path}"
+                        success=False, output="", error=f"Not a file: {file_path}"
                     )
-                
-                with open(path, 'r', encoding='utf-8', errors='replace') as f:
+
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
                     lines = f.read().splitlines()
-            
+
             elif text:
                 lines = text.splitlines()
-            
+
             else:
                 return ToolResult(
                     success=False,
                     output="",
-                    error="Must provide either file_path or text to process"
+                    error="Must provide either file_path or text to process",
                 )
-            
+
             # Process lines for uniqueness
             line_counts = {}
             for line in lines:
                 line_counts[line] = line_counts.get(line, 0) + 1
-            
+
             # Generate output based on flags
             output_lines = []
-            
+
             for line in lines:
                 line_count = line_counts[line]
-                
+
                 # Skip if we've already processed this line
                 if line_counts[line] == 0:
                     continue
-                
+
                 # Apply filters
                 if duplicates_only and line_count == 1:
                     line_counts[line] = 0  # Mark as processed
                     continue
-                
+
                 # Format output
                 if count:
                     output_lines.append(f"{line_count:>7} {line}")
                 else:
                     output_lines.append(line)
-                
+
                 # Mark as processed
                 line_counts[line] = 0
-            
-            output = '\n'.join(output_lines)
-            
-            total_unique = len([c for c in line_counts.values() if c > 0]) + len(output_lines)
+
+            output = "\n".join(output_lines)
+
+            total_unique = len([c for c in line_counts.values() if c > 0]) + len(
+                output_lines
+            )
             duplicates = sum(1 for line, cnt in line_counts.items() if cnt > 1)
-            
+
             return ToolResult(
                 success=True,
                 output=output,
@@ -253,13 +260,13 @@ class UniqTool(Tool):
                     "unique_lines": total_unique,
                     "duplicates_found": duplicates,
                     "count": count,
-                    "duplicates_only": duplicates_only
-                }
+                    "duplicates_only": duplicates_only,
+                },
             )
-            
+
         except Exception as e:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Error processing unique lines: {str(e)}"
+                error=f"Error processing unique lines: {str(e)}",
             )

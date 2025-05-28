@@ -3,13 +3,15 @@ Base classes for language-specific analysis.
 """
 
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Set
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
+
 
 class SymbolType(Enum):
     """Types of code symbols."""
+
     FUNCTION = "function"
     CLASS = "class"
     VARIABLE = "variable"
@@ -22,9 +24,11 @@ class SymbolType(Enum):
     PROPERTY = "property"
     NAMESPACE = "namespace"
 
+
 @dataclass
 class Symbol:
     """Represents a code symbol."""
+
     name: str
     type: SymbolType
     line: int
@@ -44,7 +48,7 @@ class Symbol:
             "name": self.name,
             "type": self.type.value,
             "line": self.line,
-            "column": self.column
+            "column": self.column,
         }
 
         if self.end_line is not None:
@@ -66,9 +70,11 @@ class Symbol:
 
         return result
 
+
 @dataclass
 class Import:
     """Represents an import statement."""
+
     module: str
     alias: Optional[str] = None
     items: Optional[List[str]] = None  # For "from X import Y, Z"
@@ -82,12 +88,14 @@ class Import:
             "alias": self.alias,
             "items": self.items,
             "line": self.line,
-            "is_relative": self.is_relative
+            "is_relative": self.is_relative,
         }
+
 
 @dataclass
 class CodeMetrics:
     """Code complexity and quality metrics."""
+
     lines_of_code: int = 0
     cyclomatic_complexity: int = 0
     cognitive_complexity: int = 0
@@ -107,12 +115,14 @@ class CodeMetrics:
             "function_count": self.function_count,
             "class_count": self.class_count,
             "max_nesting_depth": self.max_nesting_depth,
-            "comment_ratio": self.comment_ratio
+            "comment_ratio": self.comment_ratio,
         }
+
 
 @dataclass
 class AnalysisResult:
     """Complete analysis result for a source file."""
+
     file_path: Path
     language: str
     symbols: List[Symbol]
@@ -130,8 +140,9 @@ class AnalysisResult:
             "imports": [i.to_dict() for i in self.imports],
             "metrics": self.metrics.to_dict(),
             "dependencies": list(self.dependencies),
-            "syntax_errors": self.syntax_errors
+            "syntax_errors": self.syntax_errors,
         }
+
 
 class LanguageAnalyzer(ABC):
     """
@@ -142,7 +153,7 @@ class LanguageAnalyzer(ABC):
     """
 
     def __init__(self):
-        self.language = self.__class__.__name__.lower().replace('analyzer', '')
+        self.language = self.__class__.__name__.lower().replace("analyzer", "")
 
     @property
     @abstractmethod
@@ -182,10 +193,12 @@ class LanguageAnalyzer(ABC):
 
     def calculate_metrics(self, content: str, symbols: List[Symbol]) -> CodeMetrics:
         """Calculate code metrics."""
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         # Basic metrics
-        lines_of_code = len([line for line in lines if line.strip() and not self._is_comment_line(line)])
+        lines_of_code = len(
+            [line for line in lines if line.strip() and not self._is_comment_line(line)]
+        )
         comment_lines = len([line for line in lines if self._is_comment_line(line)])
 
         comment_ratio = comment_lines / max(len(lines), 1)
@@ -204,11 +217,13 @@ class LanguageAnalyzer(ABC):
             lines_of_code=lines_of_code,
             cyclomatic_complexity=cyclomatic_complexity,
             cognitive_complexity=cyclomatic_complexity,  # Simplified
-            maintainability_index=max(0, 171 - 5.2 * cyclomatic_complexity - 0.23 * lines_of_code),
+            maintainability_index=max(
+                0, 171 - 5.2 * cyclomatic_complexity - 0.23 * lines_of_code
+            ),
             function_count=function_count,
             class_count=class_count,
             max_nesting_depth=max_nesting_depth,
-            comment_ratio=comment_ratio
+            comment_ratio=comment_ratio,
         )
 
     def _is_comment_line(self, line: str) -> bool:
@@ -222,13 +237,25 @@ class LanguageAnalyzer(ABC):
     def _calculate_cyclomatic_complexity(self, content: str) -> int:
         """Calculate cyclomatic complexity by counting decision points."""
         # This is a simplified implementation
-        decision_keywords = ['if', 'elif', 'else', 'for', 'while', 'try', 'except', 'case', 'switch']
+        decision_keywords = [
+            "if",
+            "elif",
+            "else",
+            "for",
+            "while",
+            "try",
+            "except",
+            "case",
+            "switch",
+        ]
         complexity = 1  # Base complexity
 
-        for line in content.split('\n'):
+        for line in content.split("\n"):
             stripped = line.strip()
             for keyword in decision_keywords:
-                if f' {keyword} ' in f' {stripped} ' or stripped.startswith(f'{keyword} '):
+                if f" {keyword} " in f" {stripped} " or stripped.startswith(
+                    f"{keyword} "
+                ):
                     complexity += 1
 
         return complexity
@@ -239,13 +266,13 @@ class LanguageAnalyzer(ABC):
         max_depth = 0
         current_depth = 0
 
-        for line in content.split('\n'):
+        for line in content.split("\n"):
             if line.strip():
                 # Count leading whitespace
                 indent = len(line) - len(line.lstrip())
                 # Assume 4 spaces or 1 tab per level
-                if '\t' in line:
-                    depth = line.count('\t')
+                if "\t" in line:
+                    depth = line.count("\t")
                 else:
                     depth = indent // 4
 
@@ -254,7 +281,9 @@ class LanguageAnalyzer(ABC):
 
         return max_depth
 
-    def resolve_dependencies(self, imports: List[Import], project_root: Path) -> Set[str]:
+    def resolve_dependencies(
+        self, imports: List[Import], project_root: Path
+    ) -> Set[str]:
         """
         Resolve import dependencies to actual files in the project.
 
@@ -275,13 +304,15 @@ class LanguageAnalyzer(ABC):
 
         return dependencies
 
-    def _resolve_import_to_file(self, import_stmt: Import, project_root: Path) -> Optional[str]:
+    def _resolve_import_to_file(
+        self, import_stmt: Import, project_root: Path
+    ) -> Optional[str]:
         """
         Resolve a single import statement to a file path.
 
         This is a simplified implementation that can be overridden by language-specific analyzers.
         """
-        module_parts = import_stmt.module.split('.')
+        module_parts = import_stmt.module.split(".")
 
         # Try different file extensions
         for ext in self.file_extensions:
@@ -304,6 +335,7 @@ class LanguageAnalyzer(ABC):
     def can_analyze(self, file_path: Path) -> bool:
         """Check if this analyzer can handle the given file."""
         return file_path.suffix.lower() in self.file_extensions
+
 
 class LanguageRegistry:
     """Registry for language analyzers."""
@@ -341,6 +373,7 @@ class LanguageRegistry:
     def get_supported_extensions(self) -> List[str]:
         """Get list of supported file extensions."""
         return list(self.extension_map.keys())
+
 
 # Create global registry instance
 language_registry = LanguageRegistry()

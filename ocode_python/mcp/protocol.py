@@ -5,20 +5,24 @@ Model Context Protocol (MCP) JSON-RPC 2.0 implementation.
 import asyncio
 import json
 import uuid
-from typing import Any, Dict, List, Optional, Union, Callable, Awaitable
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from enum import Enum
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+
 
 class MCPCapability(Enum):
     """MCP server capabilities."""
+
     RESOURCES = "resources"
     TOOLS = "tools"
     PROMPTS = "prompts"
     LOGGING = "logging"
 
+
 @dataclass
 class JSONRPCRequest:
     """JSON-RPC 2.0 request."""
+
     jsonrpc: str = "2.0"
     method: str = ""
     params: Optional[Dict[str, Any]] = None
@@ -32,9 +36,11 @@ class JSONRPCRequest:
             result["id"] = self.id
         return result
 
+
 @dataclass
 class JSONRPCResponse:
     """JSON-RPC 2.0 response."""
+
     jsonrpc: str = "2.0"
     id: Optional[Union[str, int]] = None
     result: Optional[Any] = None
@@ -50,9 +56,11 @@ class JSONRPCResponse:
             response["result"] = self.result
         return response
 
+
 @dataclass
 class MCPResource:
     """MCP resource definition."""
+
     uri: str
     name: str
     description: Optional[str] = None
@@ -61,9 +69,11 @@ class MCPResource:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
+
 @dataclass
 class MCPTool:
     """MCP tool definition."""
+
     name: str
     description: str
     input_schema: Dict[str, Any]
@@ -71,15 +81,18 @@ class MCPTool:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
+
 @dataclass
 class MCPPrompt:
     """MCP prompt template definition."""
+
     name: str
     description: str
     arguments: Optional[List[Dict[str, Any]]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
 
 class MCPProtocol:
     """
@@ -169,11 +182,7 @@ class MCPProtocol:
             data = json.loads(message)
         except json.JSONDecodeError as e:
             error_response = JSONRPCResponse(
-                error={
-                    "code": -32700,
-                    "message": "Parse error",
-                    "data": str(e)
-                }
+                error={"code": -32700, "message": "Parse error", "data": str(e)}
             )
             return json.dumps(error_response.to_dict())
 
@@ -189,7 +198,9 @@ class MCPProtocol:
             response = await self._handle_single_message(data)
             return json.dumps(response.to_dict()) if response else None
 
-    async def _handle_single_message(self, data: Dict[str, Any]) -> Optional[JSONRPCResponse]:
+    async def _handle_single_message(
+        self, data: Dict[str, Any]
+    ) -> Optional[JSONRPCResponse]:
         """Handle a single JSON-RPC message."""
         # Validate JSON-RPC format
         if data.get("jsonrpc") != "2.0":
@@ -198,8 +209,8 @@ class MCPProtocol:
                 error={
                     "code": -32600,
                     "message": "Invalid Request",
-                    "data": "jsonrpc must be '2.0'"
-                }
+                    "data": "jsonrpc must be '2.0'",
+                },
             )
 
         method = data.get("method")
@@ -209,8 +220,8 @@ class MCPProtocol:
                 error={
                     "code": -32600,
                     "message": "Invalid Request",
-                    "data": "method is required"
-                }
+                    "data": "method is required",
+                },
             )
 
         params = data.get("params", {})
@@ -238,8 +249,8 @@ class MCPProtocol:
                         error={
                             "code": -32601,
                             "message": "Method not found",
-                            "data": f"Unknown method: {method}"
-                        }
+                            "data": f"Unknown method: {method}",
+                        },
                     )
 
                 if asyncio.iscoroutinefunction(handler):
@@ -252,11 +263,7 @@ class MCPProtocol:
         except Exception as e:
             return JSONRPCResponse(
                 id=request_id,
-                error={
-                    "code": -32603,
-                    "message": "Internal error",
-                    "data": str(e)
-                }
+                error={"code": -32603, "message": "Internal error", "data": str(e)},
             )
 
     # Core MCP method handlers
@@ -274,13 +281,8 @@ class MCPProtocol:
 
         return {
             "protocolVersion": self.VERSION,
-            "capabilities": {
-                capability.value: {} for capability in self.capabilities
-            },
-            "serverInfo": {
-                "name": self.name,
-                "version": self.version
-            }
+            "capabilities": {capability.value: {} for capability in self.capabilities},
+            "serverInfo": {"name": self.name, "version": self.version},
         }
 
     def _handle_initialized(self, params: Dict[str, Any]):
@@ -295,9 +297,7 @@ class MCPProtocol:
         # Simple implementation without pagination
         resources = [resource.to_dict() for resource in self.resources.values()]
 
-        return {
-            "resources": resources
-        }
+        return {"resources": resources}
 
     async def _handle_read_resource(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle resources/read request."""
@@ -315,7 +315,7 @@ class MCPProtocol:
                 {
                     "uri": uri,
                     "mimeType": resource.mime_type or "text/plain",
-                    "text": f"Content of resource: {uri}"
+                    "text": f"Content of resource: {uri}",
                 }
             ]
         }
@@ -326,9 +326,7 @@ class MCPProtocol:
 
         tools = [tool.to_dict() for tool in self.tools.values()]
 
-        return {
-            "tools": tools
-        }
+        return {"tools": tools}
 
     async def _handle_call_tool(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle tools/call request."""
@@ -347,7 +345,7 @@ class MCPProtocol:
             "content": [
                 {
                     "type": "text",
-                    "text": f"Executed tool {name} with arguments {arguments}"
+                    "text": f"Executed tool {name} with arguments {arguments}",
                 }
             ]
         }
@@ -358,9 +356,7 @@ class MCPProtocol:
 
         prompts = [prompt.to_dict() for prompt in self.prompts.values()]
 
-        return {
-            "prompts": prompts
-        }
+        return {"prompts": prompts}
 
     async def _handle_get_prompt(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle prompts/get request."""
@@ -382,10 +378,10 @@ class MCPProtocol:
                     "role": "user",
                     "content": {
                         "type": "text",
-                        "text": f"Rendered prompt: {name} with arguments {arguments}"
-                    }
+                        "text": f"Rendered prompt: {name} with arguments {arguments}",
+                    },
                 }
-            ]
+            ],
         }
 
     def _handle_set_log_level(self, params: Dict[str, Any]):
@@ -394,23 +390,24 @@ class MCPProtocol:
         # Set logging level - placeholder implementation
         print(f"Log level set to: {level}")
 
-    def create_request(self, method: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def create_request(
+        self, method: str, params: Optional[Dict[str, Any]] = None
+    ) -> str:
         """Create a JSON-RPC request message."""
-        request = JSONRPCRequest(
-            method=method,
-            params=params,
-            id=str(uuid.uuid4())
-        )
+        request = JSONRPCRequest(method=method, params=params, id=str(uuid.uuid4()))
         return json.dumps(request.to_dict())
 
-    def create_notification(self, method: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def create_notification(
+        self, method: str, params: Optional[Dict[str, Any]] = None
+    ) -> str:
         """Create a JSON-RPC notification message."""
         request = JSONRPCRequest(
             method=method,
-            params=params
+            params=params,
             # No id for notifications
         )
         return json.dumps(request.to_dict())
+
 
 class MCPServer(MCPProtocol):
     """MCP Server implementation."""
@@ -445,13 +442,10 @@ class MCPServer(MCPProtocol):
 
             except Exception as e:
                 error_response = JSONRPCResponse(
-                    error={
-                        "code": -32603,
-                        "message": "Internal error",
-                        "data": str(e)
-                    }
+                    error={"code": -32603, "message": "Internal error", "data": str(e)}
                 )
                 print(json.dumps(error_response.to_dict()), flush=True)
+
 
 class MCPClient(MCPProtocol):
     """MCP Client implementation."""
@@ -462,16 +456,16 @@ class MCPClient(MCPProtocol):
 
     async def initialize(self, server_transport) -> Dict[str, Any]:
         """Initialize connection with MCP server."""
-        request = self.create_request("initialize", {
-            "protocolVersion": self.VERSION,
-            "clientInfo": {
-                "name": self.name,
-                "version": self.version
+        request = self.create_request(
+            "initialize",
+            {
+                "protocolVersion": self.VERSION,
+                "clientInfo": {"name": self.name, "version": self.version},
+                "capabilities": {
+                    capability.value: {} for capability in self.capabilities
+                },
             },
-            "capabilities": {
-                capability.value: {} for capability in self.capabilities
-            }
-        })
+        )
 
         response = await self._send_request(server_transport, request)
 
@@ -487,42 +481,50 @@ class MCPClient(MCPProtocol):
         # For now, just return a mock response
         return {"protocolVersion": self.VERSION, "capabilities": {}}
 
+
 async def main():
     """Example MCP server."""
     server = MCPServer("example-server", "1.0.0")
 
     # Register a test resource
-    server.register_resource(MCPResource(
-        uri="file:///example.txt",
-        name="Example File",
-        description="An example text file",
-        mime_type="text/plain"
-    ))
+    server.register_resource(
+        MCPResource(
+            uri="file:///example.txt",
+            name="Example File",
+            description="An example text file",
+            mime_type="text/plain",
+        )
+    )
 
     # Register a test tool
-    server.register_tool(MCPTool(
-        name="echo",
-        description="Echo the input text",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "text": {"type": "string", "description": "Text to echo"}
+    server.register_tool(
+        MCPTool(
+            name="echo",
+            description="Echo the input text",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Text to echo"}
+                },
+                "required": ["text"],
             },
-            "required": ["text"]
-        }
-    ))
+        )
+    )
 
     # Register a test prompt
-    server.register_prompt(MCPPrompt(
-        name="summarize",
-        description="Summarize the given text",
-        arguments=[
-            {"name": "text", "description": "Text to summarize", "required": True}
-        ]
-    ))
+    server.register_prompt(
+        MCPPrompt(
+            name="summarize",
+            description="Summarize the given text",
+            arguments=[
+                {"name": "text", "description": "Text to summarize", "required": True}
+            ],
+        )
+    )
 
     print("MCP Server starting on stdio...")
     await server.start_stdio()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

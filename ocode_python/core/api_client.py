@@ -5,31 +5,37 @@ Ollama API Client for streaming completions and model management.
 import asyncio
 import json
 import os
-from typing import AsyncGenerator, Dict, List, Optional, Any
 from dataclasses import dataclass
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import aiohttp
 from pydantic import BaseModel
 
+
 @dataclass
 class Message:
     """Chat message structure."""
+
     role: str  # "system", "user", "assistant"
     content: str
 
     def to_dict(self) -> Dict[str, str]:
         return {"role": self.role, "content": self.content}
 
+
 @dataclass
 class ToolCall:
     """Tool call structure for function calling."""
+
     name: str
     arguments: Dict[str, Any]
     id: Optional[str] = None
 
+
 @dataclass
 class StreamChunk:
     """Streaming response chunk."""
+
     content: Optional[str] = None
     tool_call: Optional[ToolCall] = None
     done: bool = False
@@ -48,8 +54,10 @@ class StreamChunk:
         else:
             return "unknown"
 
+
 class CompletionRequest(BaseModel):
     """Request structure for chat completions."""
+
     model: str
     messages: List[Dict[str, str]]
     stream: bool = True
@@ -58,6 +66,7 @@ class CompletionRequest(BaseModel):
 
     class Config:
         extra = "allow"
+
 
 class OllamaAPIClient:
     """
@@ -78,7 +87,7 @@ class OllamaAPIClient:
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session: Optional[aiohttp.ClientSession] = None
 
-    async def __aenter__(self) -> 'OllamaAPIClient':
+    async def __aenter__(self) -> "OllamaAPIClient":
         """Async context manager entry."""
         self.session = aiohttp.ClientSession(timeout=self.timeout)
         return self
@@ -96,21 +105,23 @@ class OllamaAPIClient:
     def _convert_messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert chat messages to a single prompt for /api/generate endpoint."""
         prompt_parts = []
-        
+
         for message in messages:
             role = message.get("role", "")
             content = message.get("content", "")
-            
+
             if role == "system":
                 prompt_parts.append(f"System: {content}")
             elif role == "user":
                 prompt_parts.append(f"User: {content}")
             elif role == "assistant":
                 prompt_parts.append(f"Assistant: {content}")
-        
+
         return "\n\n".join(prompt_parts)
 
-    async def stream_chat(self, request: CompletionRequest) -> AsyncGenerator[StreamChunk, None]:
+    async def stream_chat(
+        self, request: CompletionRequest
+    ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream chat completion responses.
 
@@ -140,9 +151,9 @@ class OllamaAPIClient:
                 "prompt": prompt,
                 "stream": request.stream,
             }
-        
+
         headers = {"Content-Type": "application/json"}
-        
+
         if request.options:
             payload["options"] = request.options
 
@@ -150,7 +161,9 @@ class OllamaAPIClient:
             await self._ensure_session()
             if not self.session:
                 raise RuntimeError("Failed to create session")
-            async with self.session.post(url, json=payload, headers=headers) as response:
+            async with self.session.post(
+                url, json=payload, headers=headers
+            ) as response:
                 response.raise_for_status()
 
                 if request.tools and not payload["stream"]:
@@ -161,14 +174,14 @@ class OllamaAPIClient:
                 else:
                     # Handle streaming response
                     async for line in response.content:
-                        line_str = line.decode('utf-8').strip()
+                        line_str = line.decode("utf-8").strip()
                         if not line_str:
                             continue
 
                         try:
                             data = json.loads(line_str)
                             chunk = self._parse_chunk(data)
-                            
+
                             # Always yield the chunk if it has any content
                             if chunk.content or chunk.done or chunk.tool_call:
                                 yield chunk
@@ -192,26 +205,26 @@ class OllamaAPIClient:
         chunk = StreamChunk(
             done=data.get("done", False),
             model=data.get("model"),
-            created_at=data.get("created_at")
+            created_at=data.get("created_at"),
         )
 
         # Handle content from /api/generate endpoint
         if "response" in data:
             chunk.content = data["response"]
-        
+
         # Handle content from /api/chat endpoint
         if "message" in data:
             message = data["message"]
             if "content" in message:
                 chunk.content = message["content"]
-            
+
             # Handle tool calls from /api/chat endpoint
             if "tool_calls" in message and message["tool_calls"]:
                 tool_call_data = message["tool_calls"][0]  # Handle first tool call
                 if "function" in tool_call_data:
                     function = tool_call_data["function"]
                     arguments = function.get("arguments", {})
-                    
+
                     # Handle both string and dict formats
                     if isinstance(arguments, str):
                         try:
@@ -223,11 +236,11 @@ class OllamaAPIClient:
                             arguments = {}
                     elif not isinstance(arguments, dict):
                         arguments = {}
-                    
+
                     chunk.tool_call = ToolCall(
                         name=function.get("name", ""),
                         arguments=arguments,
-                        id=tool_call_data.get("id")
+                        id=tool_call_data.get("id"),
                     )
 
         return chunk
@@ -283,7 +296,7 @@ class OllamaAPIClient:
                         continue
 
                     try:
-                        progress = json.loads(line.decode('utf-8'))
+                        progress = json.loads(line.decode("utf-8"))
                         yield progress
 
                         if progress.get("status") == "success":
@@ -348,6 +361,7 @@ class OllamaAPIClient:
         if self.session and not self.session.closed:
             asyncio.create_task(self.session.close())
 
+
 async def main() -> None:
     """Example usage of OllamaAPIClient."""
     async with OllamaAPIClient() as client:
@@ -363,9 +377,7 @@ async def main() -> None:
         # Stream chat
         request = CompletionRequest(
             model="llama3:8b",
-            messages=[
-                {"role": "user", "content": "Hello, how are you?"}
-            ]
+            messages=[{"role": "user", "content": "Hello, how are you?"}],
         )
 
         print("Response: ", end="", flush=True)
@@ -373,6 +385,7 @@ async def main() -> None:
             if chunk.content:
                 print(chunk.content, end="", flush=True)
         print()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

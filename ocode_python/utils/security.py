@@ -5,20 +5,24 @@ Security and permission management for OCode.
 import os
 import re
 import subprocess
-from pathlib import Path
-from typing import List, Set, Dict, Any, Optional, Callable, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+
 
 class PermissionLevel(Enum):
     """Permission levels for operations."""
+
     DENIED = "denied"
     READ_ONLY = "read_only"
     RESTRICTED = "restricted"
     FULL = "full"
 
+
 class OperationType(Enum):
     """Types of operations that can be controlled."""
+
     FILE_READ = "file_read"
     FILE_WRITE = "file_write"
     FILE_DELETE = "file_delete"
@@ -28,9 +32,11 @@ class OperationType(Enum):
     ENVIRONMENT_READ = "environment_read"
     ENVIRONMENT_WRITE = "environment_write"
 
+
 @dataclass
 class PermissionRule:
     """Represents a permission rule."""
+
     operation: OperationType
     pattern: str  # Path pattern or command pattern
     permission: PermissionLevel
@@ -40,7 +46,9 @@ class PermissionRule:
         """Check if this rule matches the target."""
         # Support glob-style patterns
         import fnmatch
+
         return fnmatch.fnmatch(target, self.pattern)
+
 
 class PermissionManager:
     """
@@ -77,80 +85,137 @@ class PermissionManager:
         """Load default security rules."""
         # Default blocked paths (high-security system directories)
         default_blocked = [
-            "/etc/*", "/bin/*", "/sbin/*", "/usr/bin/*", "/usr/sbin/*",
-            "/boot/*", "/sys/*", "/proc/*", "/dev/*",
-            "C:\\Windows\\*", "C:\\Program Files\\*", "C:\\Program Files (x86)\\*"
+            "/etc/*",
+            "/bin/*",
+            "/sbin/*",
+            "/usr/bin/*",
+            "/usr/sbin/*",
+            "/boot/*",
+            "/sys/*",
+            "/proc/*",
+            "/dev/*",
+            "C:\\Windows\\*",
+            "C:\\Program Files\\*",
+            "C:\\Program Files (x86)\\*",
         ]
 
         for pattern in default_blocked:
-            self.add_rule(PermissionRule(
-                operation=OperationType.FILE_WRITE,
-                pattern=pattern,
-                permission=PermissionLevel.DENIED,
-                description=f"Block writes to system directory: {pattern}"
-            ))
+            self.add_rule(
+                PermissionRule(
+                    operation=OperationType.FILE_WRITE,
+                    pattern=pattern,
+                    permission=PermissionLevel.DENIED,
+                    description=f"Block writes to system directory: {pattern}",
+                )
+            )
 
-            self.add_rule(PermissionRule(
-                operation=OperationType.FILE_DELETE,
-                pattern=pattern,
-                permission=PermissionLevel.DENIED,
-                description=f"Block deletes in system directory: {pattern}"
-            ))
+            self.add_rule(
+                PermissionRule(
+                    operation=OperationType.FILE_DELETE,
+                    pattern=pattern,
+                    permission=PermissionLevel.DENIED,
+                    description=f"Block deletes in system directory: {pattern}",
+                )
+            )
 
         # Default blocked commands
         dangerous_commands = [
-            "rm", "rmdir", "del", "format", "fdisk", "mkfs",
-            "sudo", "su", "passwd", "useradd", "userdel",
-            "kill", "killall", "pkill", "taskkill",
-            "chmod", "chown", "icacls", "takeown",
-            "dd", "mount", "umount"
+            "rm",
+            "rmdir",
+            "del",
+            "format",
+            "fdisk",
+            "mkfs",
+            "sudo",
+            "su",
+            "passwd",
+            "useradd",
+            "userdel",
+            "kill",
+            "killall",
+            "pkill",
+            "taskkill",
+            "chmod",
+            "chown",
+            "icacls",
+            "takeown",
+            "dd",
+            "mount",
+            "umount",
         ]
 
         for cmd in dangerous_commands:
-            self.add_rule(PermissionRule(
-                operation=OperationType.SHELL_EXEC,
-                pattern=f"{cmd}*",
-                permission=PermissionLevel.DENIED,
-                description=f"Block dangerous command: {cmd}"
-            ))
+            self.add_rule(
+                PermissionRule(
+                    operation=OperationType.SHELL_EXEC,
+                    pattern=f"{cmd}*",
+                    permission=PermissionLevel.DENIED,
+                    description=f"Block dangerous command: {cmd}",
+                )
+            )
 
         # Allow common safe commands
         safe_commands = [
-            "ls", "dir", "cat", "type", "echo", "pwd", "cd",
-            "grep", "find", "head", "tail", "wc", "sort",
-            "python*", "pip*", "npm*", "node*", "git*",
-            "curl", "wget", "test", "pytest"
+            "ls",
+            "dir",
+            "cat",
+            "type",
+            "echo",
+            "pwd",
+            "cd",
+            "grep",
+            "find",
+            "head",
+            "tail",
+            "wc",
+            "sort",
+            "python*",
+            "pip*",
+            "npm*",
+            "node*",
+            "git*",
+            "curl",
+            "wget",
+            "test",
+            "pytest",
         ]
 
         for cmd in safe_commands:
-            self.add_rule(PermissionRule(
-                operation=OperationType.SHELL_EXEC,
-                pattern=f"{cmd}*",
-                permission=PermissionLevel.RESTRICTED,
-                description=f"Allow safe command: {cmd}"
-            ))
+            self.add_rule(
+                PermissionRule(
+                    operation=OperationType.SHELL_EXEC,
+                    pattern=f"{cmd}*",
+                    permission=PermissionLevel.RESTRICTED,
+                    description=f"Allow safe command: {cmd}",
+                )
+            )
 
         # Default file access rules
-        self.add_rule(PermissionRule(
-            operation=OperationType.FILE_READ,
-            pattern="*",
-            permission=PermissionLevel.READ_ONLY,
-            description="Default read access to all files"
-        ))
+        self.add_rule(
+            PermissionRule(
+                operation=OperationType.FILE_READ,
+                pattern="*",
+                permission=PermissionLevel.READ_ONLY,
+                description="Default read access to all files",
+            )
+        )
 
         # Git operations are generally safe
-        self.add_rule(PermissionRule(
-            operation=OperationType.GIT_OPERATION,
-            pattern="*",
-            permission=PermissionLevel.RESTRICTED,
-            description="Allow git operations with restrictions"
-        ))
+        self.add_rule(
+            PermissionRule(
+                operation=OperationType.GIT_OPERATION,
+                pattern="*",
+                permission=PermissionLevel.RESTRICTED,
+                description="Allow git operations with restrictions",
+            )
+        )
 
     def _load_config(self, config_path: Path):
         """Load configuration from file."""
         try:
             import json
-            with open(config_path, 'r') as f:
+
+            with open(config_path, "r") as f:
                 config = json.load(f)
 
             # Load custom rules
@@ -160,7 +225,7 @@ class PermissionManager:
                         operation=OperationType(rule_data["operation"]),
                         pattern=rule_data["pattern"],
                         permission=PermissionLevel(rule_data["permission"]),
-                        description=rule_data.get("description", "")
+                        description=rule_data.get("description", ""),
                     )
                     self.add_rule(rule)
 
@@ -191,7 +256,9 @@ class PermissionManager:
             self.validators[operation] = []
         self.validators[operation].append(validator)
 
-    def check_permission(self, operation: OperationType, target: str) -> PermissionLevel:
+    def check_permission(
+        self, operation: OperationType, target: str
+    ) -> PermissionLevel:
         """
         Check permission for an operation on a target.
 
@@ -209,7 +276,11 @@ class PermissionManager:
                     return PermissionLevel.DENIED
 
         # Check explicit blocks/allows first
-        if operation in [OperationType.FILE_READ, OperationType.FILE_WRITE, OperationType.FILE_DELETE]:
+        if operation in [
+            OperationType.FILE_READ,
+            OperationType.FILE_WRITE,
+            OperationType.FILE_DELETE,
+        ]:
             if self._is_path_blocked(target):
                 return PermissionLevel.DENIED
             if self.allowed_paths and not self._is_path_allowed(target):
@@ -223,7 +294,11 @@ class PermissionManager:
                 return PermissionLevel.DENIED
 
         # Check rules (most specific first)
-        matching_rules = [rule for rule in self.rules if rule.operation == operation and rule.matches(target)]
+        matching_rules = [
+            rule
+            for rule in self.rules
+            if rule.operation == operation and rule.matches(target)
+        ]
 
         if matching_rules:
             # Return the most restrictive permission from matching rules
@@ -244,6 +319,7 @@ class PermissionManager:
     def _is_path_blocked(self, path: str) -> bool:
         """Check if path is explicitly blocked."""
         import fnmatch
+
         abs_path = os.path.abspath(path)
 
         for blocked_pattern in self.blocked_paths:
@@ -255,6 +331,7 @@ class PermissionManager:
     def _is_path_allowed(self, path: str) -> bool:
         """Check if path is explicitly allowed."""
         import fnmatch
+
         abs_path = os.path.abspath(path)
 
         for allowed_pattern in self.allowed_paths:
@@ -298,12 +375,12 @@ class PermissionManager:
 
         # Remove dangerous operators and characters
         dangerous_patterns = [
-            r'[;&|`$()]',  # Command injection characters
-            r'>\s*/',      # Redirect to root paths
-            r'>.*etc',     # Redirect to etc directory
-            r'rm\s+-rf',   # Dangerous rm flags
-            r'sudo',       # Sudo commands
-            r'su\s',       # Switch user
+            r"[;&|`$()]",  # Command injection characters
+            r">\s*/",  # Redirect to root paths
+            r">.*etc",  # Redirect to etc directory
+            r"rm\s+-rf",  # Dangerous rm flags
+            r"sudo",  # Sudo commands
+            r"su\s",  # Switch user
         ]
 
         for pattern in dangerous_patterns:
@@ -318,9 +395,18 @@ class PermissionManager:
 
         # Only include safe environment variables
         safe_vars = {
-            'PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'LC_ALL',
-            'PYTHONPATH', 'NODE_PATH', 'GOPATH', 'JAVA_HOME',
-            'OCODE_MODEL', 'OLLAMA_HOST'
+            "PATH",
+            "HOME",
+            "USER",
+            "SHELL",
+            "LANG",
+            "LC_ALL",
+            "PYTHONPATH",
+            "NODE_PATH",
+            "GOPATH",
+            "JAVA_HOME",
+            "OCODE_MODEL",
+            "OLLAMA_HOST",
         }
 
         for var in safe_vars:
@@ -350,7 +436,9 @@ class PermissionManager:
             "max_memory": 512 * 1024 * 1024,  # 512MB
         }
 
-    def validate_file_operation(self, operation: str, file_path: str) -> Tuple[bool, str]:
+    def validate_file_operation(
+        self, operation: str, file_path: str
+    ) -> Tuple[bool, str]:
         """
         Validate a file operation.
 
@@ -389,7 +477,10 @@ class PermissionManager:
                 if not os.access(abs_path, os.W_OK):
                     return False, f"No delete permission: {file_path}"
                 if not self.can_delete_file(abs_path):
-                    return False, f"Delete access denied by security policy: {file_path}"
+                    return (
+                        False,
+                        f"Delete access denied by security policy: {file_path}",
+                    )
 
             return True, "Operation allowed"
 
@@ -404,19 +495,21 @@ class PermissionManager:
                     "operation": rule.operation.value,
                     "pattern": rule.pattern,
                     "permission": rule.permission.value,
-                    "description": rule.description
+                    "description": rule.description,
                 }
                 for rule in self.rules
             ],
             "blocked_paths": list(self.blocked_paths),
             "allowed_paths": list(self.allowed_paths),
             "blocked_commands": list(self.blocked_commands),
-            "allowed_commands": list(self.allowed_commands)
+            "allowed_commands": list(self.allowed_commands),
         }
 
         import json
-        with open(output_path, 'w') as f:
+
+        with open(output_path, "w") as f:
             json.dump(policy, f, indent=2)
+
 
 class SecureShellExecutor:
     """Secure shell command executor with sandboxing."""
@@ -424,8 +517,9 @@ class SecureShellExecutor:
     def __init__(self, permission_manager: PermissionManager):
         self.permission_manager = permission_manager
 
-    async def execute(self, command: str, working_dir: Optional[str] = None,
-                     timeout: int = 300) -> Tuple[bool, str, str]:
+    async def execute(
+        self, command: str, working_dir: Optional[str] = None, timeout: int = 300
+    ) -> Tuple[bool, str, str]:
         """
         Execute command securely.
 
@@ -444,7 +538,9 @@ class SecureShellExecutor:
 
         # Validate working directory
         if working_dir:
-            allowed, reason = self.permission_manager.validate_file_operation("read", working_dir)
+            allowed, reason = self.permission_manager.validate_file_operation(
+                "read", working_dir
+            )
             if not allowed:
                 return False, "", f"Working directory access denied: {reason}"
 
@@ -460,7 +556,7 @@ class SecureShellExecutor:
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             try:
@@ -475,6 +571,7 @@ class SecureShellExecutor:
         except Exception as e:
             return False, "", f"Execution error: {str(e)}"
 
+
 def main():
     """Example usage of security system."""
     manager = PermissionManager()
@@ -484,7 +581,7 @@ def main():
         "/tmp/test.txt",
         "/etc/passwd",
         "~/documents/myfile.py",
-        "project/src/main.py"
+        "project/src/main.py",
     ]
 
     for file_path in test_files:
@@ -499,7 +596,7 @@ def main():
         "rm -rf /",
         "python script.py",
         "sudo apt install",
-        "git status"
+        "git status",
     ]
 
     print("\nCommands:")
@@ -507,6 +604,7 @@ def main():
         can_execute = manager.can_execute_command(command)
         sanitized = manager.sanitize_command(command)
         print(f"  {command}: {can_execute} -> {sanitized}")
+
 
 if __name__ == "__main__":
     main()

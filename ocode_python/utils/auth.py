@@ -4,14 +4,17 @@ Authentication management for OCode.
 
 import json
 import time
-from pathlib import Path
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Optional
+
 import requests
+
 
 @dataclass
 class AuthToken:
     """Authentication token information."""
+
     token: str
     expires_at: Optional[float] = None
     token_type: str = "Bearer"
@@ -29,7 +32,7 @@ class AuthToken:
             "token": self.token,
             "expires_at": self.expires_at,
             "token_type": self.token_type,
-            "scope": self.scope
+            "scope": self.scope,
         }
 
     @classmethod
@@ -39,8 +42,9 @@ class AuthToken:
             token=data["token"],
             expires_at=data.get("expires_at"),
             token_type=data.get("token_type", "Bearer"),
-            scope=data.get("scope")
+            scope=data.get("scope"),
         )
+
 
 class AuthenticationManager:
     """
@@ -68,7 +72,7 @@ class AuthenticationManager:
             return {}
 
         try:
-            with open(self.auth_file, 'r', encoding='utf-8') as f:
+            with open(self.auth_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return data if isinstance(data, dict) else {}
         except (json.JSONDecodeError, OSError) as e:
@@ -78,7 +82,7 @@ class AuthenticationManager:
     def _save_auth_file(self, data: Dict[str, Any]) -> bool:
         """Save authentication data to file."""
         try:
-            with open(self.auth_file, 'w', encoding='utf-8') as f:
+            with open(self.auth_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
 
             # Set restrictive permissions
@@ -121,8 +125,13 @@ class AuthenticationManager:
         auth_token = self.get_token()
         return auth_token.token if auth_token else None
 
-    def save_token(self, token: str, expires_at: Optional[float] = None,
-                   token_type: str = "Bearer", scope: Optional[str] = None) -> bool:
+    def save_token(
+        self,
+        token: str,
+        expires_at: Optional[float] = None,
+        token_type: str = "Bearer",
+        scope: Optional[str] = None,
+    ) -> bool:
         """
         Save authentication token.
 
@@ -136,10 +145,7 @@ class AuthenticationManager:
             True if saved successfully
         """
         auth_token = AuthToken(
-            token=token,
-            expires_at=expires_at,
-            token_type=token_type,
-            scope=scope
+            token=token, expires_at=expires_at, token_type=token_type, scope=scope
         )
 
         auth_data = self._load_auth_file()
@@ -198,48 +204,50 @@ class AuthenticationManager:
         # Get stored credentials
         credentials = self.get_credentials()
         refresh_token = credentials.get("refresh_token")
-        
+
         if not refresh_token:
             return False
-            
+
         try:
             # Make request to refresh token endpoint
             # Get token endpoint from credentials or use default
-            token_endpoint = credentials.get("token_endpoint", "https://auth.ocode.com/oauth/token")
-            
+            token_endpoint = credentials.get(
+                "token_endpoint", "https://auth.ocode.com/oauth/token"
+            )
+
             # Prepare refresh token request
             data = {
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token,
-                "client_id": credentials.get("client_id")
+                "client_id": credentials.get("client_id"),
             }
-            
+
             # Add client secret if available
             if "client_secret" in credentials:
                 data["client_secret"] = credentials["client_secret"]
-                
+
             # Make the request
             response = requests.post(token_endpoint, data=data)
             response.raise_for_status()
-            
+
             # Parse response
             token_data = response.json()
-            
+
             # Save new tokens
             success = self.save_token(
                 token=token_data["access_token"],
                 expires_at=time.time() + token_data.get("expires_in", 3600),
                 token_type=token_data.get("token_type", "Bearer"),
-                scope=token_data.get("scope")
+                scope=token_data.get("scope"),
             )
-            
+
             # Save new refresh token if provided
             if "refresh_token" in token_data:
                 credentials["refresh_token"] = token_data["refresh_token"]
                 self.save_credentials(credentials)
-                
+
             return success
-            
+
         except Exception as e:
             print(f"Failed to refresh token: {e}")
             return False
@@ -301,18 +309,24 @@ class AuthenticationManager:
             "has_api_key": api_key is not None,
             "token_expired": token.is_expired() if token else None,
             "token_expires_at": token.expires_at if token else None,
-            "auth_file_exists": self.auth_file.exists()
+            "auth_file_exists": self.auth_file.exists(),
         }
 
         return status
+
 
 class OIDCAuthenticator:
     """
     OIDC (OpenID Connect) authentication for enterprise environments.
     """
 
-    def __init__(self, auth_manager: AuthenticationManager,
-                 issuer_url: str, client_id: str, client_secret: Optional[str] = None):
+    def __init__(
+        self,
+        auth_manager: AuthenticationManager,
+        issuer_url: str,
+        client_id: str,
+        client_secret: Optional[str] = None,
+    ):
         """
         Initialize OIDC authenticator.
 
@@ -339,63 +353,66 @@ class OIDCAuthenticator:
             True if authentication successful
         """
         try:
-            import aiohttp
             import json
-            
+
+            import aiohttp
+
             # Discover OIDC endpoints
             async with aiohttp.ClientSession() as session:
                 # Get OIDC configuration
-                async with session.get(f"{self.issuer_url}/.well-known/openid-configuration") as response:
+                async with session.get(
+                    f"{self.issuer_url}/.well-known/openid-configuration"
+                ) as response:
                     if response.status != 200:
                         return False
                     config = await response.json()
-                
+
                 # Get token endpoint
                 token_endpoint = config.get("token_endpoint")
                 if not token_endpoint:
                     return False
-                
+
                 # Prepare token request
                 data = {
                     "grant_type": "password",
                     "username": username,
                     "password": password,
                     "client_id": self.client_id,
-                    "scope": "openid profile email"
+                    "scope": "openid profile email",
                 }
-                
+
                 # Add client secret if available
                 if self.client_secret:
                     data["client_secret"] = self.client_secret
-                
+
                 # Make token request
                 async with session.post(token_endpoint, data=data) as response:
                     if response.status != 200:
                         return False
-                    
+
                     token_data = await response.json()
-                    
+
                     # Save tokens
                     success = self.auth_manager.save_token(
                         token=token_data["access_token"],
                         expires_at=time.time() + token_data.get("expires_in", 3600),
                         token_type=token_data.get("token_type", "Bearer"),
-                        scope=token_data.get("scope")
+                        scope=token_data.get("scope"),
                     )
-                    
+
                     # Save refresh token and other credentials
                     credentials = {
                         "refresh_token": token_data.get("refresh_token"),
                         "token_endpoint": token_endpoint,
-                        "client_id": self.client_id
+                        "client_id": self.client_id,
                     }
                     if self.client_secret:
                         credentials["client_secret"] = self.client_secret
-                    
+
                     self.auth_manager.save_credentials(credentials)
-                    
+
                     return success
-                    
+
         except Exception as e:
             print(f"Authentication failed: {e}")
             return False
@@ -410,6 +427,7 @@ class OIDCAuthenticator:
         # Placeholder for device flow
         # Would implement full device authorization flow here
         return False
+
 
 def main() -> None:
     """Example usage of AuthenticationManager."""
@@ -433,6 +451,7 @@ def main() -> None:
     # Get auth headers
     headers = auth.get_auth_headers()
     print(f"\nAuth headers: {headers}")
+
 
 if __name__ == "__main__":
     main()

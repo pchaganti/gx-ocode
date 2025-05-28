@@ -2,242 +2,226 @@
 Unit tests for OCode engine.
 """
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
 
-from ocode_python.core.engine import OCodeEngine
+import pytest
+
 from ocode_python.core.api_client import StreamChunk
+from ocode_python.core.engine import OCodeEngine
 
 
 @pytest.mark.unit
 class TestOCodeEngine:
     """Test OCodeEngine functionality."""
-    
+
     @pytest.mark.asyncio
-    async def test_engine_initialization(self, mock_project_dir: Path, mock_config: dict):
+    async def test_engine_initialization(
+        self, mock_project_dir: Path, mock_config: dict
+    ):
         """Test engine initialization."""
         engine = OCodeEngine(
             model="test-model",
             output_format="text",
             verbose=False,
-            root_path=mock_project_dir
+            root_path=mock_project_dir,
         )
-        
+
         assert engine.model == "test-model"
         assert engine.output_format == "text"
         assert not engine.verbose
         assert engine.root_path == mock_project_dir
-    
+
     @pytest.mark.asyncio
     async def test_engine_context_management(self, mock_project_dir: Path):
         """Test async context manager functionality."""
         async with OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
+            model="test-model", root_path=mock_project_dir
         ) as engine:
             assert engine.api_client is not None
-    
-    @patch('ocode_python.core.engine.OllamaAPIClient')
+
+    @patch("ocode_python.core.engine.OllamaAPIClient")
     @pytest.mark.asyncio
-    async def test_process_simple_prompt(self, mock_client_class, mock_project_dir: Path):
+    async def test_process_simple_prompt(
+        self, mock_client_class, mock_project_dir: Path
+    ):
         """Test processing a simple prompt."""
         # Mock API client
         mock_client = AsyncMock()
-        
+
         async def mock_stream_chat(request):
             yield StreamChunk(content="Hello, ")
             yield StreamChunk(content="this is a test.")
             yield StreamChunk(done=True)
-        
+
         mock_client.stream_chat = mock_stream_chat
         mock_client_class.return_value = mock_client
-        
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         responses = []
         async for response in engine.process("Hello, world!"):
             responses.append(response)
-        
+
         assert len(responses) == 2
         assert responses[0] == "Hello, "
         assert responses[1] == "this is a test."
-    
-    @patch('ocode_python.core.engine.OllamaAPIClient')
+
+    @patch("ocode_python.core.engine.OllamaAPIClient")
     @pytest.mark.asyncio
-    async def test_process_with_context(self, mock_client_class, mock_project_dir: Path):
+    async def test_process_with_context(
+        self, mock_client_class, mock_project_dir: Path
+    ):
         """Test processing with context files."""
         mock_client = AsyncMock()
-        
+
         async def mock_stream_chat(request):
             yield StreamChunk(content="Based on the context, ")
             yield StreamChunk(content="I can help you.")
             yield StreamChunk(done=True)
-        
+
         mock_client.stream_chat = mock_stream_chat
         mock_client_class.return_value = mock_client
-        
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         responses = []
         async for response in engine.process("Analyze the main.py file"):
             responses.append(response)
-        
+
         assert len(responses) == 2
         assert "Based on the context" in responses[0]
-    
-    @patch('ocode_python.core.engine.OllamaAPIClient')
+
+    @patch("ocode_python.core.engine.OllamaAPIClient")
     @pytest.mark.asyncio
-    async def test_process_with_tool_calls(self, mock_client_class, mock_project_dir: Path):
+    async def test_process_with_tool_calls(
+        self, mock_client_class, mock_project_dir: Path
+    ):
         """Test processing with tool calls."""
         from ocode_python.core.api_client import ToolCall
-        
+
         mock_client = AsyncMock()
-        
+
         async def mock_stream_chat(request):
             # First yield a tool call
             tool_call = ToolCall(
-                name="file_read",
-                arguments={"path": "main.py"},
-                id="call_123"
+                name="file_read", arguments={"path": "main.py"}, id="call_123"
             )
             yield StreamChunk(tool_call=tool_call)
-            
+
             # Then yield final response
             yield StreamChunk(content="The file contains a main function.")
             yield StreamChunk(done=True)
-        
+
         mock_client.stream_chat = mock_stream_chat
         mock_client_class.return_value = mock_client
-        
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         # Mock tool execution
-        with patch.object(engine.tool_registry, 'execute_tool') as mock_execute:
+        with patch.object(engine.tool_registry, "execute_tool") as mock_execute:
             from ocode_python.tools.base import ToolResult
+
             mock_execute.return_value = ToolResult(
-                success=True,
-                output="print('Hello, world!')"
+                success=True, output="print('Hello, world!')"
             )
-            
+
             responses = []
             async for response in engine.process("Read the main.py file"):
                 responses.append(response)
-            
+
             # Should execute tool and return response
             mock_execute.assert_called_once()
             assert len(responses) >= 1
-    
+
     @pytest.mark.asyncio
     async def test_engine_error_handling(self, mock_project_dir: Path):
         """Test engine error handling."""
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         # Mock API client to raise an error
         engine.api_client = AsyncMock()
         engine.api_client.stream_chat = AsyncMock(side_effect=Exception("API error"))
-        
+
         responses = []
         async for response in engine.process("test prompt"):
             responses.append(response)
-        
+
         # Should handle error gracefully
         assert len(responses) >= 1
         assert any("error" in response.lower() for response in responses)
-    
+
     @pytest.mark.asyncio
     async def test_save_and_continue_session(self, mock_project_dir: Path):
         """Test session management."""
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         # Add some conversation history
-        engine.conversation_history.extend([
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"}
-        ])
-        
+        engine.conversation_history.extend(
+            [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there!"},
+            ]
+        )
+
         # Save session
         session_id = engine.save_session()
         assert session_id is not None
-        
+
         # Create new engine and continue session
-        new_engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+        new_engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         success = new_engine.continue_session(session_id)
         assert success
         assert len(new_engine.conversation_history) == 2
-    
+
     @pytest.mark.asyncio
     async def test_engine_with_different_formats(self, mock_project_dir: Path):
         """Test engine with different output formats."""
         formats = ["text", "json", "stream-json"]
-        
+
         for fmt in formats:
             engine = OCodeEngine(
-                model="test-model",
-                output_format=fmt,
-                root_path=mock_project_dir
+                model="test-model", output_format=fmt, root_path=mock_project_dir
             )
-            
+
             assert engine.output_format == fmt
-    
+
     @pytest.mark.asyncio
     async def test_context_file_selection(self, mock_project_dir: Path):
         """Test context file selection logic."""
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         # Test different prompts that should select different files
         test_cases = [
             ("Fix the main function", ["main.py"]),
             ("Update the Calculator class", ["utils.py"]),
             ("Look at the package module", ["mypackage/module.py"]),
         ]
-        
+
         for prompt, expected_files in test_cases:
             context_files = engine._select_context_files(prompt)
-            
+
             # Should select relevant files (exact matching depends on implementation)
             assert isinstance(context_files, list)
-    
-    @pytest.mark.asyncio 
+
+    @pytest.mark.asyncio
     async def test_engine_memory_management(self, mock_project_dir: Path):
         """Test memory management for long conversations."""
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         # Simulate long conversation
         for i in range(20):
-            engine.conversation_history.extend([
-                {"role": "user", "content": f"Message {i}"},
-                {"role": "assistant", "content": f"Response {i}"}
-            ])
-        
+            engine.conversation_history.extend(
+                [
+                    {"role": "user", "content": f"Message {i}"},
+                    {"role": "assistant", "content": f"Response {i}"},
+                ]
+            )
+
         # Should manage memory appropriately
         engine._manage_conversation_memory()
-        
+
         # History should be trimmed but not empty
         assert len(engine.conversation_history) > 0
         assert len(engine.conversation_history) < 40  # Should be less than original
@@ -246,65 +230,56 @@ class TestOCodeEngine:
 @pytest.mark.unit
 class TestEngineUtilities:
     """Test engine utility functions."""
-    
+
     def test_format_response_text(self, mock_project_dir: Path):
         """Test text response formatting."""
         engine = OCodeEngine(
-            model="test-model",
-            output_format="text",
-            root_path=mock_project_dir
+            model="test-model", output_format="text", root_path=mock_project_dir
         )
-        
+
         response = "This is a test response."
         formatted = engine._format_response(response)
-        
+
         assert formatted == response
-    
+
     def test_format_response_json(self, mock_project_dir: Path):
         """Test JSON response formatting."""
         engine = OCodeEngine(
-            model="test-model", 
-            output_format="json",
-            root_path=mock_project_dir
+            model="test-model", output_format="json", root_path=mock_project_dir
         )
-        
+
         response = "This is a test response."
         formatted = engine._format_response(response)
-        
+
         # Should be valid JSON
         import json
+
         parsed = json.loads(formatted)
         assert "response" in parsed
-    
+
     def test_validate_model_name(self, mock_project_dir: Path):
         """Test model name validation."""
         # Valid model names
         valid_names = ["llama3:8b", "codellama:7b", "custom-model"]
-        
+
         for name in valid_names:
-            engine = OCodeEngine(
-                model=name,
-                root_path=mock_project_dir
-            )
+            engine = OCodeEngine(model=name, root_path=mock_project_dir)
             assert engine.model == name
-    
+
     @pytest.mark.asyncio
     async def test_engine_health_check(self, mock_project_dir: Path):
         """Test engine health check."""
-        engine = OCodeEngine(
-            model="test-model",
-            root_path=mock_project_dir
-        )
-        
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
+
         # Mock healthy API client
         engine.api_client = AsyncMock()
         engine.api_client.check_health = AsyncMock(return_value=True)
-        
+
         is_healthy = await engine.check_health()
         assert is_healthy
-        
+
         # Mock unhealthy API client
         engine.api_client.check_health = AsyncMock(return_value=False)
-        
+
         is_healthy = await engine.check_health()
         assert not is_healthy

@@ -19,7 +19,48 @@ OCode is a sophisticated terminal-native AI coding assistant that provides deep 
 | **Code Generation & Modification** | Multi-file refactors, TDD scaffolding, optimization, documentation |
 | **Project Understanding** | Architecture analysis, dependency tracking, cross-file reasoning |
 | **Development Automation** | Git workflows, test execution, build & CI integration |
+| **Data Processing** | JSON/YAML parsing and querying, data validation, format conversion |
+| **System Operations** | Process monitoring, environment management, network connectivity testing |
 | **Interactive Operations** | Natural language queries, contextual exploration, debugging assistance |
+
+### 🛠️ Available Tools
+
+OCode includes 19+ specialized tools organized by category:
+
+#### **File Operations**
+- `file_edit` - Edit and modify source files with precision
+- `file_ops` - Read, write, and manage file operations
+- `glob` - Pattern-based file discovery and matching
+- `find` - Search for files and directories
+- `ls` - List directory contents with filtering
+- `head_tail` - Read file beginnings and endings
+- `wc` - Count lines, words, and characters
+
+#### **Text Processing**
+- `grep` - Advanced text search with regex support
+- `text_tools` - Text manipulation and formatting
+- `diff` - Compare files and show differences
+
+#### **Data Processing**
+- `json_yaml` - Parse, query, and manipulate JSON/YAML data with JSONPath
+- `notebook_tools` - Work with Jupyter notebooks
+
+#### **System Operations**
+- `ps` - Monitor and query system processes
+- `env` - Manage environment variables and .env files
+- `ping` - Test network connectivity
+- `bash` - Execute shell commands safely
+- `which` - Locate system commands
+
+#### **Development Tools**
+- `git_tools` - Git operations and repository management
+- `architect` - Project architecture analysis and documentation
+- `agent` - Delegate complex tasks to specialized agents
+- `memory_tools` - Manage context and session memory
+
+#### **Integration**
+- `mcp` - Model Context Protocol integration
+- `curl` - HTTP requests and API testing
 
 ## 🚀 Quick Installation
 
@@ -34,7 +75,7 @@ This will:
 - ✅ Check Python 3.8+ and dependencies
 - 🐍 Set up virtual environment (optional)
 - 📦 Install OCode with enhanced multi-action detection
-- 🤖 Configure 16+ specialized tools
+- 🤖 Configure 19+ specialized tools including data processing and system monitoring
 - 🔧 Set up shell completion
 - ✨ Test enhanced conversation parsing
 
@@ -234,6 +275,11 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install in development mode with enhanced features
 pip install -e .
+
+# This will install new dependencies for data processing:
+# - pyyaml>=6.0 (YAML parsing)
+# - jsonpath-ng>=1.5.3 (JSONPath queries)  
+# - python-dotenv>=1.0.0 (Environment file handling)
 ```
 
 **Method 3: Direct Git Installation**
@@ -306,11 +352,13 @@ python -m ocode_python.core.cli -p "Run tests and commit if they pass"          
 python -m ocode_python.core.cli -p "Find all TODO comments and replace them"     # grep + file_edit  
 python -m ocode_python.core.cli -p "Analyze architecture and write documentation" # architect + file_write
 python -m ocode_python.core.cli -p "Create a component and write tests for it"   # file_write + test_runner
+python -m ocode_python.core.cli -p "Parse config.json and update environment"    # json_yaml + env
+python -m ocode_python.core.cli -p "Monitor processes and kill high CPU ones"    # ps + bash
 ```
 
 ### 🧠 Smart Tool Selection
-- **14+ Query Categories**: Agent management, file operations, testing, git, architecture analysis
-- **16+ Specialized Tools**: Comprehensive coverage for development workflows
+- **14+ Query Categories**: Agent management, file operations, testing, git, architecture analysis, data processing
+- **19+ Specialized Tools**: Comprehensive coverage for development workflows including data processing and system monitoring
 - **Context Optimization**: Intelligent file analysis based on query type
 - **Agent Delegation**: Recommendations for complex multi-step workflows
 
@@ -469,6 +517,36 @@ ocode -p "Review the changes in the current branch and suggest improvements"
 
 # Branch analysis
 ocode -p "Compare this branch with main and summarize the changes"
+```
+
+### Data Processing & Analysis
+```bash
+# JSON/YAML processing
+ocode -p "Parse the config.json file and extract all database connection strings"
+
+# Data validation
+ocode -p "Validate the structure of all YAML files in the configs/ directory"
+
+# JSONPath queries
+ocode -p "Query user data: find all users with admin roles using JSONPath"
+
+# Environment management
+ocode -p "Load variables from .env.production and compare with current environment"
+```
+
+### System Monitoring & Operations
+```bash
+# Process monitoring
+ocode -p "Show all Python processes and their memory usage"
+
+# Performance analysis
+ocode -p "Find processes consuming more than 50% CPU and analyze them"
+
+# Network connectivity
+ocode -p "Test connectivity to all services defined in docker-compose.yml"
+
+# Environment troubleshooting
+ocode -p "Check if all required environment variables are set for production"
 ```
 
 ### Project Management

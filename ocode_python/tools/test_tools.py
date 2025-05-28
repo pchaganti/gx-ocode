@@ -6,10 +6,12 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import ConfigDict
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+
 
 class ExecutionTool(Tool):
     """Tool for running tests in the project."""
@@ -23,29 +25,29 @@ class ExecutionTool(Tool):
                     name="path",
                     type="string",
                     description="Path to test directory or file",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="framework",
                     type="string",
                     description="Test framework to use (pytest, unittest)",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="verbose",
                     type="boolean",
                     description="Enable verbose output",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="timeout",
                     type="number",
                     description="Test execution timeout in seconds",
                     required=False,
-                    default=300
-                )
-            ]
+                    default=300,
+                ),
+            ],
         )
         super().__init__()
 
@@ -58,7 +60,9 @@ class ExecutionTool(Tool):
         test_path = Path(path)
 
         # Check for specific test files and configs
-        if (test_path / "pytest.ini").exists() or (test_path / "pyproject.toml").exists():
+        if (test_path / "pytest.ini").exists() or (
+            test_path / "pyproject.toml"
+        ).exists():
             return "pytest"
 
         if (test_path / "package.json").exists():
@@ -93,7 +97,9 @@ class ExecutionTool(Tool):
 
         return "pytest"  # Default fallback
 
-    async def _run_pytest(self, path: str, pattern: Optional[str], verbose: bool, timeout: int) -> ToolResult:
+    async def _run_pytest(
+        self, path: str, pattern: Optional[str], verbose: bool, timeout: int
+    ) -> ToolResult:
         """Run pytest tests."""
         cmd_parts = ["python", "-m", "pytest"]
 
@@ -109,21 +115,18 @@ class ExecutionTool(Tool):
 
         try:
             process = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
 
             stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
+                process.communicate(), timeout=timeout
             )
 
-            output = stdout.decode('utf-8') if stdout else ""
-            error = stderr.decode('utf-8') if stderr else ""
+            output = stdout.decode("utf-8") if stdout else ""
+            error = stderr.decode("utf-8") if stderr else ""
 
             # Parse pytest output for summary
-            lines = output.split('\n')
+            lines = output.split("\n")
             summary_line = ""
             for line in lines:
                 if "passed" in line or "failed" in line or "error" in line:
@@ -138,24 +141,24 @@ class ExecutionTool(Tool):
                 metadata={
                     "framework": "pytest",
                     "return_code": process.returncode,
-                    "summary": summary_line
-                }
+                    "summary": summary_line,
+                },
             )
 
         except asyncio.TimeoutError:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Tests timed out after {timeout} seconds"
+                error=f"Tests timed out after {timeout} seconds",
             )
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Failed to run pytest: {str(e)}"
+                success=False, output="", error=f"Failed to run pytest: {str(e)}"
             )
 
-    async def _run_jest(self, path: str, pattern: Optional[str], verbose: bool, timeout: int) -> ToolResult:
+    async def _run_jest(
+        self, path: str, pattern: Optional[str], verbose: bool, timeout: int
+    ) -> ToolResult:
         """Run Jest tests."""
         cmd_parts = ["npm", "test"]
 
@@ -172,16 +175,15 @@ class ExecutionTool(Tool):
                 command,
                 cwd=path,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
 
             stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
+                process.communicate(), timeout=timeout
             )
 
-            output = stdout.decode('utf-8') if stdout else ""
-            error = stderr.decode('utf-8') if stderr else ""
+            output = stdout.decode("utf-8") if stdout else ""
+            error = stderr.decode("utf-8") if stderr else ""
 
             success = process.returncode == 0
 
@@ -189,26 +191,23 @@ class ExecutionTool(Tool):
                 success=success,
                 output=output,
                 error=error if not success else None,
-                metadata={
-                    "framework": "jest",
-                    "return_code": process.returncode
-                }
+                metadata={"framework": "jest", "return_code": process.returncode},
             )
 
         except asyncio.TimeoutError:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Tests timed out after {timeout} seconds"
+                error=f"Tests timed out after {timeout} seconds",
             )
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Failed to run Jest: {str(e)}"
+                success=False, output="", error=f"Failed to run Jest: {str(e)}"
             )
 
-    async def _run_go_test(self, path: str, pattern: Optional[str], verbose: bool, timeout: int) -> ToolResult:
+    async def _run_go_test(
+        self, path: str, pattern: Optional[str], verbose: bool, timeout: int
+    ) -> ToolResult:
         """Run Go tests."""
         cmd_parts = ["go", "test"]
 
@@ -227,16 +226,15 @@ class ExecutionTool(Tool):
                 command,
                 cwd=path,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
 
             stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
+                process.communicate(), timeout=timeout
             )
 
-            output = stdout.decode('utf-8') if stdout else ""
-            error = stderr.decode('utf-8') if stderr else ""
+            output = stdout.decode("utf-8") if stdout else ""
+            error = stderr.decode("utf-8") if stderr else ""
 
             success = process.returncode == 0
 
@@ -244,23 +242,18 @@ class ExecutionTool(Tool):
                 success=success,
                 output=output,
                 error=error if not success else None,
-                metadata={
-                    "framework": "go",
-                    "return_code": process.returncode
-                }
+                metadata={"framework": "go", "return_code": process.returncode},
             )
 
         except asyncio.TimeoutError:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Tests timed out after {timeout} seconds"
+                error=f"Tests timed out after {timeout} seconds",
             )
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Failed to run Go tests: {str(e)}"
+                success=False, output="", error=f"Failed to run Go tests: {str(e)}"
             )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -292,16 +285,15 @@ class ExecutionTool(Tool):
                 process = await asyncio.create_subprocess_shell(
                     command,
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
                 )
 
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=timeout
+                    process.communicate(), timeout=timeout
                 )
 
-                output = stdout.decode('utf-8') if stdout else ""
-                error = stderr.decode('utf-8') if stderr else ""
+                output = stdout.decode("utf-8") if stdout else ""
+                error = stderr.decode("utf-8") if stderr else ""
 
                 return ToolResult(
                     success=process.returncode == 0,
@@ -309,22 +301,21 @@ class ExecutionTool(Tool):
                     error=error if process.returncode != 0 else None,
                     metadata={
                         "framework": "unittest",
-                        "return_code": process.returncode
-                    }
+                        "return_code": process.returncode,
+                    },
                 )
 
             except Exception as e:
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"Failed to run unittest: {str(e)}"
+                    success=False, output="", error=f"Failed to run unittest: {str(e)}"
                 )
         else:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Unsupported test framework: {framework}"
+                error=f"Unsupported test framework: {framework}",
             )
+
 
 class LintTool(Tool):
     """Tool for running code linters and formatters."""
@@ -339,29 +330,29 @@ class LintTool(Tool):
                     type="string",
                     description="Linting tool: 'flake8', 'black', 'eslint', 'prettier', 'auto'",
                     required=False,
-                    default="auto"
+                    default="auto",
                 ),
                 ToolParameter(
                     name="path",
                     type="string",
                     description="Path to code files or directory",
                     required=False,
-                    default="."
+                    default=".",
                 ),
                 ToolParameter(
                     name="fix",
                     type="boolean",
                     description="Automatically fix issues when possible",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="config",
                     type="string",
                     description="Config file path",
-                    required=False
-                )
-            ]
+                    required=False,
+                ),
+            ],
         )
         super().__init__()
 
@@ -416,14 +407,12 @@ class LintTool(Tool):
 
                 # Execute command
                 process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
                 )
 
                 stdout, stderr = await process.communicate()
-                output = stdout.decode('utf-8') if stdout else ""
-                error = stderr.decode('utf-8') if stderr else ""
+                output = stdout.decode("utf-8") if stdout else ""
+                error = stderr.decode("utf-8") if stderr else ""
 
                 if process.returncode == 0:
                     results.append(f"{lint_tool}: ✓ No issues found")
@@ -442,9 +431,10 @@ class LintTool(Tool):
                 "tools_run": tools_to_run,
                 "path": kwargs.get("path", "."),
                 "fix_mode": kwargs.get("fix"),
-                "config": kwargs.get("config")
-            }
+                "config": kwargs.get("config"),
+            },
         )
+
 
 class CoverageTool(Tool):
     """Tool for measuring test coverage."""
@@ -459,23 +449,23 @@ class CoverageTool(Tool):
                     type="string",
                     description="Path to source code",
                     required=False,
-                    default="."
+                    default=".",
                 ),
                 ToolParameter(
                     name="format",
                     type="string",
                     description="Report format: 'text', 'html', 'xml'",
                     required=False,
-                    default="text"
+                    default="text",
                 ),
                 ToolParameter(
                     name="min_coverage",
                     type="number",
                     description="Minimum coverage percentage required",
                     required=False,
-                    default=80
-                )
-            ]
+                    default=80,
+                ),
+            ],
         )
         super().__init__()
 
@@ -487,12 +477,18 @@ class CoverageTool(Tool):
         """Measure test coverage."""
         try:
             # Run coverage with pytest
-            cmd = ["python", "-m", "coverage", "run", "-m", "pytest", kwargs.get("path", ".")]
+            cmd = [
+                "python",
+                "-m",
+                "coverage",
+                "run",
+                "-m",
+                "pytest",
+                kwargs.get("path", "."),
+            ]
 
             process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
 
             await process.communicate()
@@ -508,19 +504,19 @@ class CoverageTool(Tool):
             process = await asyncio.create_subprocess_exec(
                 *report_cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
             )
 
             stdout, stderr = await process.communicate()
-            output = stdout.decode('utf-8') if stdout else ""
-            error = stderr.decode('utf-8') if stderr else ""
+            output = stdout.decode("utf-8") if stdout else ""
+            error = stderr.decode("utf-8") if stderr else ""
 
             # Extract coverage percentage
             coverage_percent = 0
-            for line in output.split('\n'):
-                if 'TOTAL' in line and '%' in line:
+            for line in output.split("\n"):
+                if "TOTAL" in line and "%" in line:
                     try:
-                        coverage_percent = int(line.split()[-1].replace('%', ''))
+                        coverage_percent = int(line.split()[-1].replace("%", ""))
                     except:
                         pass
 
@@ -533,19 +529,17 @@ class CoverageTool(Tool):
                 metadata={
                     "coverage_percent": coverage_percent,
                     "min_coverage": kwargs.get("min_coverage", 80),
-                    "format": kwargs.get("format", "text")
-                }
+                    "format": kwargs.get("format", "text"),
+                },
             )
 
         except FileNotFoundError:
             return ToolResult(
                 success=False,
                 output="",
-                error="Coverage tool not found. Install with: pip install coverage"
+                error="Coverage tool not found. Install with: pip install coverage",
             )
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Coverage measurement failed: {str(e)}"
+                success=False, output="", error=f"Coverage measurement failed: {str(e)}"
             )

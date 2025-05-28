@@ -1,13 +1,14 @@
 """Unit tests for JSON/YAML data processing tool."""
 
-import pytest
 import json
-import yaml
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
-from ocode_python.tools.data_tools import JsonYamlTool
+import pytest
+import yaml
+
 from ocode_python.tools.base import ToolResult
+from ocode_python.tools.data_tools import JsonYamlTool
 
 
 class TestJsonYamlTool:
@@ -24,13 +25,13 @@ class TestJsonYamlTool:
         return {
             "users": [
                 {"id": 1, "name": "Alice", "active": True},
-                {"id": 2, "name": "Bob", "active": False}
+                {"id": 2, "name": "Bob", "active": False},
             ],
             "config": {
                 "debug": False,
                 "timeout": 30,
-                "features": ["auth", "api", "ui"]
-            }
+                "features": ["auth", "api", "ui"],
+            },
         }
 
     def test_tool_definition(self, tool):
@@ -44,9 +45,7 @@ class TestJsonYamlTool:
     async def test_parse_json_string(self, tool, test_data):
         """Test parsing JSON string."""
         result = await tool.execute(
-            action="parse",
-            source=json.dumps(test_data),
-            format="json"
+            action="parse", source=json.dumps(test_data), format="json"
         )
         assert result.success
         assert "users" in result.output
@@ -56,11 +55,7 @@ class TestJsonYamlTool:
     async def test_parse_yaml_string(self, tool, test_data):
         """Test parsing YAML string."""
         yaml_str = yaml.dump(test_data)
-        result = await tool.execute(
-            action="parse",
-            source=yaml_str,
-            format="yaml"
-        )
+        result = await tool.execute(action="parse", source=yaml_str, format="yaml")
         assert result.success
         assert "users" in result.output
         assert result.metadata["format"] == "yaml"
@@ -68,16 +63,12 @@ class TestJsonYamlTool:
     @pytest.mark.asyncio
     async def test_parse_json_file(self, tool, test_data):
         """Test parsing JSON from file."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(test_data, f)
             temp_path = f.name
-        
+
         try:
-            result = await tool.execute(
-                action="parse",
-                source=temp_path,
-                format="auto"
-            )
+            result = await tool.execute(action="parse", source=temp_path, format="auto")
             assert result.success
             assert result.metadata["format"] == "json"
         finally:
@@ -87,9 +78,7 @@ class TestJsonYamlTool:
     async def test_query_simple_path(self, tool, test_data):
         """Test querying with simple JSONPath."""
         result = await tool.execute(
-            action="query",
-            source=json.dumps(test_data),
-            query="$.config.timeout"
+            action="query", source=json.dumps(test_data), query="$.config.timeout"
         )
         assert result.success
         assert json.loads(result.output) == 30
@@ -99,9 +88,7 @@ class TestJsonYamlTool:
     async def test_query_array_element(self, tool, test_data):
         """Test querying array elements."""
         result = await tool.execute(
-            action="query",
-            source=json.dumps(test_data),
-            query="$.users[0].name"
+            action="query", source=json.dumps(test_data), query="$.users[0].name"
         )
         assert result.success
         assert json.loads(result.output) == "Alice"
@@ -110,9 +97,7 @@ class TestJsonYamlTool:
     async def test_query_multiple_matches(self, tool, test_data):
         """Test query with multiple matches."""
         result = await tool.execute(
-            action="query",
-            source=json.dumps(test_data),
-            query="$.users[*].name"
+            action="query", source=json.dumps(test_data), query="$.users[*].name"
         )
         assert result.success
         names = json.loads(result.output)
@@ -123,9 +108,7 @@ class TestJsonYamlTool:
     async def test_query_no_match(self, tool, test_data):
         """Test query with no matches."""
         result = await tool.execute(
-            action="query",
-            source=json.dumps(test_data),
-            query="$.nonexistent"
+            action="query", source=json.dumps(test_data), query="$.nonexistent"
         )
         assert result.success
         assert result.output == "null"
@@ -138,7 +121,7 @@ class TestJsonYamlTool:
             action="set",
             source=json.dumps(test_data),
             path="$.config.debug",
-            value="true"
+            value="true",
         )
         assert result.success
         modified_data = json.loads(result.output)
@@ -152,7 +135,7 @@ class TestJsonYamlTool:
             action="set",
             source=json.dumps(test_data),
             path="$.users[0].name",
-            value='"Charlie"'
+            value='"Charlie"',
         )
         assert result.success
         modified_data = json.loads(result.output)
@@ -163,18 +146,18 @@ class TestJsonYamlTool:
         """Test setting value and writing to file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "output.json"
-            
+
             result = await tool.execute(
                 action="set",
                 source=json.dumps(test_data),
                 path="$.config.timeout",
                 value="60",
-                output_path=str(output_path)
+                output_path=str(output_path),
             )
-            
+
             assert result.success
             assert output_path.exists()
-            
+
             # Verify file contents
             with open(output_path) as f:
                 saved_data = json.load(f)
@@ -183,10 +166,7 @@ class TestJsonYamlTool:
     @pytest.mark.asyncio
     async def test_validate_structure(self, tool, test_data):
         """Test structure validation."""
-        result = await tool.execute(
-            action="validate",
-            source=json.dumps(test_data)
-        )
+        result = await tool.execute(action="validate", source=json.dumps(test_data))
         assert result.success
         structure = json.loads(result.output)
         assert structure["type"] == "dict"
@@ -196,10 +176,7 @@ class TestJsonYamlTool:
     @pytest.mark.asyncio
     async def test_invalid_action(self, tool):
         """Test invalid action."""
-        result = await tool.execute(
-            action="invalid",
-            source="{}"
-        )
+        result = await tool.execute(action="invalid", source="{}")
         assert not result.success
         assert "Invalid action" in result.error
 
@@ -210,7 +187,7 @@ class TestJsonYamlTool:
         result = await tool.execute(source="{}")
         assert not result.success
         assert "Action parameter is required" in result.error
-        
+
         # Missing source
         result = await tool.execute(action="parse")
         assert not result.success
@@ -220,9 +197,7 @@ class TestJsonYamlTool:
     async def test_invalid_json(self, tool):
         """Test parsing invalid JSON."""
         result = await tool.execute(
-            action="parse",
-            source="{'invalid': json}",
-            format="json"
+            action="parse", source="{'invalid': json}", format="json"
         )
         assert not result.success
         assert "Invalid JSON format" in result.error
@@ -230,10 +205,6 @@ class TestJsonYamlTool:
     @pytest.mark.asyncio
     async def test_invalid_jsonpath(self, tool):
         """Test invalid JSONPath query."""
-        result = await tool.execute(
-            action="query",
-            source="{}",
-            query="$[invalid"
-        )
+        result = await tool.execute(action="query", source="{}", query="$[invalid")
         assert not result.success
         assert "Invalid JSONPath query" in result.error

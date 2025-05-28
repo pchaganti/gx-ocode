@@ -3,17 +3,18 @@ Enhanced Bash/Shell command execution tool with advanced features.
 """
 
 import asyncio
+import io
 import os
 import re
 import shlex
-import tempfile
-import pexpect
-import io
-import time
 import signal
-from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+import tempfile
+import time
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import pexpect
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -32,71 +33,71 @@ class BashTool(Tool):
                     name="command",
                     type="string",
                     description="Shell command to execute",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="working_dir",
                     type="string",
                     description="Working directory for command execution",
                     required=False,
-                    default="."
+                    default=".",
                 ),
                 ToolParameter(
                     name="timeout",
                     type="number",
                     description="Command timeout in seconds (0 = no timeout)",
                     required=False,
-                    default=30
+                    default=30,
                 ),
                 ToolParameter(
                     name="capture_output",
                     type="boolean",
                     description="Capture stdout and stderr",
                     required=False,
-                    default=True
+                    default=True,
                 ),
                 ToolParameter(
                     name="shell",
                     type="string",
                     description="Shell to use (bash, sh, zsh, fish)",
                     required=False,
-                    default="bash"
+                    default="bash",
                 ),
                 ToolParameter(
                     name="env_vars",
                     type="object",
                     description="Additional environment variables",
                     required=False,
-                    default={}
+                    default={},
                 ),
                 ToolParameter(
                     name="input_data",
                     type="string",
                     description="Input data to pipe to the command",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="interactive",
                     type="boolean",
                     description="Run in interactive mode (for commands requiring input)",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="safe_mode",
                     type="boolean",
                     description="Enable safety checks (prevent dangerous commands)",
                     required=False,
-                    default=True
+                    default=True,
                 ),
                 ToolParameter(
                     name="show_command",
                     type="boolean",
                     description="Show the command being executed",
                     required=False,
-                    default=True
-                )
-            ]
+                    default=True,
+                ),
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -119,7 +120,7 @@ class BashTool(Tool):
                 return ToolResult(
                     success=False,
                     output="",
-                    error=f"Working directory does not exist: {working_dir}"
+                    error=f"Working directory does not exist: {working_dir}",
                 )
 
             # Safety checks
@@ -129,7 +130,7 @@ class BashTool(Tool):
                     return ToolResult(
                         success=False,
                         output="",
-                        error=f"Command blocked for safety: {safety_result['reason']}"
+                        error=f"Command blocked for safety: {safety_result['reason']}",
                     )
 
             # Prepare environment
@@ -147,7 +148,9 @@ class BashTool(Tool):
 
             # Execute command
             if interactive:
-                result = await self._execute_interactive(shell_cmd, work_dir, env, timeout, input_data)
+                result = await self._execute_interactive(
+                    shell_cmd, work_dir, env, timeout, input_data
+                )
             else:
                 result = await self._execute_standard(
                     shell_cmd, work_dir, env, timeout, capture_output, input_data
@@ -157,13 +160,13 @@ class BashTool(Tool):
             if result["success"]:
                 if result["stdout"]:
                     output_lines.append(result["stdout"])
-                
+
                 if result["stderr"] and capture_output:
                     output_lines.append("STDERR:")
                     output_lines.append(result["stderr"])
 
                 output = "\n".join(output_lines) if output_lines else ""
-                
+
                 return ToolResult(
                     success=True,
                     output=output,
@@ -172,8 +175,8 @@ class BashTool(Tool):
                         "working_dir": str(work_dir),
                         "return_code": result["return_code"],
                         "execution_time": result.get("execution_time", 0),
-                        "shell": shell
-                    }
+                        "shell": shell,
+                    },
                 )
             else:
                 error_msg = result["stderr"] or "Command execution failed"
@@ -184,27 +187,21 @@ class BashTool(Tool):
                     metadata={
                         "command": command,
                         "return_code": result["return_code"],
-                        "execution_time": result.get("execution_time", 0)
-                    }
+                        "execution_time": result.get("execution_time", 0),
+                    },
                 )
 
         except FileNotFoundError as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Command or shell not found: {str(e)}"
+                success=False, output="", error=f"Command or shell not found: {str(e)}"
             )
         except PermissionError as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Permission denied: {str(e)}"
+                success=False, output="", error=f"Permission denied: {str(e)}"
             )
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Command execution failed: {str(e)}"
+                success=False, output="", error=f"Command execution failed: {str(e)}"
             )
 
     def _check_command_safety(self, command: str) -> Dict[str, Any]:
@@ -218,7 +215,6 @@ class BashTool(Tool):
             r"\bmkfs\b",
             r"\bshred\b",
             r"\bwipe\b",
-            
             # System modifications
             r"\bsudo\s+rm\s+-rf",
             r"\bchmod\s+777\s+/",
@@ -226,7 +222,6 @@ class BashTool(Tool):
             r"\buseradd\b",
             r"\buserdel\b",
             r"\bpasswd\b",
-            
             # Network/security risks
             r"\bcurl\s+.*\|\s*(sh|bash|zsh)",
             r"\bwget\s+.*\|\s*(sh|bash|zsh)",
@@ -234,57 +229,53 @@ class BashTool(Tool):
             r"\beval\s+\$\(",
             r"\$\(curl\b",
             r"\$\(wget\b",
-            
             # Process killers
             r"\bkillall\s+-9",
             r"\bpkill\s+-f\s+.*",
             r"\bkill\s+-9\s+1\b",  # init process
-            
             # System reboot/shutdown
             r"\breboot\b",
             r"\bshutdown\b",
             r"\bhalt\b",
             r"\bpoweroff\b",
-            
             # File system mounting
             r"\bmount\s+.*\s+/",
             r"\bumount\s+/",
-            
             # Code injection patterns
             r";\s*(rm|mv|dd|format)",
             r"&&\s*(rm|mv|dd|format)",
             r"\|\|\s*(rm|mv|dd|format)",
         ]
-        
+
         for pattern in dangerous_patterns:
             if re.search(pattern, command, re.IGNORECASE):
                 return {
                     "safe": False,
-                    "reason": f"Command contains potentially dangerous pattern: {pattern}"
+                    "reason": f"Command contains potentially dangerous pattern: {pattern}",
                 }
 
         # Check for suspicious file operations
         if re.search(r"\brm\s+.*\*", command):
             return {
                 "safe": False,
-                "reason": "Bulk file deletion with wildcards detected"
+                "reason": "Bulk file deletion with wildcards detected",
             }
-            
+
         # Only check for truly dangerous command injection patterns
         # Don't block legitimate shell features like pipes, redirects, variable expansion
         dangerous_injection_patterns = [
             r";\s*(rm|mv|dd|format|sudo|curl.*\|.*sh)",
-            r"&&\s*(rm|mv|dd|format|sudo|curl.*\|.*sh)", 
+            r"&&\s*(rm|mv|dd|format|sudo|curl.*\|.*sh)",
             r"\|\|\s*(rm|mv|dd|format|sudo|curl.*\|.*sh)",
             r"`.*rm\s+",  # Command substitution with rm
             r"\$\(.*rm\s+",  # Command substitution with rm
         ]
-        
+
         for pattern in dangerous_injection_patterns:
             if re.search(pattern, command, re.IGNORECASE):
                 return {
                     "safe": False,
-                    "reason": f"Command contains dangerous injection pattern: {pattern}"
+                    "reason": f"Command contains dangerous injection pattern: {pattern}",
                 }
 
         return {"safe": True, "reason": ""}
@@ -293,17 +284,17 @@ class BashTool(Tool):
         """Prepare shell command for execution with proper sanitization."""
         shell_map = {
             "bash": "/bin/bash",
-            "sh": "/bin/sh", 
+            "sh": "/bin/sh",
             "zsh": "/bin/zsh",
-            "fish": "/usr/bin/fish"
+            "fish": "/usr/bin/fish",
         }
-        
+
         # Validate shell parameter
         if shell not in shell_map:
             shell = "bash"  # Default to bash for unknown shells
-            
+
         shell_path = shell_map[shell]
-        
+
         # Check if shell exists, fallback to available shells
         fallback_shells = ["/bin/bash", "/bin/sh", "/usr/bin/bash"]
         if not Path(shell_path).exists():
@@ -312,27 +303,29 @@ class BashTool(Tool):
                     shell_path = fallback
                     break
             else:
-                raise FileNotFoundError(f"No suitable shell found. Tried: {[shell_path] + fallback_shells}")
-        
+                raise FileNotFoundError(
+                    f"No suitable shell found. Tried: {[shell_path] + fallback_shells}"
+                )
+
         # Use exec form to prevent shell injection
         return [shell_path, "-c", command]
-    
+
     def _sanitize_environment(self, env: Dict[str, str]) -> Dict[str, str]:
         """Sanitize environment variables to prevent injection attacks."""
         safe_env = {}
-        
+
         for key, value in env.items():
             # Validate environment variable names (must be valid identifiers)
-            if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', key):
+            if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key):
                 continue  # Skip invalid variable names
-                
+
             # Convert value to string - environment variables are intentionally flexible
             # so we don't overly restrict their content
             safe_value = str(value)
             safe_env[key] = safe_value
-            
+
         return safe_env
-    
+
     def _expect_eof_safe(self, child):
         """Safely expect EOF from pexpect child process."""
         try:
@@ -345,8 +338,14 @@ class BashTool(Tool):
             pass
 
     @asynccontextmanager
-    async def _managed_process(self, shell_cmd: List[str], work_dir: Path, env: Dict[str, str], 
-                              capture_output: bool, input_data: Optional[str]):
+    async def _managed_process(
+        self,
+        shell_cmd: List[str],
+        work_dir: Path,
+        env: Dict[str, str],
+        capture_output: bool,
+        input_data: Optional[str],
+    ):
         """Context manager for proper process cleanup."""
         process = None
         try:
@@ -358,14 +357,16 @@ class BashTool(Tool):
                     stdin=asyncio.subprocess.PIPE if input_data else None,
                     cwd=str(work_dir),
                     env=env,
-                    preexec_fn=os.setsid if hasattr(os, 'setsid') else None  # Create process group
+                    preexec_fn=(
+                        os.setsid if hasattr(os, "setsid") else None
+                    ),  # Create process group
                 )
             else:
                 process = await asyncio.create_subprocess_exec(
                     *shell_cmd,
                     cwd=str(work_dir),
                     env=env,
-                    preexec_fn=os.setsid if hasattr(os, 'setsid') else None
+                    preexec_fn=os.setsid if hasattr(os, "setsid") else None,
                 )
             yield process
         finally:
@@ -383,46 +384,69 @@ class BashTool(Tool):
                     # Process already dead
                     pass
 
-    async def _execute_standard(self, shell_cmd: List[str], work_dir: Path,
-                               env: Dict[str, str], timeout: int, capture_output: bool,
-                               input_data: Optional[str]) -> Dict[str, Any]:
+    async def _execute_standard(
+        self,
+        shell_cmd: List[str],
+        work_dir: Path,
+        env: Dict[str, str],
+        timeout: int,
+        capture_output: bool,
+        input_data: Optional[str],
+    ) -> Dict[str, Any]:
         """Execute command in standard mode with enhanced error handling."""
         start_time = time.time()
-        
+
         try:
             # Sanitize environment variables
             safe_env = self._sanitize_environment(env)
-            
-            async with self._managed_process(shell_cmd, work_dir, safe_env, capture_output, input_data) as process:
+
+            async with self._managed_process(
+                shell_cmd, work_dir, safe_env, capture_output, input_data
+            ) as process:
                 if capture_output:
                     try:
-                        input_bytes = input_data.encode('utf-8', errors='replace') if input_data else None
-                        
+                        input_bytes = (
+                            input_data.encode("utf-8", errors="replace")
+                            if input_data
+                            else None
+                        )
+
                         if timeout > 0:
                             stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                                process.communicate(input=input_bytes),
-                                timeout=timeout
+                                process.communicate(input=input_bytes), timeout=timeout
                             )
                         else:
-                            stdout_bytes, stderr_bytes = await process.communicate(input=input_bytes)
-                            
-                        stdout = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
-                        stderr = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
+                            stdout_bytes, stderr_bytes = await process.communicate(
+                                input=input_bytes
+                            )
+
+                        stdout = (
+                            stdout_bytes.decode("utf-8", errors="replace")
+                            if stdout_bytes
+                            else ""
+                        )
+                        stderr = (
+                            stderr_bytes.decode("utf-8", errors="replace")
+                            if stderr_bytes
+                            else ""
+                        )
                         return_code = process.returncode
-                        
+
                     except asyncio.TimeoutError:
                         return {
                             "success": False,
                             "stdout": "",
                             "stderr": f"Command timed out after {timeout} seconds",
                             "return_code": -15,  # SIGTERM
-                            "execution_time": time.time() - start_time
+                            "execution_time": time.time() - start_time,
                         }
                 else:
                     # No output capture
                     try:
                         if timeout > 0:
-                            return_code = await asyncio.wait_for(process.wait(), timeout=timeout)
+                            return_code = await asyncio.wait_for(
+                                process.wait(), timeout=timeout
+                            )
                         else:
                             return_code = await process.wait()
                     except asyncio.TimeoutError:
@@ -431,18 +455,18 @@ class BashTool(Tool):
                             "stdout": "",
                             "stderr": f"Command timed out after {timeout} seconds",
                             "return_code": -15,
-                            "execution_time": time.time() - start_time
+                            "execution_time": time.time() - start_time,
                         }
                     stdout, stderr = "", ""
 
             execution_time = time.time() - start_time
-            
+
             return {
                 "success": return_code == 0,
                 "stdout": stdout or "",
                 "stderr": stderr or "",
                 "return_code": return_code,
-                "execution_time": execution_time
+                "execution_time": execution_time,
             }
 
         except FileNotFoundError as e:
@@ -451,7 +475,7 @@ class BashTool(Tool):
                 "stdout": "",
                 "stderr": f"Command not found: {e}",
                 "return_code": 127,
-                "execution_time": time.time() - start_time
+                "execution_time": time.time() - start_time,
             }
         except PermissionError as e:
             return {
@@ -459,7 +483,7 @@ class BashTool(Tool):
                 "stdout": "",
                 "stderr": f"Permission denied: {e}",
                 "return_code": 126,
-                "execution_time": time.time() - start_time
+                "execution_time": time.time() - start_time,
             }
         except Exception as e:
             return {
@@ -467,11 +491,17 @@ class BashTool(Tool):
                 "stdout": "",
                 "stderr": f"Execution error: {str(e)}",
                 "return_code": -1,
-                "execution_time": time.time() - start_time
+                "execution_time": time.time() - start_time,
             }
 
-    async def _execute_interactive(self, shell_cmd: List[str], work_dir: Path,
-                                 env: Dict[str, str], timeout: int, input_data: Optional[str] = None) -> Dict[str, Any]:
+    async def _execute_interactive(
+        self,
+        shell_cmd: List[str],
+        work_dir: Path,
+        env: Dict[str, str],
+        timeout: int,
+        input_data: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Execute command in interactive mode using pexpect with improved async handling."""
         output_buffer = io.StringIO()
         child = None
@@ -479,19 +509,21 @@ class BashTool(Tool):
         try:
             # Convert shell command list to string for pexpect
             cmd_str = " ".join(shlex.quote(arg) for arg in shell_cmd)
-            
+
             # Create pexpect spawn object with more conservative timeout
             child = pexpect.spawn(
                 cmd_str,
                 cwd=str(work_dir),
                 env=env,
-                encoding='utf-8',
-                timeout=min(timeout, 30) if timeout > 0 else 30  # Max 30s per operation
+                encoding="utf-8",
+                timeout=(
+                    min(timeout, 30) if timeout > 0 else 30
+                ),  # Max 30s per operation
             )
-            
+
             # Set up logging using StringIO
             child.logfile_read = output_buffer
-            
+
             # If input_data is provided, send it (simulate user input)
             if input_data:
                 input_lines = input_data.splitlines()
@@ -502,44 +534,46 @@ class BashTool(Tool):
                             asyncio.get_event_loop().run_in_executor(
                                 None, child.sendline, line
                             ),
-                            timeout=5  # 5 second timeout per line
+                            timeout=5,  # 5 second timeout per line
                         )
-                        
+
                         # Small delay between lines to prevent overwhelming the process
                         if i < len(input_lines) - 1:  # Don't delay after the last line
                             await asyncio.sleep(0.1)
-                            
+
                     except asyncio.TimeoutError:
                         # Continue on timeout, but log it
                         break
-            
+
             # Wait for command to complete with proper timeout handling
             try:
-                remaining_timeout = max(1, timeout - (time.time() - start_time)) if timeout > 0 else 30
+                remaining_timeout = (
+                    max(1, timeout - (time.time() - start_time)) if timeout > 0 else 30
+                )
                 await asyncio.wait_for(
                     asyncio.get_event_loop().run_in_executor(
                         None, self._expect_eof_safe, child
                     ),
-                    timeout=remaining_timeout
+                    timeout=remaining_timeout,
                 )
             except asyncio.TimeoutError:
                 # Handle timeout gracefully
                 pass
-            
+
             # Get final output
             final_output = output_buffer.getvalue()
-            
+
             # Get exit status
             child.close()
             return_code = child.exitstatus if child.exitstatus is not None else -1
-            
+
             return {
                 "success": return_code == 0,
                 "stdout": final_output,
                 "stderr": "",  # pexpect combines stdout and stderr
-                "return_code": return_code
+                "return_code": return_code,
             }
-            
+
         except pexpect.TIMEOUT:
             if child:
                 child.terminate(force=True)
@@ -547,7 +581,7 @@ class BashTool(Tool):
                 "success": False,
                 "stdout": output_buffer.getvalue(),
                 "stderr": f"Interactive command timed out after {timeout} seconds",
-                "return_code": -1
+                "return_code": -1,
             }
         except Exception as e:
             if child:
@@ -556,7 +590,7 @@ class BashTool(Tool):
                 "success": False,
                 "stdout": output_buffer.getvalue(),
                 "stderr": str(e),
-                "return_code": -1
+                "return_code": -1,
             }
         finally:
             if child and child.isalive():
@@ -577,44 +611,44 @@ class ScriptTool(Tool):
                     name="script_content",
                     type="string",
                     description="Script content (multiple commands separated by newlines)",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="script_type",
                     type="string",
                     description="Script type: 'bash', 'sh', 'python', 'node'",
                     required=False,
-                    default="bash"
+                    default="bash",
                 ),
                 ToolParameter(
                     name="working_dir",
                     type="string",
                     description="Working directory for script execution",
                     required=False,
-                    default="."
+                    default=".",
                 ),
                 ToolParameter(
                     name="timeout",
                     type="number",
                     description="Script timeout in seconds",
                     required=False,
-                    default=60
+                    default=60,
                 ),
                 ToolParameter(
                     name="save_script",
                     type="boolean",
                     description="Save script to temporary file for inspection",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="env_vars",
                     type="object",
                     description="Environment variables for script",
                     required=False,
-                    default={}
-                )
-            ]
+                    default={},
+                ),
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -627,34 +661,29 @@ class ScriptTool(Tool):
             timeout = kwargs.get("timeout", 60)
             save_script = kwargs.get("save_script", False)
             env_vars = kwargs.get("env_vars", {})
-            
+
             if not script_content:
                 return ToolResult(
-                    success=False,
-                    output="",
-                    error="No script content provided"
+                    success=False, output="", error="No script content provided"
                 )
-            
+
             work_dir = Path(working_dir).resolve()
-            
+
             # Create temporary script file
             script_extensions = {
                 "bash": ".sh",
-                "sh": ".sh", 
+                "sh": ".sh",
                 "python": ".py",
                 "node": ".js",
-                "javascript": ".js"
+                "javascript": ".js",
             }
-            
+
             extension = script_extensions.get(script_type, ".sh")
-            
+
             with tempfile.NamedTemporaryFile(
-                mode='w', 
-                suffix=extension, 
-                delete=not save_script,
-                encoding='utf-8'
+                mode="w", suffix=extension, delete=not save_script, encoding="utf-8"
             ) as script_file:
-                
+
                 # Add shebang if needed
                 if script_type == "bash":
                     script_file.write("#!/bin/bash\\nset -e\\n\\n")
@@ -662,13 +691,13 @@ class ScriptTool(Tool):
                     script_file.write("#!/usr/bin/env python3\\n\\n")
                 elif script_type in ["node", "javascript"]:
                     script_file.write("#!/usr/bin/env node\\n\\n")
-                
+
                 script_file.write(script_content)
                 script_file.flush()
-                
+
                 # Make script executable
                 os.chmod(script_file.name, 0o755)
-                
+
                 # Prepare execution command
                 if script_type == "bash":
                     cmd = ["bash", script_file.name]
@@ -678,37 +707,41 @@ class ScriptTool(Tool):
                     cmd = ["node", script_file.name]
                 else:
                     cmd = ["sh", script_file.name]
-                
+
                 # Execute script using BashTool
                 bash_tool = BashTool()
                 command_str = " ".join(shlex.quote(arg) for arg in cmd)
-                
+
                 result = await bash_tool.execute(
                     command=command_str,
                     working_dir=working_dir,
                     timeout=timeout,
                     env_vars=env_vars,
                     safe_mode=False,  # Scripts are already created by us
-                    show_command=True
+                    show_command=True,
                 )
-                
+
                 # Add script info to metadata
                 if result.metadata:
-                    result.metadata.update({
-                        "script_type": script_type,
-                        "script_path": script_file.name if save_script else "temporary",
-                        "script_size": len(script_content)
-                    })
-                
+                    result.metadata.update(
+                        {
+                            "script_type": script_type,
+                            "script_path": (
+                                script_file.name if save_script else "temporary"
+                            ),
+                            "script_size": len(script_content),
+                        }
+                    )
+
                 if save_script:
                     saved_path = Path(script_file.name)
-                    result.output = f"Script saved to: {saved_path}\\n\\n" + (result.output or "")
-                
+                    result.output = f"Script saved to: {saved_path}\\n\\n" + (
+                        result.output or ""
+                    )
+
                 return result
 
         except Exception as e:
             return ToolResult(
-                success=False,
-                output="",
-                error=f"Script execution failed: {str(e)}"
+                success=False, output="", error=f"Script execution failed: {str(e)}"
             )
