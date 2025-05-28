@@ -305,6 +305,9 @@ class ToolRegistry:
         from .curl_tool import CurlTool
         from .which_tool import WhichTool
         from .ping_tool import PingTool
+        from .data_tools import JsonYamlTool
+        from .process_tool import ProcessMonitorTool
+        from .env_tool import EnvironmentTool
 
         core_tools = [
             # Original tools
@@ -348,6 +351,10 @@ class ToolRegistry:
             CurlTool(),
             WhichTool(),
             PingTool(),
+            # Data processing and system tools
+            JsonYamlTool(),
+            ProcessMonitorTool(),
+            EnvironmentTool(),
         ]
 
         for tool in core_tools:
