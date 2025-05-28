@@ -22,6 +22,16 @@ from .agent_tool import AgentTool
 from .mcp_tool import MCPTool
 from .sticker_tool import StickerRequestTool
 
+# Basic Unix tools
+from .head_tail_tool import HeadTool, TailTool
+from .diff_tool import DiffTool
+from .wc_tool import WcTool
+from .find_tool import FindTool
+from .file_ops_tool import CopyTool, MoveTool, RemoveTool
+from .text_tools import SortTool, UniqTool
+from .curl_tool import CurlTool
+from .which_tool import WhichTool
+
 __all__ = [
     # Base classes
     "Tool", "ToolDefinition", "ToolParameter", "ToolResult", "ToolRegistry",
@@ -44,5 +54,15 @@ __all__ = [
     "ArchitectTool",
     "AgentTool",
     "MCPTool",
-    "StickerRequestTool"
+    "StickerRequestTool",
+    
+    # Basic Unix tools
+    "HeadTool", "TailTool",
+    "DiffTool",
+    "WcTool",
+    "FindTool",
+    "CopyTool", "MoveTool", "RemoveTool",
+    "SortTool", "UniqTool",
+    "CurlTool",
+    "WhichTool"
 ]
