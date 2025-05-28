@@ -8,7 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import Tool, ToolDefinition, ToolParameter, ToolResult, ErrorHandler, ErrorType
+from ..utils.timeout_handler import with_timeout, TimeoutError
 
 
 class MCPTool(Tool):
@@ -187,28 +188,38 @@ class MCPTool(Tool):
         try:
             # This is where we would actually spawn the MCP server process
             # and establish communication via stdio or other transport
+            
+            async def _perform_connection():
+                connection_info = {
+                    "name": server_name,
+                    "config": config,
+                    "status": "connected",
+                    "connected_at": datetime.now().isoformat(),
+                    "capabilities": [
+                        "tools",
+                        "resources",
+                        "prompts",
+                    ],  # Example capabilities
+                    "server_info": {
+                        "name": config.get("description", f"{server_name} MCP server"),
+                        "version": "1.0.0",
+                    },
+                }
 
-            connection_info = {
-                "name": server_name,
-                "config": config,
-                "status": "connected",
-                "connected_at": datetime.now().isoformat(),
-                "capabilities": [
-                    "tools",
-                    "resources",
-                    "prompts",
-                ],  # Example capabilities
-                "server_info": {
-                    "name": config.get("description", f"{server_name} MCP server"),
-                    "version": "1.0.0",
-                },
-            }
+                self.connected_servers[server_name] = connection_info
 
-            self.connected_servers[server_name] = connection_info
-
-            # Discover available tools and resources
-            await self._discover_tools_internal(server_name)
-            await self._discover_resources_internal(server_name)
+                # Discover available tools and resources
+                await self._discover_tools_internal(server_name)
+                await self._discover_resources_internal(server_name)
+                
+                return connection_info
+            
+            # Use timeout for the connection process
+            connection_info = await with_timeout(
+                _perform_connection(),
+                timeout=timeout,
+                operation=f"mcp_connect({server_name})"
+            )
 
             output = f"Successfully connected to MCP server: {server_name}\n"
             output += f"Description: {config.get('description', 'No description')}\n"
@@ -221,7 +232,16 @@ class MCPTool(Tool):
             return ToolResult(
                 success=True, output=output, metadata={"server": connection_info}
             )
-
+            
+        except TimeoutError as e:
+            # Clean up partial connection on timeout
+            if server_name in self.connected_servers:
+                del self.connected_servers[server_name]
+            return ErrorHandler.create_error_result(
+                f"Connection to MCP server '{server_name}' timed out: {str(e)}",
+                ErrorType.TIMEOUT_ERROR,
+                {"server_name": server_name, "timeout": timeout}
+            )
         except Exception as e:
             return ToolResult(
                 success=False,
@@ -451,8 +471,11 @@ class MCPTool(Tool):
 
         # Simulate tool execution
         try:
-            result = await self._simulate_tool_call(
-                server_name, tool_name, tool_arguments
+            # Use timeout for tool execution
+            result = await with_timeout(
+                self._simulate_tool_call(server_name, tool_name, tool_arguments),
+                timeout=timeout,
+                operation=f"mcp_tool_call({server_name}.{tool_name})"
             )
 
             output = f"MCP Tool Call Result:\n"
@@ -471,7 +494,13 @@ class MCPTool(Tool):
                     "result": result,
                 },
             )
-
+            
+        except TimeoutError as e:
+            return ErrorHandler.create_error_result(
+                f"MCP tool call '{tool_name}' on server '{server_name}' timed out: {str(e)}",
+                ErrorType.TIMEOUT_ERROR,
+                {"server_name": server_name, "tool_name": tool_name, "timeout": timeout}
+            )
         except Exception as e:
             return ToolResult(
                 success=False, output="", error=f"Tool call failed: {str(e)}"

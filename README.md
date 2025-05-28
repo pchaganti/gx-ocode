@@ -985,6 +985,16 @@ OCode implements enterprise-grade security:
 }
 ```
 
+## 📚 Documentation
+
+Additional technical documentation is available in the [docs/](docs/) directory:
+
+- [Manual CLI Testing Guide](docs/manual-cli-testing.md) - Instructions for testing the CLI
+- [Reliability Improvements](docs/reliability-improvements.md) - Recent enhancements to tool reliability
+- [Timeout Analysis](docs/timeout-analysis.md) - Detailed timeout implementation analysis
+
+For the full documentation index, see [docs/index.md](docs/index.md).
+
 ## 🤝 Contributing
 
 We welcome contributions! Here's how to get started:

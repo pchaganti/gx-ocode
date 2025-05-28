@@ -10,7 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import Tool, ToolDefinition, ToolParameter, ToolResult, ErrorHandler, ErrorType
+from ..utils.timeout_handler import with_timeout, TimeoutError
 
 
 @dataclass
@@ -436,23 +437,31 @@ class AgentTool(Tool):
             task.started_at = datetime.now().isoformat()
             agent.status = "busy"
 
-            # Simulate different types of task execution
-            if agent.type == "coder":
-                result = await self._simulate_coding_task(task)
-            elif agent.type == "tester":
-                result = await self._simulate_testing_task(task)
-            elif agent.type == "reviewer":
-                result = await self._simulate_review_task(task)
-            elif agent.type == "documenter":
-                result = await self._simulate_documentation_task(task)
-            elif agent.type == "analyzer":
-                result = await self._simulate_analysis_task(task)
-            elif agent.type == "fixer":
-                result = await self._simulate_fixing_task(task)
-            elif agent.type == "researcher":
-                result = await self._simulate_research_task(task)
-            else:
-                result = "Task completed by generic agent"
+            async def _run_task():
+                # Simulate different types of task execution
+                if agent.type == "coder":
+                    return await self._simulate_coding_task(task)
+                elif agent.type == "tester":
+                    return await self._simulate_testing_task(task)
+                elif agent.type == "reviewer":
+                    return await self._simulate_review_task(task)
+                elif agent.type == "documenter":
+                    return await self._simulate_documentation_task(task)
+                elif agent.type == "analyzer":
+                    return await self._simulate_analysis_task(task)
+                elif agent.type == "fixer":
+                    return await self._simulate_fixing_task(task)
+                elif agent.type == "researcher":
+                    return await self._simulate_research_task(task)
+                else:
+                    return "Task completed by generic agent"
+            
+            # Execute with timeout
+            result = await with_timeout(
+                _run_task(),
+                timeout=timeout,
+                operation=f"agent_task({agent.type}.{task.id})"
+            )
 
             # Complete task
             task.status = "completed"
@@ -463,6 +472,14 @@ class AgentTool(Tool):
 
             return {"success": True, "result": result}
 
+        except TimeoutError as e:
+            # Handle timeout
+            task.status = "failed"
+            task.error = f"Task timed out after {timeout} seconds: {str(e)}"
+            task.completed_at = datetime.now().isoformat()
+            agent.status = "idle"
+            
+            return {"success": False, "error": task.error}
         except Exception as e:
             # Handle task failure
             task.status = "failed"

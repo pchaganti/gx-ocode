@@ -10,7 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import psutil
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import Tool, ToolDefinition, ToolParameter, ToolResult, ErrorHandler, ErrorType
+from ..utils.timeout_handler import with_timeout, TimeoutError
 
 
 class ProcessMonitorTool(Tool):
@@ -62,6 +63,13 @@ class ProcessMonitorTool(Tool):
                     required=False,
                     default="table",
                 ),
+                ToolParameter(
+                    name="timeout",
+                    type="number",
+                    description="Operation timeout in seconds (default: 10)",
+                    required=False,
+                    default=10,
+                ),
             ],
         )
 
@@ -73,6 +81,7 @@ class ProcessMonitorTool(Tool):
         sort_by = kwargs.get("sort_by", "cpu").lower()
         limit = kwargs.get("limit", 20)
         output_format = kwargs.get("format", "table").lower()
+        timeout = kwargs.get("timeout", 10)
 
         if not action:
             return ToolResult(
@@ -89,7 +98,11 @@ class ProcessMonitorTool(Tool):
 
         try:
             if action == "list":
-                return await self._action_list(sort_by, limit, output_format)
+                return await with_timeout(
+                    self._action_list(sort_by, limit, output_format),
+                    timeout=timeout,
+                    operation="process_list"
+                )
             elif action == "find":
                 if not name:
                     return ToolResult(
@@ -97,7 +110,11 @@ class ProcessMonitorTool(Tool):
                         output="",
                         error="Name parameter is required for 'find' action",
                     )
-                return await self._action_find(name, output_format)
+                return await with_timeout(
+                    self._action_find(name, output_format),
+                    timeout=timeout,
+                    operation=f"process_find({name})"
+                )
             elif action == "info":
                 if pid is None:
                     return ToolResult(
@@ -105,7 +122,11 @@ class ProcessMonitorTool(Tool):
                         output="",
                         error="PID parameter is required for 'info' action",
                     )
-                return await self._action_info(int(pid), output_format)
+                return await with_timeout(
+                    self._action_info(int(pid), output_format),
+                    timeout=timeout,
+                    operation=f"process_info({pid})"
+                )
             elif action == "check":
                 if not name:
                     return ToolResult(
@@ -113,7 +134,11 @@ class ProcessMonitorTool(Tool):
                         output="",
                         error="Name parameter is required for 'check' action",
                     )
-                return await self._action_check(name)
+                return await with_timeout(
+                    self._action_check(name),
+                    timeout=timeout,
+                    operation=f"process_check({name})"
+                )
             
             # This should never happen due to validation above, but included for completeness
             return ToolResult(
@@ -122,6 +147,12 @@ class ProcessMonitorTool(Tool):
                 error=f"Unknown action: {action}",
             )
 
+        except TimeoutError as e:
+            return ErrorHandler.create_error_result(
+                f"Process operation timed out: {str(e)}",
+                ErrorType.TIMEOUT_ERROR,
+                {"action": action, "timeout": timeout}
+            )
         except Exception as e:
             return ToolResult(
                 success=False,
