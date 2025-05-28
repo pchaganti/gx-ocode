@@ -164,3 +164,7 @@ secrets.json
 
 # Documentation (temporarily)
 dev-docs/
+
+# Claude Code memory files
+CLAUDE.md
+.claude/
