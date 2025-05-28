@@ -18,6 +18,7 @@ class GitStatusTool(Tool):
         return ToolDefinition(
             name="git_status",
             description="Get the current git repository status",
+            category="Git Operations",
             parameters=[
                 ToolParameter(
                     name="path",

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from .api_client import OllamaAPIClient, CompletionRequest, Message, StreamChunk
 from .context_manager import ContextManager, ProjectContext
 from .session import SessionManager
-from ..tools.base import ToolRegistry, ToolResult
+from ..tools.base import ToolRegistry, ToolResult, Tool
 from ..utils.config import ConfigManager
 from ..utils.auth import AuthenticationManager
 
@@ -246,17 +246,9 @@ Before responding, consider:
     def _get_tool_descriptions_by_category(self) -> str:
         """Organize tool descriptions by functional category.
         
-        Groups available tools into logical categories for easier understanding:
-        - File Operations: Basic file system operations
-        - Code Analysis: Tools for analyzing and searching code
-        - Git Operations: Version control commands
-        - System Operations: Shell and system utilities
-        - Memory Management: Context and memory tools
-        - Agent Management: Task delegation tools
-        - Text Processing: Text manipulation utilities
-        - Project Management: File organization tools
-        - Testing: Test execution tools
-        - Documentation: Documentation and thinking tools
+        Dynamically groups tools based on their category metadata,
+        ensuring the categorization stays accurate as tools are added
+        or modified without requiring manual updates to this method.
         
         Returns:
             str: Formatted tool descriptions grouped by category
@@ -264,26 +256,28 @@ Before responding, consider:
         # Return cached descriptions if available
         if self._tool_descriptions_cache is not None:
             return self._tool_descriptions_cache
-        categories = {
-            "File Operations": ["file_read", "file_write", "file_edit", "ls", "find", "head", "tail"],
-            "Code Analysis": ["architect", "grep", "wc", "diff"],
-            "Git Operations": ["git_status", "git_commit", "git_diff", "git_log"],
-            "System Operations": ["bash", "which", "curl"],
-            "Memory Management": ["memory_read", "memory_write"],
-            "Agent Management": ["agent"],
-            "Text Processing": ["sort", "uniq"],
-            "Project Management": ["copy", "move", "remove"],
-            "Testing": ["test", "testflow"],
-            "Documentation": ["sticker", "think"]
-        }
+            
+        # Dynamically group tools by their category
+        categories: Dict[str, List[Tool]] = {}
+        
+        for tool in self.tool_registry.get_all_tools():
+            # Get category from tool definition, default to "General" if not specified
+            category = getattr(tool.definition, 'category', 'General')
+            
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(tool)
+        
+        # Sort categories for consistent output
+        sorted_categories = sorted(categories.items())
         
         output = []
-        for category, tool_names in categories.items():
+        for category, tools in sorted_categories:
             output.append(f"**{category}:**")
-            for tool_name in tool_names:
-                tool = self.tool_registry.get_tool(tool_name)
-                if tool:
-                    output.append(f"  - {tool.definition.name}: {tool.definition.description}")
+            # Sort tools within category by name for consistency
+            sorted_tools = sorted(tools, key=lambda t: t.definition.name)
+            for tool in sorted_tools:
+                output.append(f"  - {tool.definition.name}: {tool.definition.description}")
             output.append("")  # Add blank line between categories
         
         # Cache the result for future use
