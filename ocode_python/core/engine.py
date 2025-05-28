@@ -93,7 +93,19 @@ class OCodeEngine:
         self.system_prompt = self._build_system_prompt()
 
     def _build_system_prompt(self) -> str:
-        """Build a comprehensive system prompt with deep guidance."""
+        """Build a comprehensive system prompt with deep guidance.
+        
+        Constructs a detailed system prompt that includes:
+        - Core role and capabilities definition
+        - Query analysis framework for understanding user intent
+        - Tool usage decision criteria
+        - Workflow patterns for different task types
+        - Error handling and communication guidelines
+        - Thinking framework for systematic analysis
+        
+        Returns:
+            str: A complete system prompt with structured guidance
+        """
         # Get available tools dynamically
         tool_descriptions = self._get_tool_descriptions_by_category()
         
@@ -231,7 +243,23 @@ Before responding, consider:
 </thinking_framework>"""
 
     def _get_tool_descriptions_by_category(self) -> str:
-        """Organize tool descriptions by functional category."""
+        """Organize tool descriptions by functional category.
+        
+        Groups available tools into logical categories for easier understanding:
+        - File Operations: Basic file system operations
+        - Code Analysis: Tools for analyzing and searching code
+        - Git Operations: Version control commands
+        - System Operations: Shell and system utilities
+        - Memory Management: Context and memory tools
+        - Agent Management: Task delegation tools
+        - Text Processing: Text manipulation utilities
+        - Project Management: File organization tools
+        - Testing: Test execution tools
+        - Documentation: Documentation and thinking tools
+        
+        Returns:
+            str: Formatted tool descriptions grouped by category
+        """
         categories = {
             "File Operations": ["file_read", "file_write", "file_edit", "ls", "find", "head", "tail"],
             "Code Analysis": ["architect", "grep", "wc", "diff"],
@@ -256,7 +284,22 @@ Before responding, consider:
         return "\n".join(output)
 
     def _add_examples_to_system_prompt(self, base_prompt: str) -> str:
-        """Add concrete examples to the system prompt."""
+        """Add concrete examples to the system prompt.
+        
+        Appends practical examples that demonstrate:
+        - Knowledge queries that require direct responses
+        - Simple tool usage for basic operations
+        - Complex workflows requiring multiple tools
+        
+        These examples help guide the AI's decision-making process
+        about when to use tools versus direct knowledge.
+        
+        Args:
+            base_prompt: The base system prompt to extend
+            
+        Returns:
+            str: The system prompt with examples appended
+        """
         examples = """
 
 <examples>
@@ -280,7 +323,23 @@ Response: [Create specialized agents for different aspects]
         return base_prompt + examples
 
     def _add_project_context_guidance(self, base_prompt: str, context: ProjectContext) -> str:
-        """Add project-specific guidance to the system prompt."""
+        """Add project-specific guidance to the system prompt.
+        
+        Enhances the system prompt with project-specific information:
+        - Detected programming languages in the project
+        - Project structure and file organization
+        - Best practices for the detected languages
+        - Contextual guidance based on project type
+        
+        This helps tailor responses to the specific project environment.
+        
+        Args:
+            base_prompt: The base system prompt to extend
+            context: Project context containing file information
+            
+        Returns:
+            str: The system prompt with project-specific guidance
+        """
         if not context:
             return base_prompt
         
@@ -291,7 +350,7 @@ Response: [Create specialized agents for different aspects]
             '.java': 'Java', '.cpp': 'C++', '.c': 'C', '.go': 'Go',
             '.rb': 'Ruby', '.php': 'PHP', '.rs': 'Rust', '.swift': 'Swift'
         }
-        for file_path in context.files.keys():
+        for file_path in context.files:
             ext = file_path.suffix.lower()
             if ext in ext_to_lang:
                 languages.add(ext_to_lang[ext])
