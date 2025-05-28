@@ -214,7 +214,7 @@ class TestContextManagerEnhanced:
             await manager.build_context("test", max_files=-1)
 
         # Test excessive max_files (should be capped)
-        context = await manager.build_context("test", max_files=5000)
+        _context = await manager.build_context("test", max_files=5000)
         # Should not raise, but internally capped at 1000
 
     @pytest.mark.asyncio
@@ -275,7 +275,7 @@ class TestContextManagerEnhanced:
         with patch.object(
             manager, "analyze_file", side_effect=track_concurrent_analyze
         ):
-            context = await manager.build_context("test", max_files=15)
+            _context = await manager.build_context("test", max_files=15)
 
         # Should limit concurrency (semaphore is set to 10)
         assert max_concurrent <= 10

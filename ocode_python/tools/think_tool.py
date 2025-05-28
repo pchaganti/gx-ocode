@@ -531,11 +531,11 @@ class ThinkTool(Tool):
 
     def _format_comparison(self, results: Dict[str, Any]) -> str:
         """Format comparison results."""
-        output = f"Options to Compare:\n"
+        output = "Options to Compare:\n"
         for option in results.get("options", []):
             output += f"• {option}\n"
 
-        output += f"\nEvaluation Criteria:\n"
+        output += "\nEvaluation Criteria:\n"
         for criterion in results.get("criteria", []):
             output += f"• {criterion}\n"
 

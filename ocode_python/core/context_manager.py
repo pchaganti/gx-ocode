@@ -615,8 +615,6 @@ class ContextManager:
             }
 
         query_lower = query.lower().strip()
-        suggested_tools = []
-        context_strategy = "full"
 
         # First, check for multi-action queries that need multiple tools/agents
         multi_action_result = self._detect_multi_action_query(query_lower)

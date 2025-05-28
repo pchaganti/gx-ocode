@@ -9,7 +9,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ocode_python.tools.base import ToolRegistry
+from ocode_python.tools.base import ToolRegistry  # noqa: E402
 
 
 def main():
@@ -90,15 +90,15 @@ def main():
                 print(f"  ✓ {tool_name}: Can be retrieved")
                 try:
                     definition = tool.definition
-                    ollama_format = definition.to_ollama_format()
-                    print(f"    - Definition: ✓")
-                    print(f"    - Ollama format: ✓")
+                    _ = definition.to_ollama_format()
+                    print("    - Definition: ✓")
+                    print("    - Ollama format: ✓")
                 except Exception as e:
                     print(f"    - Error: {e}")
             else:
                 print(f"  ✗ {tool_name}: Cannot be retrieved")
 
-        print(f"\n✅ All tools are properly registered and functional!")
+        print("\n✅ All tools are properly registered and functional!")
 
     except Exception as e:
         print(f"❌ Error: {e}")

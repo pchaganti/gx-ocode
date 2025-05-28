@@ -1299,7 +1299,7 @@ class ArchitectTool(Tool):
 
         if analysis_type == "overview":
             summary = results.get("summary", {})
-            output += f"Project Overview:\n"
+            output += "Project Overview:\n"
             output += f"• Language: {results.get('language', 'unknown')}\n"
             output += f"• Total Files: {summary.get('total_files', 0)}\n"
             output += f"• Total Lines: {summary.get('total_lines', 0)}\n"
@@ -1314,7 +1314,7 @@ class ArchitectTool(Tool):
 
         elif analysis_type == "dependencies":
             stats = results.get("statistics", {})
-            output += f"Dependency Analysis:\n"
+            output += "Dependency Analysis:\n"
             output += f"• Files Analyzed: {stats.get('files_analyzed', 0)}\n"
             output += (
                 f"• Internal Dependencies: {stats.get('total_internal_deps', 0)}\n"
@@ -1339,7 +1339,7 @@ class ArchitectTool(Tool):
 
             issues = results.get("issues", [])
             if issues:
-                output += f"\nIssues Found:\n"
+                output += "\nIssues Found:\n"
                 for issue in issues:
                     output += f"• {issue}\n"
 

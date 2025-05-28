@@ -599,7 +599,7 @@ class BashTool(Tool):
             if child:
                 try:
                     child.terminate(force=True)
-                except:
+                except Exception:
                     pass
             return {
                 "success": False,
@@ -613,7 +613,7 @@ class BashTool(Tool):
             if child and child.isalive():
                 try:
                     child.terminate(force=True)
-                except:
+                except Exception:
                     pass
             output_buffer.close()
 

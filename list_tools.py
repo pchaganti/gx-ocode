@@ -9,7 +9,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ocode_python.tools.base import ToolRegistry
+from ocode_python.tools.base import ToolRegistry  # noqa: E402
 
 
 def main():

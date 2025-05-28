@@ -71,7 +71,7 @@ class ExecutionTool(Tool):
                     package_data = json.load(f)
                     if "jest" in package_data.get("devDependencies", {}):
                         return "jest"
-            except:
+            except Exception:
                 pass
 
         if (test_path / "go.mod").exists():
@@ -517,7 +517,7 @@ class CoverageTool(Tool):
                 if "TOTAL" in line and "%" in line:
                     try:
                         coverage_percent = int(line.split()[-1].replace("%", ""))
-                    except:
+                    except Exception:
                         pass
 
             success = coverage_percent >= kwargs.get("min_coverage", 80)

@@ -408,7 +408,7 @@ class AgentTool(Tool):
         self.task_queue.append(task_id)
 
         # Simulate task execution
-        result = await self._execute_task(task, target_agent, timeout)
+        _result = await self._execute_task(task, target_agent, timeout)
 
         output = f"Task delegated to {target_agent.name} (ID: {target_agent.id})\n"
         output += f"Task ID: {task_id}\n"
@@ -417,7 +417,7 @@ class AgentTool(Tool):
         output += f"Status: {task.status}\n"
 
         if task.status == "completed":
-            output += f"\nTask completed successfully!\n"
+            output += "\nTask completed successfully!\n"
             if task.result:
                 output += f"Result: {task.result}\n"
         elif task.status == "failed":
@@ -571,7 +571,7 @@ class AgentTool(Tool):
             output += f"Created: {agent.created_at}\n\n"
 
             if agent_tasks:
-                output += f"Recent Tasks:\n"
+                output += "Recent Tasks:\n"
                 for task in agent_tasks[-3:]:  # Show last 3 tasks
                     output += f"- {task.description} ({task.status})\n"
 
@@ -593,7 +593,7 @@ class AgentTool(Tool):
                     metadata={"agents": [], "tasks": []},
                 )
 
-            output = f"System Status:\n"
+            output = "System Status:\n"
             output += f"Total Agents: {len(self.agents)}\n"
             output += f"Total Tasks: {len(self.tasks)}\n"
             output += f"Tasks in Queue: {len(self.task_queue)}\n\n"
@@ -628,7 +628,7 @@ class AgentTool(Tool):
         completed_tasks = [t for t in relevant_tasks if t.status == "completed"]
         failed_tasks = [t for t in relevant_tasks if t.status == "failed"]
 
-        output = f"Task Results Summary:\n"
+        output = "Task Results Summary:\n"
         output += f"Completed: {len(completed_tasks)}\n"
         output += f"Failed: {len(failed_tasks)}\n\n"
 

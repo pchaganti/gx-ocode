@@ -11,17 +11,17 @@ from pathlib import Path
 # Add the project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ocode_python.tools.agent_tool import AgentTool
-from ocode_python.tools.base import ToolRegistry
-from ocode_python.tools.bash_tool import BashTool
-from ocode_python.tools.file_edit_tool import FileEditTool
+from ocode_python.tools.agent_tool import AgentTool  # noqa: E402
+from ocode_python.tools.base import ToolRegistry  # noqa: E402
+from ocode_python.tools.bash_tool import BashTool  # noqa: E402
+from ocode_python.tools.file_edit_tool import FileEditTool  # noqa: E402
 
 # Import the tools
-from ocode_python.tools.glob_tool import GlobTool
-from ocode_python.tools.grep_tool import GrepTool
-from ocode_python.tools.ls_tool import LsTool
-from ocode_python.tools.sticker_tool import StickerRequestTool
-from ocode_python.tools.think_tool import ThinkTool
+from ocode_python.tools.glob_tool import GlobTool  # noqa: E402
+from ocode_python.tools.grep_tool import GrepTool  # noqa: E402
+from ocode_python.tools.ls_tool import LsTool  # noqa: E402
+from ocode_python.tools.sticker_tool import StickerRequestTool  # noqa: E402
+from ocode_python.tools.think_tool import ThinkTool  # noqa: E402
 
 
 class TestRunner:
@@ -83,12 +83,12 @@ class TestRunner:
         self.run_test(self.test_tool_definitions, "Tool Definitions")
 
         # Print summary
-        print(f"\nTest Results:")
+        print("\nTest Results:")
         print(f"✅ Passed: {self.passed}")
         print(f"❌ Failed: {self.failed}")
 
         if self.errors:
-            print(f"\nErrors:")
+            print("\nErrors:")
             for error in self.errors:
                 print(f"  - {error}")
 
@@ -222,10 +222,10 @@ def main():
     success = runner.run_all_tests()
 
     if success:
-        print(f"\n🎉 All tests passed!")
+        print("\n🎉 All tests passed!")
         return 0
     else:
-        print(f"\n💥 Some tests failed!")
+        print("\n💥 Some tests failed!")
         return 1
 
 

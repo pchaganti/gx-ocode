@@ -485,7 +485,7 @@ class MCPTool(Tool):
                 operation=f"mcp_tool_call({server_name}.{tool_name})",
             )
 
-            output = f"MCP Tool Call Result:\n"
+            output = "MCP Tool Call Result:\n"
             output += f"Server: {server_name}\n"
             output += f"Tool: {tool_name}\n"
             output += f"Arguments: {json.dumps(tool_arguments, indent=2)}\n"
@@ -585,7 +585,7 @@ class MCPTool(Tool):
             # Simulate resource fetching
             content = await self._simulate_resource_fetch(resource_uri)
 
-            output = f"Resource Content:\n"
+            output = "Resource Content:\n"
             output += f"URI: {resource_uri}\n"
             output += f"Name: {resource['name']}\n"
             output += f"Type: {resource['mimeType']}\n"
@@ -662,7 +662,7 @@ class MCPTool(Tool):
 
     async def _get_status(self) -> ToolResult:
         """Get status of MCP connections and capabilities."""
-        output = f"MCP Integration Status:\n"
+        output = "MCP Integration Status:\n"
         output += "=" * 30 + "\n"
         output += f"Connected Servers: {len(self.connected_servers)}\n"
 

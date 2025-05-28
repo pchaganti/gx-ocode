@@ -46,7 +46,7 @@ class TestFileReadToolTimeout:
             mock_timeout.return_value.__aenter__ = AsyncMock()
             mock_timeout.return_value.__aexit__ = AsyncMock()
 
-            result = await file_read_tool.execute(
+            _result = await file_read_tool.execute(
                 path=str(test_file), timeout=1.0  # Initial timeout of 1 second
             )
 

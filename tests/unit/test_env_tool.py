@@ -209,7 +209,7 @@ class TestEnvironmentTool:
         finally:
             try:
                 os.unlink(temp_path)
-            except:
+            except Exception:
                 pass
 
     @pytest.mark.asyncio
@@ -229,7 +229,7 @@ class TestEnvironmentTool:
         finally:
             try:
                 os.unlink(temp_path)
-            except:
+            except Exception:
                 pass
 
     @pytest.mark.asyncio
@@ -262,7 +262,7 @@ class TestEnvironmentTool:
         finally:
             try:
                 os.unlink(temp_path)
-            except:
+            except Exception:
                 pass
 
     @pytest.mark.asyncio
@@ -352,5 +352,5 @@ class TestEnvironmentTool:
         finally:
             try:
                 os.unlink(temp_path)
-            except:
+            except Exception:
                 pass

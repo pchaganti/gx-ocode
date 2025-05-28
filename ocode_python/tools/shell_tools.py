@@ -94,7 +94,7 @@ class ShellCommandTool(Tool):
             # Allow this command for timeout test
             status = "allowed"
             reason = ""
-            requires_confirmation = False
+            _requires_confirmation = False
         if status == "blocked":
             return ToolResult(
                 success=False, output="", error=f"Command blocked: {reason}"

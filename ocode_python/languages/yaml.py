@@ -214,9 +214,9 @@ class YAMLAnalyzer(LanguageAnalyzer):
                 depth = leading_spaces // 2
                 max_depth = max(max_depth, depth)
 
-        # Count different symbol types
-        namespace_count = len([s for s in symbols if s.type == SymbolType.NAMESPACE])
-        variable_count = len([s for s in symbols if s.type == SymbolType.VARIABLE])
+        # Count different symbol types (currently unused but kept for future use)
+        # _namespace_count = len([s for s in symbols if s.type == SymbolType.NAMESPACE])
+        # _variable_count = len([s for s in symbols if s.type == SymbolType.VARIABLE])
 
         return CodeMetrics(
             lines_of_code=code_lines,

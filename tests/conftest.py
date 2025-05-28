@@ -49,7 +49,7 @@ def mock_project_dir(temp_dir: Path) -> Path:
 def main():
     """Main function."""
     print("Hello, world!")
-    
+
 if __name__ == "__main__":
     main()
 '''
@@ -64,12 +64,12 @@ def add(a, b):
     return a + b
 
 def multiply(a, b):
-    """Multiply two numbers.""" 
+    """Multiply two numbers."""
     return a * b
 
 class Calculator:
     """Simple calculator."""
-    
+
     def calculate(self, operation, a, b):
         """Perform calculation."""
         if operation == "add":
@@ -78,10 +78,10 @@ class Calculator:
             return self.multiply(a, b)
         else:
             raise ValueError("Unknown operation")
-    
+
     def add(self, a, b):
         return a + b
-    
+
     def multiply(self, a, b):
         return a * b
 '''

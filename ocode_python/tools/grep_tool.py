@@ -166,7 +166,7 @@ class GrepTool(Tool):
                         all_matches = all_matches[:max_matches]
                         break
 
-                except Exception as e:
+                except Exception:
                     # Skip files that can't be read
                     continue
 
@@ -796,7 +796,7 @@ class CodeGrepTool(GrepTool):
                         all_matches = all_matches[:max_matches]
                         break
 
-                except Exception as e:
+                except Exception:
                     # Skip files that can't be read
                     continue
 

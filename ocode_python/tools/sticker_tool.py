@@ -918,7 +918,7 @@ class StickerRequestTool(Tool):
                 stats["tags"][tag] = stats["tags"].get(tag, 0) + 1
 
         # Generate output
-        output = f"Sticker Statistics:\n"
+        output = "Sticker Statistics:\n"
         output += "=" * 30 + "\n"
         output += f"Total stickers: {stats['total']}\n\n"
 
@@ -932,7 +932,7 @@ class StickerRequestTool(Tool):
             if priority in stats["by_priority"]:
                 output += f"  {priority}: {stats['by_priority'][priority]}\n"
 
-        output += f"\nStatus:\n"
+        output += "\nStatus:\n"
         output += f"  Open: {stats['by_status']['open']}\n"
         output += f"  Resolved: {stats['by_status']['resolved']}\n"
 

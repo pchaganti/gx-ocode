@@ -253,7 +253,7 @@ class GitDiffTool(Tool):
                 try:
                     diff_text = change.diff.decode("utf-8")
                     diff_lines.append(diff_text)
-                except:
+                except Exception:
                     diff_lines.append("(binary file)")
 
                 diff_lines.append("")
@@ -339,7 +339,7 @@ class GitBranchTool(Tool):
                         error="Branch name required for create action",
                     )
 
-                new_branch = repo.create_head(branch_name)
+                _new_branch = repo.create_head(branch_name)
                 return ToolResult(
                     success=True,
                     output=f"Created branch '{branch_name}'",

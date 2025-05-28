@@ -722,12 +722,11 @@ Examples:
                 ]
             )
         elif query_category.startswith("workflow_"):
-            workflow_type = query_category.replace("workflow_", "")
             lines.extend(
                 [
-                    f"GUIDANCE: This is a complex {workflow_type} workflow. Consider using multiple tools in sequence:",
+                    f"GUIDANCE: This is a complex workflow. Consider using multiple tools in sequence:",
                     f"- Suggested workflow tools: {', '.join(suggested_tools)}",
-                    f"- Start with analysis tools, then proceed with implementation",
+                    "- Start with analysis tools, then proceed with implementation",
                     "",
                 ]
             )
