@@ -963,7 +963,7 @@ When a user asks you to perform an action, call the appropriate function."""
                     # Re-execute with confirmation
                     arguments["confirmed"] = True
                     result = await self.tool_registry.execute_tool(
-                        tool_name, **arguments
+                        registry_name, **arguments
                     )
                 else:
                     result = ToolResult(

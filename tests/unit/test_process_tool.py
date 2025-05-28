@@ -221,6 +221,7 @@ class TestProcessMonitorTool:
                 "cmdline": ["test_process", "--arg"],
                 "username": "test_user",
             }
+            test_proc.cpu_percent.return_value = 25.5  # Return float that supports round()
 
             # Add info to python and chrome processes
             python_process.info = {

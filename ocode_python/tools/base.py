@@ -413,17 +413,17 @@ class ToolRegistry:
         """Get all tool definitions in Ollama format."""
         return [tool.definition.to_ollama_format() for tool in self.tools.values()]
 
-    async def execute_tool(self, name: str, **kwargs) -> ToolResult:
+    async def execute_tool(self, tool_name: str, **kwargs) -> ToolResult:
         """Execute a tool by name."""
-        tool = self.get_tool(name)
+        tool = self.get_tool(tool_name)
         if not tool:
             return ToolResult(
-                success=False, output="", error=f"Tool '{name}' not found"
+                success=False, output="", error=f"Tool '{tool_name}' not found"
             )
 
         if not tool.validate_parameters(kwargs):
             return ToolResult(
-                success=False, output="", error=f"Invalid parameters for tool '{name}'"
+                success=False, output="", error=f"Invalid parameters for tool '{tool_name}'"
             )
 
         try:
