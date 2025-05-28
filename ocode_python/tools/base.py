@@ -304,6 +304,7 @@ class ToolRegistry:
         from .text_tools import SortTool, UniqTool
         from .curl_tool import CurlTool
         from .which_tool import WhichTool
+        from .ping_tool import PingTool
 
         core_tools = [
             # Original tools
@@ -346,6 +347,7 @@ class ToolRegistry:
             UniqTool(),
             CurlTool(),
             WhichTool(),
+            PingTool(),
         ]
 
         for tool in core_tools:
