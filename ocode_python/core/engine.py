@@ -275,13 +275,14 @@ Before responding, consider:
         
         output = []
         for category, tool_names in categories.items():
-            output.append(f"\n**{category}:**")
+            output.append(f"**{category}:**")
             for tool_name in tool_names:
                 tool = self.tool_registry.get_tool(tool_name)
                 if tool:
-                    output.append(f"- {tool.definition.name}: {tool.definition.description}")
+                    output.append(f"  - {tool.definition.name}: {tool.definition.description}")
+            output.append("")  # Add blank line between categories
         
-        return "\n".join(output)
+        return "\n".join(output).strip()
 
     def _add_examples_to_system_prompt(self, base_prompt: str) -> str:
         """Add concrete examples to the system prompt.
@@ -301,23 +302,22 @@ Before responding, consider:
             str: The system prompt with examples appended
         """
         examples = """
-
 <examples>
 **Knowledge Query Example:**
-User: "Explain the difference between REST and GraphQL"
-Response: [Comprehensive explanation without tools]
+  User: "Explain the difference between REST and GraphQL"
+  Response: [Comprehensive explanation without tools]
 
 **Simple Action Example:**
-User: "List files in the current directory"
-Response: [Execute ls tool immediately]
+  User: "List files in the current directory"
+  Response: [Execute ls tool immediately]
 
 **Complex Workflow Example:**
-User: "Refactor this codebase to use dependency injection"
-Response: [Multi-step process: analyze → plan → implement → test]
+  User: "Refactor this codebase to use dependency injection"
+  Response: [Multi-step process: analyze → plan → implement → test]
 
 **Agent Delegation Example:**
-User: "Set up a complete CI/CD pipeline for this project"
-Response: [Create specialized agents for different aspects]
+  User: "Set up a complete CI/CD pipeline for this project"
+  Response: [Create specialized agents for different aspects]
 </examples>"""
         
         return base_prompt + examples
@@ -356,14 +356,13 @@ Response: [Create specialized agents for different aspects]
                 languages.add(ext_to_lang[ext])
             
         context_guidance = f"""
-
 <project_context>
-Current Project: {context.project_root}
-Languages Detected: {', '.join(sorted(languages)) if languages else 'Unknown'}
-Key Files: {len(context.files)} analyzed
-Git Branch: {context.git_info.get('branch', 'unknown') if context.git_info else 'not a git repo'}
-
-Adapt your responses to this project context and prefer tools that work well with the detected languages and project structure.
+  Current Project: {context.project_root}
+  Languages Detected: {', '.join(sorted(languages)) if languages else 'Unknown'}
+  Key Files: {len(context.files)} analyzed
+  Git Branch: {context.git_info.get('branch', 'unknown') if context.git_info else 'not a git repo'}
+  
+  Adapt your responses to this project context and prefer tools that work well with the detected languages and project structure.
 </project_context>"""
         
         return base_prompt + context_guidance
