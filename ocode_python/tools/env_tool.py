@@ -136,7 +136,7 @@ class EnvironmentTool(Tool):
 
             elif action == "save":
                 return await self._action_save(file_path, pattern)
-            
+
             # This should never happen due to validation above, but included for completeness
             return ToolResult(
                 success=False,

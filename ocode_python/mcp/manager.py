@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -214,7 +215,7 @@ class MCPServerManager:
                 info.status = "stopped"
                 info.pid = None
 
-            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
                 info.status = "stopped"
                 info.pid = None
 
@@ -299,7 +300,7 @@ class MCPServerManager:
             try:
                 with open(state_file, "r") as f:
                     state = json.load(f)
-            except:
+            except Exception:
                 state = {}
 
         # Update state
@@ -310,7 +311,7 @@ class MCPServerManager:
             state_file.parent.mkdir(parents=True, exist_ok=True)
             with open(state_file, "w") as f:
                 json.dump(state, f, indent=2)
-        except:
+        except Exception:
             pass
 
     def _load_server_state(self) -> None:
@@ -328,7 +329,7 @@ class MCPServerManager:
                 if name in self._server_info:
                     self._server_info[name].pid = server_state.get("pid")
                     self._server_info[name].port = server_state.get("port")
-        except:
+        except Exception:
             pass
 
     async def cleanup(self) -> None:
@@ -341,7 +342,11 @@ class MCPServerManager:
 EXAMPLE_MCP_SERVERS = {
     "filesystem": {
         "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+        "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            tempfile.gettempdir(),
+        ],
         "env": {},
         "cwd": None,
     },

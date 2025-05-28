@@ -8,6 +8,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from ..utils import path_validator
+from ..utils.timeout_handler import TimeoutError, async_timeout
 from .base import (
     ErrorHandler,
     ErrorType,
@@ -17,8 +19,6 @@ from .base import (
     ToolParameter,
     ToolResult,
 )
-from ..utils import path_validator
-from ..utils.timeout_handler import async_timeout, TimeoutError
 
 
 class FileReadTool(Tool):
@@ -67,7 +67,18 @@ class FileReadTool(Tool):
             return base_path
 
         # Common extensions to try
-        common_extensions = [".md", ".txt", ".rst", ".markdown", ".py", ".js", ".ts", ".json", ".yaml", ".yml"]
+        common_extensions = [
+            ".md",
+            ".txt",
+            ".rst",
+            ".markdown",
+            ".py",
+            ".js",
+            ".ts",
+            ".json",
+            ".yaml",
+            ".yml",
+        ]
 
         for ext in common_extensions:
             path_with_ext = base_path.with_suffix(ext)
@@ -88,7 +99,7 @@ class FileReadTool(Tool):
             encoding = kwargs.get("encoding", "utf-8")
             offset = kwargs.get("offset", 0)
             limit = kwargs.get("limit", -1)
-            
+
             # Calculate appropriate timeout based on file size
             timeout = kwargs.get("timeout", 30.0)  # Default 30 second timeout
 
@@ -111,7 +122,18 @@ class FileReadTool(Tool):
                     ErrorType.FILE_NOT_FOUND,
                     {
                         "path": path,
-                        "attempted_extensions": [".md", ".txt", ".rst", ".markdown", ".py", ".js", ".ts", ".json", ".yaml", ".yml"],
+                        "attempted_extensions": [
+                            ".md",
+                            ".txt",
+                            ".rst",
+                            ".markdown",
+                            ".py",
+                            ".js",
+                            ".ts",
+                            ".json",
+                            ".yaml",
+                            ".yml",
+                        ],
                     },
                 )
 
@@ -128,11 +150,11 @@ class FileReadTool(Tool):
             # Check file size before reading
             file_size = resolved_path.stat().st_size
             max_file_size = 50 * 1024 * 1024  # 50MB limit
-            
+
             # Adjust timeout based on file size (roughly 1MB per second)
             if file_size > 1024 * 1024:  # 1MB
                 timeout = max(timeout, file_size / (1024 * 1024))  # Seconds per MB
-            
+
             # For streaming support with offset/limit
             if offset > 0 or limit > 0:
                 # Validate offset
@@ -142,13 +164,15 @@ class FileReadTool(Tool):
                         ErrorType.VALIDATION_ERROR,
                         {"offset": offset, "file_size": file_size},
                     )
-                
+
                 # Read with offset and limit - wrapped with timeout
                 try:
-                    async with async_timeout(timeout, f"file_read({resolved_path.name})"):
+                    async with async_timeout(
+                        timeout, f"file_read({resolved_path.name})"
+                    ):
                         # Use asyncio to make I/O non-blocking
                         loop = asyncio.get_event_loop()
-                        
+
                         def _read_chunk():
                             with open(resolved_path, "rb") as f:
                                 f.seek(offset)
@@ -156,9 +180,9 @@ class FileReadTool(Tool):
                                     return f.read(limit)
                                 else:
                                     return f.read()
-                        
+
                         content_bytes = await loop.run_in_executor(None, _read_chunk)
-                    
+
                     # Try to decode with specified encoding
                     try:
                         content = content_bytes.decode(encoding)
@@ -169,9 +193,13 @@ class FileReadTool(Tool):
                     return ErrorHandler.create_error_result(
                         f"File read operation timed out: {e}",
                         ErrorType.TIMEOUT_ERROR,
-                        {"path": str(resolved_path), "timeout": timeout, "file_size": file_size},
+                        {
+                            "path": str(resolved_path),
+                            "timeout": timeout,
+                            "file_size": file_size,
+                        },
                     )
-                    
+
                 return ErrorHandler.create_success_result(
                     content,
                     {
@@ -182,7 +210,7 @@ class FileReadTool(Tool):
                         "offset": offset,
                     },
                 )
-            
+
             # Standard full file read
             if file_size > max_file_size:
                 return ErrorHandler.create_error_result(
@@ -196,14 +224,14 @@ class FileReadTool(Tool):
             if encoding != "utf-8":
                 encodings_to_try.append("utf-8")
             encodings_to_try.extend(["utf-8-sig", "latin-1", "cp1252"])
-            
+
             content = None
             used_encoding = None
-            
+
             try:
                 async with async_timeout(timeout, f"file_read({resolved_path.name})"):
                     loop = asyncio.get_event_loop()
-                    
+
                     def _read_with_encoding():
                         for enc in encodings_to_try:
                             try:
@@ -211,18 +239,27 @@ class FileReadTool(Tool):
                                     return f.read(), enc
                             except UnicodeDecodeError:
                                 continue
-                        
+
                         # Last resort: binary read with lossy conversion
                         with open(resolved_path, "rb") as f:
-                            return f.read().decode("utf-8", errors="replace"), "utf-8 (with replacements)"
-                    
-                    content, used_encoding = await loop.run_in_executor(None, _read_with_encoding)
-                    
+                            return (
+                                f.read().decode("utf-8", errors="replace"),
+                                "utf-8 (with replacements)",
+                            )
+
+                    content, used_encoding = await loop.run_in_executor(
+                        None, _read_with_encoding
+                    )
+
             except TimeoutError as e:
                 return ErrorHandler.create_error_result(
                     f"File read operation timed out: {e}",
                     ErrorType.TIMEOUT_ERROR,
-                    {"path": str(resolved_path), "timeout": timeout, "file_size": file_size},
+                    {
+                        "path": str(resolved_path),
+                        "timeout": timeout,
+                        "file_size": file_size,
+                    },
                 )
 
             return ErrorHandler.create_success_result(
@@ -291,16 +328,18 @@ class FileWriteTool(Tool):
         """Write content to file with enhanced validation and safety."""
         try:
             # Validate required parameters
-            validation_error = ErrorHandler.validate_required_params(kwargs, ["path", "content"])
+            validation_error = ErrorHandler.validate_required_params(
+                kwargs, ["path", "content"]
+            )
             if validation_error:
                 return validation_error
-                
+
             path = kwargs.get("path")
             content = kwargs.get("content")
             encoding = kwargs.get("encoding", "utf-8")
             create_dirs = kwargs.get("create_dirs", True)
             append = kwargs.get("append", False)
-            
+
             # Validate path security
             is_valid, error_msg, validated_path = path_validator.validate_path(path)
             if not is_valid:
@@ -309,7 +348,7 @@ class FileWriteTool(Tool):
                     ErrorType.SECURITY_ERROR,
                     {"path": path},
                 )
-            
+
             # Ensure parent directory exists if requested
             if create_dirs:
                 validated_path.parent.mkdir(parents=True, exist_ok=True)
@@ -319,20 +358,20 @@ class FileWriteTool(Tool):
                     ErrorType.FILE_NOT_FOUND,
                     {"parent_dir": str(validated_path.parent)},
                 )
-            
+
             # Check if we're overwriting an existing file
             file_exists = validated_path.exists()
             original_size = validated_path.stat().st_size if file_exists else 0
-            
+
             # Write the file
             mode = "a" if append else "w"
             with open(validated_path, mode, encoding=encoding) as f:
                 f.write(content)
-            
+
             # Verify write succeeded
             new_size = validated_path.stat().st_size
             bytes_written = len(content.encode(encoding))
-            
+
             return ErrorHandler.create_success_result(
                 f"Successfully wrote {len(content)} characters to {validated_path}",
                 {
@@ -413,7 +452,7 @@ class FileListTool(Tool):
             extensions = kwargs.get("extensions")
             pattern = kwargs.get("pattern")
             max_depth = kwargs.get("max_depth", -1)
-            
+
             # Validate path
             is_valid, error_msg, validated_path = path_validator.validate_path(
                 path, check_exists=True
@@ -434,7 +473,7 @@ class FileListTool(Tool):
 
             files = []
             dirs = []
-            
+
             # Helper to check depth
             def is_within_depth(item_path: Path, base_path: Path, max_d: int) -> bool:
                 if max_d < 0:
@@ -452,13 +491,17 @@ class FileListTool(Tool):
                     glob_pattern = f"**/{pattern}"
                 else:
                     glob_pattern = pattern
-                    
+
                 for item in validated_path.glob(glob_pattern):
-                    if not include_hidden and any(part.startswith('.') for part in item.parts):
+                    if not include_hidden and any(
+                        part.startswith(".") for part in item.parts
+                    ):
                         continue
-                    if max_depth >= 0 and not is_within_depth(item, validated_path, max_depth):
+                    if max_depth >= 0 and not is_within_depth(
+                        item, validated_path, max_depth
+                    ):
                         continue
-                        
+
                     if item.is_file():
                         if not extensions or item.suffix in extensions:
                             files.append(str(item.relative_to(validated_path)))
@@ -468,11 +511,15 @@ class FileListTool(Tool):
                 # Standard listing
                 if recursive:
                     for item in validated_path.rglob("*"):
-                        if not include_hidden and any(part.startswith('.') for part in item.parts):
+                        if not include_hidden and any(
+                            part.startswith(".") for part in item.parts
+                        ):
                             continue
-                        if max_depth >= 0 and not is_within_depth(item, validated_path, max_depth):
+                        if max_depth >= 0 and not is_within_depth(
+                            item, validated_path, max_depth
+                        ):
                             continue
-                            
+
                         if item.is_file():
                             if not extensions or item.suffix in extensions:
                                 files.append(str(item.relative_to(validated_path)))
@@ -586,7 +633,7 @@ class FileSearchTool(Tool):
             case_sensitive = kwargs.get("case_sensitive", False)
             max_results = kwargs.get("max_results", 50)
             context_lines = kwargs.get("context_lines", 0)
-            
+
             # Validate path
             is_valid, error_msg, validated_path = path_validator.validate_path(
                 path, check_exists=True
@@ -623,7 +670,17 @@ class FileSearchTool(Tool):
                         if extensions and file_path.suffix not in extensions:
                             continue
                         # Skip binary files
-                        if file_path.suffix in ['.exe', '.dll', '.so', '.dylib', '.bin', '.jpg', '.png', '.gif', '.pdf']:
+                        if file_path.suffix in [
+                            ".exe",
+                            ".dll",
+                            ".so",
+                            ".dylib",
+                            ".bin",
+                            ".jpg",
+                            ".png",
+                            ".gif",
+                            ".pdf",
+                        ]:
                             continue
                         files_to_search.append(file_path)
 
@@ -636,7 +693,7 @@ class FileSearchTool(Tool):
                     # Check file size to avoid huge files
                     if file_path.stat().st_size > 10 * 1024 * 1024:  # 10MB
                         continue
-                        
+
                     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         lines = f.readlines()
 
@@ -650,28 +707,34 @@ class FileSearchTool(Tool):
 
                         if regex.search(line):
                             file_has_match = True
-                            
+
                             # Get context lines
                             context_before = []
                             context_after = []
-                            
+
                             if context_lines > 0:
                                 start = max(0, line_num - context_lines)
                                 end = min(len(lines), line_num + context_lines + 1)
-                                
+
                                 for i in range(start, line_num):
                                     context_before.append((i + 1, lines[i].rstrip()))
-                                
+
                                 for i in range(line_num + 1, end):
                                     context_after.append((i + 1, lines[i].rstrip()))
-                            
-                            results.append({
-                                "file": str(file_path.relative_to(validated_path) if validated_path.is_dir() else file_path),
-                                "line": line_num + 1,
-                                "text": line.rstrip(),
-                                "context_before": context_before,
-                                "context_after": context_after,
-                            })
+
+                            results.append(
+                                {
+                                    "file": str(
+                                        file_path.relative_to(validated_path)
+                                        if validated_path.is_dir()
+                                        else file_path
+                                    ),
+                                    "line": line_num + 1,
+                                    "text": line.rstrip(),
+                                    "context_before": context_before,
+                                    "context_after": context_after,
+                                }
+                            )
 
                     if file_has_match:
                         files_with_matches += 1
@@ -684,22 +747,24 @@ class FileSearchTool(Tool):
             if not results:
                 output = f"No matches found for pattern '{pattern}'"
             else:
-                output_lines = [f"Found {len(results)} matches in {files_with_matches} files:"]
-                
+                output_lines = [
+                    f"Found {len(results)} matches in {files_with_matches} files:"
+                ]
+
                 for result in results:
                     output_lines.append(f"\n{result['file']}:{result['line']}:")
-                    
+
                     # Show context before
-                    for line_num, text in result['context_before']:
+                    for line_num, text in result["context_before"]:
                         output_lines.append(f"  {line_num}: {text}")
-                    
+
                     # Show matching line (highlighted)
                     output_lines.append(f"> {result['line']}: {result['text']}")
-                    
+
                     # Show context after
-                    for line_num, text in result['context_after']:
+                    for line_num, text in result["context_after"]:
                         output_lines.append(f"  {line_num}: {text}")
-                
+
                 output = "\n".join(output_lines)
 
             return ErrorHandler.create_success_result(

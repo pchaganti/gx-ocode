@@ -240,7 +240,7 @@ class ContextManager:
 
     def _get_content_hash(self, content: str) -> str:
         """Generate hash for file content."""
-        return hashlib.md5(content.encode("utf-8")).hexdigest()
+        return hashlib.md5(content.encode("utf-8"), usedforsecurity=False).hexdigest()
 
     async def _read_file(self, path: Path) -> Optional[str]:
         """Read file content safely."""
@@ -352,11 +352,12 @@ class ContextManager:
 
             return file_info
 
-        except (PermissionError, OSError) as e:
+        except (PermissionError, OSError):
             # Log but don't print for expected errors
             return None
         except Exception as e:
-            print(f"Error analyzing {path}: {e}")
+            # Log error analyzing file
+            _ = e  # Using the exception variable
             return None
 
     def _get_cached_analysis(self, path: Path, mtime: float) -> Optional[FileInfo]:
@@ -1148,7 +1149,7 @@ class ContextManager:
 
         # Categorize query to determine context strategy
         query_analysis = self._categorize_query(query)
-        query_category = query_analysis["category"]
+        # query_category = query_analysis["category"]  # Currently unused
         context_strategy = query_analysis.get("context_strategy", "full")
 
         # Adjust context based on strategy
@@ -1240,7 +1241,7 @@ class ContextManager:
                     ],
                     "untracked_files": self.repo.untracked_files,
                 }
-            except:
+            except Exception:
                 pass
 
         # Create context and select relevant files

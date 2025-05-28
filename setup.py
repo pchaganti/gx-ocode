@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from setuptools import setup, find_packages
 import os
+
+from setuptools import find_packages, setup
 
 # Read the contents of README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
@@ -26,7 +27,7 @@ setup(
         "pyyaml>=6",
         "prompt-toolkit>=3",
         "aiofiles>=23",
-        "watchdog>=3"
+        "watchdog>=3",
     ],
     extras_require={
         "dev": [
@@ -34,14 +35,10 @@ setup(
             "pytest-asyncio>=0.21",
             "black>=23.0",
             "flake8>=6.0",
-            "mypy>=1.0"
+            "mypy>=1.0",
         ]
     },
-    entry_points={
-        "console_scripts": [
-            "ocode=ocode_python.core.cli:main"
-        ]
-    },
+    entry_points={"console_scripts": ["ocode=ocode_python.core.cli:main"]},
     python_requires=">=3.8",
     classifiers=[
         "Development Status :: 3 - Alpha",

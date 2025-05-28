@@ -10,8 +10,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult, ErrorHandler, ErrorType
-from ..utils.timeout_handler import with_timeout, TimeoutError
+from ..utils.timeout_handler import TimeoutError, with_timeout
+from .base import (
+    ErrorHandler,
+    ErrorType,
+    Tool,
+    ToolDefinition,
+    ToolParameter,
+    ToolResult,
+)
 
 
 @dataclass
@@ -455,12 +462,12 @@ class AgentTool(Tool):
                     return await self._simulate_research_task(task)
                 else:
                     return "Task completed by generic agent"
-            
+
             # Execute with timeout
             result = await with_timeout(
                 _run_task(),
                 timeout=timeout,
-                operation=f"agent_task({agent.type}.{task.id})"
+                operation=f"agent_task({agent.type}.{task.id})",
             )
 
             # Complete task
@@ -478,7 +485,7 @@ class AgentTool(Tool):
             task.error = f"Task timed out after {timeout} seconds: {str(e)}"
             task.completed_at = datetime.now().isoformat()
             agent.status = "idle"
-            
+
             return {"success": False, "error": task.error}
         except Exception as e:
             # Handle task failure

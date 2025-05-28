@@ -423,7 +423,9 @@ class ToolRegistry:
 
         if not tool.validate_parameters(kwargs):
             return ToolResult(
-                success=False, output="", error=f"Invalid parameters for tool '{tool_name}'"
+                success=False,
+                output="",
+                error=f"Invalid parameters for tool '{tool_name}'",
             )
 
         try:

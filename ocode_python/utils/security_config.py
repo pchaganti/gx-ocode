@@ -72,7 +72,7 @@ class SecurityConfigManager:
                 confirmation_timeout=settings["confirmation_timeout_seconds"],
             )
 
-        except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
+        except (FileNotFoundError, KeyError, json.JSONDecodeError):
             # Fallback to hardcoded patterns if config file is missing/invalid
             return SecurityPatterns(
                 absolute_blocked=[

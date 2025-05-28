@@ -326,7 +326,7 @@ class ConfigManager:
         # Check permissions
         permissions = config.get("permissions", {})
         allowed_paths = permissions.get("allowed_paths", [])
-        blocked_paths = permissions.get("blocked_paths", [])
+        # blocked_paths = permissions.get("blocked_paths", [])  # Currently unused
 
         for path in allowed_paths:
             if not Path(path).exists():
@@ -366,7 +366,7 @@ def main() -> None:
     # Validation
     errors = config.validate_config()
     if errors:
-        print(f"\nConfiguration errors:")
+        print("\nConfiguration errors:")
         for error in errors:
             print(f"  - {error}")
     else:

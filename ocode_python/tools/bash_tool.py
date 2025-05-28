@@ -16,39 +16,39 @@ from typing import Any, Dict, List, Optional, Union
 
 import pexpect
 
+from ..utils import command_sanitizer, path_validator
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
-from ..utils import path_validator, command_sanitizer
 
 
 class ProcessManager:
     """Manages process lifecycle with proper cleanup and resource management."""
-    
+
     def __init__(self):
         self.active_processes = set()
         self._cleanup_lock = asyncio.Lock()
-    
+
     async def register_process(self, process):
         """Register a process for tracking."""
         async with self._cleanup_lock:
             self.active_processes.add(process)
-    
+
     async def unregister_process(self, process):
         """Unregister a process from tracking."""
         async with self._cleanup_lock:
             self.active_processes.discard(process)
-    
+
     async def cleanup_all(self):
         """Cleanup all active processes."""
         async with self._cleanup_lock:
             for process in list(self.active_processes):
                 await self._terminate_process(process)
             self.active_processes.clear()
-    
+
     async def _terminate_process(self, process):
         """Terminate a single process with escalation."""
         if process.returncode is not None:
             return  # Already terminated
-        
+
         try:
             # Try graceful termination first
             process.terminate()
@@ -61,7 +61,7 @@ class ProcessManager:
                     await asyncio.wait_for(process.wait(), timeout=2.0)
                 except asyncio.TimeoutError:
                     # Process is really stuck, try OS-level kill
-                    if hasattr(os, 'killpg') and process.pid:
+                    if hasattr(os, "killpg") and process.pid:
                         try:
                             os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                         except (OSError, ProcessLookupError):
@@ -173,7 +173,7 @@ class BashTool(Tool):
         interactive = kwargs.get("interactive", False)
         safe_mode = kwargs.get("safe_mode", True)
         show_command = kwargs.get("show_command", True)
-        
+
         try:
             # Validate working directory using centralized validator
             is_valid, error_msg, work_dir = path_validator.validate_path(
@@ -257,11 +257,11 @@ class BashTool(Tool):
             else:
                 error_msg = result["stderr"] or "Command execution failed"
                 stdout = result.get("stdout", "")
-                
+
                 # Combine stdout and error for better context
                 if stdout:
                     output_lines.append(stdout)
-                
+
                 return ToolResult(
                     success=False,
                     output="\n".join(output_lines).rstrip() if output_lines else "",
@@ -275,11 +275,8 @@ class BashTool(Tool):
 
         except Exception as e:
             return ToolResult(
-                success=False, 
-                output="", 
-                error=f"Command execution failed: {str(e)}"
+                success=False, output="", error=f"Command execution failed: {str(e)}"
             )
-
 
     def _prepare_shell_command(self, command: str, shell: str) -> List[str]:
         """Prepare shell command for execution with proper sanitization."""
@@ -310,7 +307,6 @@ class BashTool(Tool):
         # Use exec form to prevent shell injection
         return [shell_path, "-c", command]
 
-
     @asynccontextmanager
     async def _managed_process(
         self,
@@ -328,30 +324,32 @@ class BashTool(Tool):
                 "cwd": str(work_dir),
                 "env": env,
             }
-            
+
             # Set up process group for better cleanup on Unix
-            if hasattr(os, 'setsid'):
+            if hasattr(os, "setsid"):
                 kwargs["preexec_fn"] = os.setsid
-            
+
             if capture_output:
-                kwargs.update({
-                    "stdout": asyncio.subprocess.PIPE,
-                    "stderr": asyncio.subprocess.PIPE,
-                    "stdin": asyncio.subprocess.PIPE if input_data else None,
-                })
-            
+                kwargs.update(
+                    {
+                        "stdout": asyncio.subprocess.PIPE,
+                        "stderr": asyncio.subprocess.PIPE,
+                        "stdin": asyncio.subprocess.PIPE if input_data else None,
+                    }
+                )
+
             process = await asyncio.create_subprocess_exec(*shell_cmd, **kwargs)
-            
+
             # Register process for tracking
             await self.process_manager.register_process(process)
-            
+
             yield process
-            
+
         finally:
             if process:
                 # Unregister process
                 await self.process_manager.unregister_process(process)
-                
+
                 # Ensure proper cleanup
                 if process.returncode is None:
                     try:
@@ -366,15 +364,17 @@ class BashTool(Tool):
                                 await asyncio.wait_for(process.wait(), timeout=2.0)
                             except asyncio.TimeoutError:
                                 # Try OS-level process group kill
-                                if hasattr(os, 'killpg') and process.pid:
+                                if hasattr(os, "killpg") and process.pid:
                                     try:
-                                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                                        os.killpg(
+                                            os.getpgid(process.pid), signal.SIGKILL
+                                        )
                                     except (OSError, ProcessLookupError):
                                         pass
                     except (ProcessLookupError, OSError):
                         # Process already terminated
                         pass
-                
+
                 # Ensure stdin is closed (stdout/stderr are read-only)
                 if process.stdin and not process.stdin.is_closing():
                     process.stdin.close()
@@ -405,8 +405,7 @@ class BashTool(Tool):
                         # Execute with timeout
                         if timeout > 0:
                             stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                                process.communicate(input=input_bytes), 
-                                timeout=timeout
+                                process.communicate(input=input_bytes), timeout=timeout
                             )
                         else:
                             stdout_bytes, stderr_bytes = await process.communicate(
@@ -414,9 +413,17 @@ class BashTool(Tool):
                             )
 
                         # Decode output
-                        stdout = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
-                        stderr = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
-                        
+                        stdout = (
+                            stdout_bytes.decode("utf-8", errors="replace")
+                            if stdout_bytes
+                            else ""
+                        )
+                        stderr = (
+                            stderr_bytes.decode("utf-8", errors="replace")
+                            if stderr_bytes
+                            else ""
+                        )
+
                         return_code = process.returncode
 
                     except asyncio.TimeoutError:
@@ -437,9 +444,9 @@ class BashTool(Tool):
                             )
                         else:
                             return_code = await process.wait()
-                        
+
                         stdout, stderr = "", ""
-                        
+
                     except asyncio.TimeoutError:
                         return {
                             "success": False,
@@ -510,7 +517,7 @@ class BashTool(Tool):
         output_buffer = io.StringIO()
         child = None
         start_time = time.time()
-        
+
         try:
             # Convert shell command to string
             cmd_str = " ".join(shlex.quote(arg) for arg in shell_cmd)
@@ -540,18 +547,20 @@ class BashTool(Tool):
                             ),
                             timeout=5.0,
                         )
-                        
+
                         # Small delay between lines
                         if i < len(input_lines) - 1:
                             await asyncio.sleep(0.1)
-                            
+
                     except asyncio.TimeoutError:
                         break
 
             # Wait for completion
             try:
-                remaining_timeout = max(1, timeout - (time.time() - start_time)) if timeout > 0 else 30
-                
+                remaining_timeout = (
+                    max(1, timeout - (time.time() - start_time)) if timeout > 0 else 30
+                )
+
                 await asyncio.wait_for(
                     asyncio.get_event_loop().run_in_executor(
                         None, self._expect_eof_safe, child
@@ -563,7 +572,7 @@ class BashTool(Tool):
 
             # Get output and status
             final_output = output_buffer.getvalue()
-            
+
             # Close child process
             child.close(force=True)
             return_code = child.exitstatus if child.exitstatus is not None else -1
@@ -702,11 +711,11 @@ class ScriptTool(Tool):
             extension = script_extensions.get(script_type, ".sh")
 
             with tempfile.NamedTemporaryFile(
-                mode="w", 
-                suffix=extension, 
-                delete=not save_script, 
+                mode="w",
+                suffix=extension,
+                delete=not save_script,
                 encoding="utf-8",
-                dir=tempfile.gettempdir()  # Use system temp dir
+                dir=tempfile.gettempdir(),  # Use system temp dir
             ) as script_file:
 
                 # Add shebang if needed
@@ -721,7 +730,7 @@ class ScriptTool(Tool):
                 script_file.flush()
 
                 # Make script executable
-                os.chmod(script_file.name, 0o755)
+                os.chmod(script_file.name, 0o700)  # User read/write/execute only
 
                 # Prepare execution command
                 if script_type == "bash":
@@ -748,20 +757,24 @@ class ScriptTool(Tool):
 
                 # Add script info to metadata
                 if result.metadata:
-                    result.metadata.update({
-                        "script_type": script_type,
-                        "script_path": script_file.name if save_script else "temporary",
-                        "script_size": len(script_content),
-                    })
+                    result.metadata.update(
+                        {
+                            "script_type": script_type,
+                            "script_path": (
+                                script_file.name if save_script else "temporary"
+                            ),
+                            "script_size": len(script_content),
+                        }
+                    )
 
                 if save_script:
-                    result.output = f"Script saved to: {script_file.name}\n\n" + (result.output or "")
+                    result.output = f"Script saved to: {script_file.name}\n\n" + (
+                        result.output or ""
+                    )
 
                 return result
 
         except Exception as e:
             return ToolResult(
-                success=False, 
-                output="", 
-                error=f"Script execution failed: {str(e)}"
+                success=False, output="", error=f"Script execution failed: {str(e)}"
             )

@@ -6,6 +6,8 @@ black>=23.0
 flake8>=6.0
 isort>=5.0
 mypy>=1.0
+pre-commit>=3.0
+bandit[toml]>=1.7
 
 # Optional performance testing
 psutil>=5.0

@@ -136,7 +136,7 @@ class MarkdownAnalyzer(LanguageAnalyzer):
                 in_code_block = False
                 code_blocks.append(
                     Symbol(
-                        name=f"code_block_indented",
+                        name="code_block_indented",
                         type=SymbolType.MODULE,
                         line=code_block_start,
                         column=0,

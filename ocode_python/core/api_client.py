@@ -190,7 +190,7 @@ class OllamaAPIClient:
                             if chunk.done:
                                 break
 
-                        except json.JSONDecodeError as e:
+                        except json.JSONDecodeError:
                             # Log invalid JSON lines for debugging
                             print(f"Warning: Invalid JSON in stream: {line_str}")
                             continue
@@ -324,7 +324,7 @@ class OllamaAPIClient:
             async with self.session.get(f"{self.base_url}/api/tags") as response:
                 result = response.status == 200
                 return bool(result)
-        except:
+        except Exception:
             return False
 
     async def generate_embeddings(self, model: str, text: str) -> List[float]:

@@ -83,7 +83,9 @@ class TestProcessMonitorTool:
                 "create_time": 1609459200.0,
                 "username": "test_user",
             }
-            process1.cpu_percent.return_value = 25.5  # Return float that supports round()
+            process1.cpu_percent.return_value = (
+                25.5  # Return float that supports round()
+            )
 
             # Add info to process2
             process2.info = {
@@ -95,7 +97,9 @@ class TestProcessMonitorTool:
                 "create_time": 1609459200.0,
                 "username": "root",
             }
-            process2.cpu_percent.return_value = 50.0  # Return float that supports round()
+            process2.cpu_percent.return_value = (
+                50.0  # Return float that supports round()
+            )
 
             mock_iter.return_value = [process1, process2]
 
@@ -134,7 +138,9 @@ class TestProcessMonitorTool:
                 "create_time": 1609459200.0,
                 "username": "test_user",
             }
-            low_cpu.cpu_percent.return_value = 25.5  # Return float that supports round()
+            low_cpu.cpu_percent.return_value = (
+                25.5  # Return float that supports round()
+            )
 
             # Add info to high_cpu_process
             high_cpu_process.info = {
@@ -146,7 +152,9 @@ class TestProcessMonitorTool:
                 "create_time": 1609459200.0,
                 "username": "user",
             }
-            high_cpu_process.cpu_percent.return_value = 90.0  # Return float that supports round()
+            high_cpu_process.cpu_percent.return_value = (
+                90.0  # Return float that supports round()
+            )
 
             mock_iter.return_value = [low_cpu, high_cpu_process]
 
@@ -179,7 +187,9 @@ class TestProcessMonitorTool:
                 "create_time": 1609459200.0,
                 "username": "user",
             }
-            process.cpu_percent.return_value = float(i * 2.0)  # Return float that supports round()
+            process.cpu_percent.return_value = float(
+                i * 2.0
+            )  # Return float that supports round()
             processes.append(process)
 
         with patch("psutil.process_iter") as mock_iter:
@@ -221,7 +231,9 @@ class TestProcessMonitorTool:
                 "cmdline": ["test_process", "--arg"],
                 "username": "test_user",
             }
-            test_proc.cpu_percent.return_value = 25.5  # Return float that supports round()
+            test_proc.cpu_percent.return_value = (
+                25.5  # Return float that supports round()
+            )
 
             # Add info to python and chrome processes
             python_process.info = {
@@ -233,7 +245,9 @@ class TestProcessMonitorTool:
                 "cmdline": ["python3", "script.py"],
                 "username": "user",
             }
-            python_process.cpu_percent.return_value = 15.0  # Return float that supports round()
+            python_process.cpu_percent.return_value = (
+                15.0  # Return float that supports round()
+            )
 
             chrome_process.info = {
                 "pid": 3000,
@@ -244,7 +258,9 @@ class TestProcessMonitorTool:
                 "cmdline": ["chrome", "--profile-directory=Default"],
                 "username": "user",
             }
-            chrome_process.cpu_percent.return_value = 30.0  # Return float that supports round()
+            chrome_process.cpu_percent.return_value = (
+                30.0  # Return float that supports round()
+            )
 
             mock_iter.return_value = [test_proc, python_process, chrome_process]
 
@@ -317,8 +333,12 @@ class TestProcessMonitorTool:
             process.pid = 1234
             process.name.return_value = "test_process"
             process.username.return_value = "test_user"
-            process.cpu_percent.return_value = 25.5  # Return float that supports round()
-            process.memory_percent.return_value = 10.2  # Return float that supports round()
+            process.cpu_percent.return_value = (
+                25.5  # Return float that supports round()
+            )
+            process.memory_percent.return_value = (
+                10.2  # Return float that supports round()
+            )
             process.status.return_value = "running"
             process.create_time.return_value = 1609459200.0
             process.exe.return_value = "/usr/bin/test_process"
@@ -352,7 +372,7 @@ class TestProcessMonitorTool:
             oneshot_mock.__enter__ = Mock(return_value=oneshot_mock)
             oneshot_mock.__exit__ = Mock(return_value=None)
             process.oneshot.return_value = oneshot_mock
-            
+
             mock_process_class.return_value = process
 
             result = await tool.execute(action="info", pid=1234)

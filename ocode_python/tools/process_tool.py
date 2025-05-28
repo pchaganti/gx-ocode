@@ -10,8 +10,15 @@ from typing import Any, Dict, List, Optional
 
 import psutil
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult, ErrorHandler, ErrorType
-from ..utils.timeout_handler import with_timeout, TimeoutError
+from ..utils.timeout_handler import TimeoutError, with_timeout
+from .base import (
+    ErrorHandler,
+    ErrorType,
+    Tool,
+    ToolDefinition,
+    ToolParameter,
+    ToolResult,
+)
 
 
 class ProcessMonitorTool(Tool):
@@ -101,7 +108,7 @@ class ProcessMonitorTool(Tool):
                 return await with_timeout(
                     self._action_list(sort_by, limit, output_format),
                     timeout=timeout,
-                    operation="process_list"
+                    operation="process_list",
                 )
             elif action == "find":
                 if not name:
@@ -113,7 +120,7 @@ class ProcessMonitorTool(Tool):
                 return await with_timeout(
                     self._action_find(name, output_format),
                     timeout=timeout,
-                    operation=f"process_find({name})"
+                    operation=f"process_find({name})",
                 )
             elif action == "info":
                 if pid is None:
@@ -125,7 +132,7 @@ class ProcessMonitorTool(Tool):
                 return await with_timeout(
                     self._action_info(int(pid), output_format),
                     timeout=timeout,
-                    operation=f"process_info({pid})"
+                    operation=f"process_info({pid})",
                 )
             elif action == "check":
                 if not name:
@@ -137,9 +144,9 @@ class ProcessMonitorTool(Tool):
                 return await with_timeout(
                     self._action_check(name),
                     timeout=timeout,
-                    operation=f"process_check({name})"
+                    operation=f"process_check({name})",
                 )
-            
+
             # This should never happen due to validation above, but included for completeness
             return ToolResult(
                 success=False,
@@ -151,7 +158,7 @@ class ProcessMonitorTool(Tool):
             return ErrorHandler.create_error_result(
                 f"Process operation timed out: {str(e)}",
                 ErrorType.TIMEOUT_ERROR,
-                {"action": action, "timeout": timeout}
+                {"action": action, "timeout": timeout},
             )
         except Exception as e:
             return ToolResult(

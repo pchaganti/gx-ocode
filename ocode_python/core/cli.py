@@ -23,7 +23,7 @@ console = Console()
 async def cli_confirmation_callback(command: str, reason: str) -> bool:
     """Interactive confirmation callback for CLI."""
     try:
-        console.print(f"\n[yellow]⚠️  Command requires confirmation:[/yellow]")
+        console.print("\n[yellow]⚠️  Command requires confirmation:[/yellow]")
         console.print(f"[white]{command}[/white]")
         console.print(f"[dim]Reason: {reason}[/dim]")
 

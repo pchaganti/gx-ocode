@@ -384,7 +384,7 @@ Before responding, consider:
   Languages Detected: {', '.join(sorted(languages)) if languages else 'Unknown'}
   Key Files: {len(context.files)} analyzed
   Git Branch: {context.git_info.get('branch', 'unknown') if context.git_info else 'not a git repo'}
-  
+
   Adapt your responses to this project context and prefer tools that work well with the detected languages and project structure.
 </project_context>"""
 
@@ -572,7 +572,7 @@ Important: You must choose from the AVAILABLE KEYS ONLY, not create new ones.
 
 Common patterns:
 - Location/city/address info is often in "address" key
-- Personal details like age/name in "name" key  
+- Personal details like age/name in "name" key
 - Project config in "config" or similar keys
 - Pet info in "cats", "pets", etc.
 
@@ -586,7 +586,7 @@ Respond with ONLY a JSON object:
 Examples:
 - Query: "what city do I live in?" with requested_key "city" and available keys ["name", "address", "cats"]
   -> {{"action": "exact_key", "key": "address", "reasoning": "City info would be stored in address key"}}
-- Query: "what is my project's configuration?" with available keys ["name", "project_config", "address"] 
+- Query: "what is my project's configuration?" with available keys ["name", "project_config", "address"]
   -> {{"action": "exact_key", "key": "project_config", "reasoning": "Question specifically asks for project configuration"}}
 - Query: "what do I have stored?" with any keys
   -> {{"action": "show_all", "key": null, "reasoning": "General query should show all entries"}}"""
@@ -607,7 +607,6 @@ Examples:
                     response_content += chunk.content
 
             # Parse JSON response
-            import json
             import re
 
             json_match = re.search(r"\{.*\}", response_content, re.DOTALL)
@@ -630,7 +629,6 @@ Examples:
         """Get list of available memory keys for the specified memory type."""
         try:
             # Direct file access to avoid recursion
-            import json
             from pathlib import Path
 
             memory_dir = Path.home() / ".ocode" / "memory"
@@ -691,7 +689,7 @@ Examples:
         if query_analysis.get("multi_action", False):
             lines.extend(
                 [
-                    f"GUIDANCE: This is a multi-action query requiring sequential operations:",
+                    "GUIDANCE: This is a multi-action query requiring sequential operations:",
                     f"- Description: {query_analysis.get('description', 'Multiple sequential actions')}",
                     f"- Primary tools: {', '.join(query_analysis.get('primary_tools', []))}",
                     f"- Secondary tools: {', '.join(query_analysis.get('secondary_tools', []))}",
@@ -811,7 +809,7 @@ Provide clear, comprehensive explanations using your knowledge. Since this is a 
 
 Focus on:
 - Clear explanations with examples
-- Practical insights and best practices  
+- Practical insights and best practices
 - Code examples when relevant
 - Step-by-step breakdowns for complex topics
 - Comparisons and trade-offs when appropriate
@@ -823,7 +821,7 @@ Be educational and thorough in your response."""
 
 Examples:
 - User: "Remember my name is John" -> Call memory_write function
-- User: "List files" -> Call ls function  
+- User: "List files" -> Call ls function
 - User: "What's in my memory?" -> Call memory_read function
 - User: "Show first 5 lines of file.txt" -> Call head function
 
@@ -1189,7 +1187,7 @@ When a user asks you to perform an action, call the appropriate function."""
                                 ):  # Minimal growth threshold
                                     if self.verbose:
                                         print(
-                                            f"\n⚠️ Stopping continuation: minimal response growth detected"
+                                            "\n⚠️ Stopping continuation: minimal response growth detected"
                                         )
                                     self.response_complete = True
                                     break
@@ -1219,7 +1217,7 @@ When a user asks you to perform an action, call the appropriate function."""
                                             f"🔄 Reason: Token limit reached ({total_tokens} tokens)"
                                         )
                                     else:
-                                        print(f"🔄 Reason: Response appears truncated")
+                                        print("🔄 Reason: Response appears truncated")
 
                                 # Prepare continuation request
                                 continuation_query = f"Continue from where you left off. Previous content ended with: {self.current_response[-200:]}"

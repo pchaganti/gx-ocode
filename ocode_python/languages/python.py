@@ -101,7 +101,7 @@ class PythonAnalyzer(LanguageAnalyzer):
             visitor = PythonASTVisitor()
             visitor.visit(tree)
             return visitor.symbols
-        except:
+        except Exception:
             return []
 
     def extract_imports(self, content: str) -> List[Import]:
@@ -111,7 +111,7 @@ class PythonAnalyzer(LanguageAnalyzer):
             visitor = PythonASTVisitor()
             visitor.visit(tree)
             return visitor.imports
-        except:
+        except Exception:
             return []
 
 
