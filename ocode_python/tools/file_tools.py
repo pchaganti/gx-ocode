@@ -86,6 +86,7 @@ class FileReadTool(Tool):
         return ToolDefinition(
             name="file_read",
             description="Read the contents of a file",
+            category="File Operations",
             parameters=[
                 ToolParameter(
                     name="path",
@@ -187,6 +188,7 @@ class FileWriteTool(Tool):
         return ToolDefinition(
             name="file_write",
             description="Write content to a file",
+            category="File Operations",
             parameters=[
                 ToolParameter(
                     name="path",

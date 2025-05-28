@@ -26,6 +26,7 @@ class BashTool(Tool):
         return ToolDefinition(
             name="bash",
             description="Execute shell commands with advanced features and safety controls",
+            category="System Operations",
             parameters=[
                 ToolParameter(
                     name="command",

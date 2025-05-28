@@ -24,6 +24,7 @@ class ToolDefinition:
     name: str
     description: str
     parameters: List[ToolParameter]
+    category: str = "General"  # Default category for backward compatibility
 
     def to_ollama_format(self) -> Dict[str, Any]:
         """Convert to Ollama function calling format."""
