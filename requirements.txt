@@ -1,0 +1,4 @@
+pexpect>=4.9.0
+gitpython>=3.1.40
+psutil>=5.9.0
+pydantic>=2.0.0 

@@ -1,0 +1,84 @@
+{
+  "version": "1.0",
+  "description": "Security patterns for shell command validation",
+  "patterns": {
+    "absolute_blocked": {
+      "description": "Commands that are absolutely prohibited - no confirmation",
+      "patterns": [
+        "rm -rf /",
+        "dd if=",
+        "mkfs",
+        "fdisk",
+        "mount",
+        "umount",
+        "sudo rm",
+        "sudo dd",
+        "curl.*\\|.*bash",
+        "wget.*\\|.*bash", 
+        "\\$\\(",
+        "`",
+        "&&.*(?:rm|dd|mkfs)",
+        "\\|\\|.*(?:rm|dd|mkfs)",
+        ";.*(?:rm|dd|mkfs)"
+      ]
+    },
+    "requires_confirmation": {
+      "description": "Commands that require user confirmation",
+      "patterns": [
+        "\\|[^|]",
+        "grep\\s",
+        "sort\\s",
+        "wc\\s",
+        "curl\\s",
+        "wget\\s",
+        "tar\\s",
+        "chmod\\s",
+        "chown\\s",
+        "rm\\s",
+        "mv\\s",
+        "cp\\s.*-r",
+        "find.*-delete",
+        "xargs",
+        "sed\\s.*-i",
+        "awk\\s",
+        "python.*-c",
+        "node\\s.*-e",
+        "eval\\s",
+        "exec\\s"
+      ]
+    },
+    "redirection_blocked": {
+      "description": "Output redirection patterns that are blocked",
+      "patterns": [
+        ">",
+        ">>",
+        "2>",
+        "&>"
+      ]
+    },
+    "command_chaining_blocked": {
+      "description": "Command chaining patterns that are blocked",
+      "patterns": [
+        ";",
+        "&&",
+        "\\|\\|"
+      ]
+    }
+  },
+  "safe_pipe_exceptions": {
+    "description": "Pipe patterns that are considered safe and don't require confirmation",
+    "patterns": [
+      "\\|\\s*wc\\s*-l",
+      "\\|\\s*head",
+      "\\|\\s*tail",
+      "\\|\\s*sort\\s*$",
+      "\\|\\s*uniq\\s*$",
+      "\\|\\s*cat\\s*$",
+      "\\|\\s*grep\\s+[^|;&>]*$"
+    ]
+  },
+  "settings": {
+    "confirmation_timeout_seconds": 30,
+    "default_interactive_mode": true
+  }
+}
