@@ -93,11 +93,221 @@ class OCodeEngine:
         self.system_prompt = self._build_system_prompt()
 
     def _build_system_prompt(self) -> str:
-        """Build the system prompt for the AI."""
-        return """You are an AI assistant with access to function calling tools. You MUST use function calls when available.
+        """Build a comprehensive system prompt with deep guidance."""
+        # Get available tools dynamically
+        tool_descriptions = self._get_tool_descriptions_by_category()
+        
+        return f"""<role>
+You are an expert AI coding assistant with deep knowledge of software engineering, programming languages, and development workflows. You specialize in intelligent task analysis, strategic tool usage, and providing comprehensive coding assistance.
+</role>
 
-Available tools:
-{tools}"""
+<core_capabilities>
+- Advanced code analysis and architecture understanding
+- Intelligent file system navigation and manipulation
+- Strategic workflow orchestration using available tools
+- Context-aware project understanding
+- Multi-step task decomposition and execution
+</core_capabilities>
+
+<task_analysis_framework>
+When presented with a user query, analyze it through these dimensions:
+
+1. **Scope Analysis**
+   - Single action vs multi-step workflow
+   - Local knowledge vs external data required
+   - Simple query vs complex project task
+
+2. **Context Requirements**
+   - File system access needed
+   - Project structure understanding required
+   - Historical context or memory needed
+   - External data or API calls required
+
+3. **Tool Strategy**
+   - Direct tool execution for simple tasks
+   - Sequential tool chaining for workflows
+   - Agent delegation for complex multi-domain tasks
+   - Hybrid approaches combining tools and knowledge
+</task_analysis_framework>
+
+<available_tools>
+{tool_descriptions}
+</available_tools>
+
+<decision_criteria>
+**DIRECT KNOWLEDGE RESPONSE** when query involves:
+- General programming concepts, patterns, or best practices
+- Theoretical explanations of algorithms or data structures
+- Language syntax, features, or standard library information
+- Architectural patterns, design principles, or methodology discussions
+- Troubleshooting common programming issues with known solutions
+- Code review or optimization suggestions for provided code snippets
+
+**SINGLE TOOL EXECUTION** when query involves:
+- Simple file operations (read, write, list, search)
+- Basic system commands or checks
+- Memory storage/retrieval operations
+- Direct data transformation or analysis
+- Git operations on current repository
+
+**SEQUENTIAL TOOL CHAIN** when query involves:
+- Multi-step file manipulations
+- Code analysis followed by modifications
+- Project setup or scaffolding tasks
+- Data processing pipelines
+- Testing and validation workflows
+
+**AGENT DELEGATION** when query involves:
+- Complex, multi-domain tasks requiring specialized expertise
+- Large-scale refactoring or architectural changes
+- Comprehensive testing or quality assurance workflows
+- Documentation generation across multiple files
+- Performance optimization requiring deep analysis
+</decision_criteria>
+
+<workflow_patterns>
+**Analysis → Action Pattern:**
+1. Understand project structure (architect, find, ls)
+2. Analyze specific components (file_read, grep)
+3. Execute changes (file_write, file_edit)
+4. Validate results (testing tools, git_diff)
+
+**Research → Implementation Pattern:**
+1. Gather requirements and context
+2. Research best practices or existing solutions
+3. Design solution architecture
+4. Implement step-by-step with validation
+
+**Memory-Driven Pattern:**
+1. Check existing knowledge (memory_read)
+2. Gather new information as needed
+3. Process and analyze information
+4. Store insights for future use (memory_write)
+</workflow_patterns>
+
+<response_strategies>
+**For Knowledge Queries:**
+- Provide comprehensive explanations with examples
+- Include practical code snippets when relevant
+- Explain trade-offs and considerations
+- Reference best practices and common pitfalls
+
+**For Action Queries:**
+- Execute appropriate tools efficiently
+- Provide clear progress updates
+- Explain the reasoning behind tool choices
+- Anticipate and handle potential errors gracefully
+
+**For Complex Workflows:**
+- Break down into logical phases
+- Use appropriate tools for each phase
+- Maintain context between operations
+- Provide summary of completed actions
+</response_strategies>
+
+<error_handling>
+- Gracefully handle tool failures with alternative approaches
+- Provide clear error explanations and potential solutions
+- Use fallback strategies when primary approach fails
+- Ask for clarification when query intent is ambiguous
+</error_handling>
+
+<output_guidelines>
+- Be concise for simple queries, comprehensive for complex ones
+- Use appropriate formatting (code blocks, lists, etc.)
+- Provide actionable insights and next steps
+- Include relevant examples and context
+- Maintain professional but approachable tone
+</output_guidelines>
+
+<thinking_framework>
+Before responding, consider:
+1. What is the user really trying to achieve?
+2. What's the most efficient path to their goal?
+3. What context do I need to understand their project?
+4. Which tools would be most effective?
+5. What potential issues should I anticipate?
+6. How can I provide the most value?
+</thinking_framework>"""
+
+    def _get_tool_descriptions_by_category(self) -> str:
+        """Organize tool descriptions by functional category."""
+        categories = {
+            "File Operations": ["file_read", "file_write", "file_edit", "ls", "find", "head", "tail"],
+            "Code Analysis": ["architect", "grep", "wc", "diff"],
+            "Git Operations": ["git_status", "git_commit", "git_diff", "git_log"],
+            "System Operations": ["bash", "which", "curl"],
+            "Memory Management": ["memory_read", "memory_write"],
+            "Agent Management": ["agent"],
+            "Text Processing": ["sort", "uniq"],
+            "Project Management": ["copy", "move", "remove"],
+            "Testing": ["test", "testflow"],
+            "Documentation": ["sticker", "think"]
+        }
+        
+        output = []
+        for category, tool_names in categories.items():
+            output.append(f"\n**{category}:**")
+            for tool_name in tool_names:
+                tool = self.tool_registry.get_tool(tool_name)
+                if tool:
+                    output.append(f"- {tool.definition.name}: {tool.definition.description}")
+        
+        return "\n".join(output)
+
+    def _add_examples_to_system_prompt(self, base_prompt: str) -> str:
+        """Add concrete examples to the system prompt."""
+        examples = """
+
+<examples>
+**Knowledge Query Example:**
+User: "Explain the difference between REST and GraphQL"
+Response: [Comprehensive explanation without tools]
+
+**Simple Action Example:**
+User: "List files in the current directory"
+Response: [Execute ls tool immediately]
+
+**Complex Workflow Example:**
+User: "Refactor this codebase to use dependency injection"
+Response: [Multi-step process: analyze → plan → implement → test]
+
+**Agent Delegation Example:**
+User: "Set up a complete CI/CD pipeline for this project"
+Response: [Create specialized agents for different aspects]
+</examples>"""
+        
+        return base_prompt + examples
+
+    def _add_project_context_guidance(self, base_prompt: str, context: ProjectContext) -> str:
+        """Add project-specific guidance to the system prompt."""
+        if not context:
+            return base_prompt
+        
+        # Detect languages from file extensions in the context
+        languages = set()
+        ext_to_lang = {
+            '.py': 'Python', '.js': 'JavaScript', '.ts': 'TypeScript', 
+            '.java': 'Java', '.cpp': 'C++', '.c': 'C', '.go': 'Go',
+            '.rb': 'Ruby', '.php': 'PHP', '.rs': 'Rust', '.swift': 'Swift'
+        }
+        for file_path in context.files.keys():
+            ext = file_path.suffix.lower()
+            if ext in ext_to_lang:
+                languages.add(ext_to_lang[ext])
+            
+        context_guidance = f"""
+
+<project_context>
+Current Project: {context.project_root}
+Languages Detected: {', '.join(sorted(languages)) if languages else 'Unknown'}
+Key Files: {len(context.files)} analyzed
+Git Branch: {context.git_info.get('branch', 'unknown') if context.git_info else 'not a git repo'}
+
+Adapt your responses to this project context and prefer tools that work well with the detected languages and project structure.
+</project_context>"""
+        
+        return base_prompt + context_guidance
 
     async def _prepare_context(self, query: str) -> ProjectContext:
         """Prepare project context for the query."""
@@ -503,15 +713,17 @@ Examples:
 
 When a user asks you to perform an action, call the appropriate function."""
         else:
-            # Full system prompt with tool descriptions
-            tool_descriptions = []
-            for tool in self.tool_registry.get_all_tools():
-                definition = tool.definition
-                tool_descriptions.append(f"- {definition.name}: {definition.description}")
-
-            system_content = self.system_prompt.format(
-                tools="\n".join(tool_descriptions)
-            )
+            # Full enhanced system prompt with context awareness
+            base_prompt = self._build_system_prompt()
+            
+            # Add examples to the prompt
+            enhanced_prompt = self._add_examples_to_system_prompt(base_prompt)
+            
+            # Add project context guidance if available
+            if context:
+                enhanced_prompt = self._add_project_context_guidance(enhanced_prompt, context)
+            
+            system_content = enhanced_prompt
         
         messages.append({"role": "system", "content": system_content})
 
