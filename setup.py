@@ -28,6 +28,7 @@ setup(
         "prompt-toolkit>=3",
         "aiofiles>=23",
         "watchdog>=3",
+        "requests>=2.31.0",
     ],
     extras_require={
         "dev": [

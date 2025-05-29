@@ -3,14 +3,14 @@ Tests for enhanced grep tool features.
 """
 
 import asyncio
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ocode_python.tools.grep_tool import GrepTool, CodeGrepTool
+from ocode_python.tools.grep_tool import CodeGrepTool, GrepTool
 
 
 class TestGrepEnhancements:
