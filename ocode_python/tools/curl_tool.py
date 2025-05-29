@@ -96,7 +96,7 @@ class CurlTool(Tool):
             include_headers = kwargs.get("include_headers", False)
 
             if not url:
-                return ToolResult(success=False, error="URL is required")
+                return ToolResult(success=False, output="", error="URL is required")
             # Prepare headers
             request_headers = headers or {}
 

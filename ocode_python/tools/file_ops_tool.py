@@ -57,7 +57,9 @@ class CopyTool(Tool):
 
             if not source or not destination:
                 return ToolResult(
-                    success=False, error="Source and destination paths are required"
+                    success=False,
+                    output="",
+                    error="Source and destination paths are required",
                 )
 
             src_path = Path(source)
@@ -166,7 +168,9 @@ class MoveTool(Tool):
 
             if not source or not destination:
                 return ToolResult(
-                    success=False, error="Source and destination paths are required"
+                    success=False,
+                    output="",
+                    error="Source and destination paths are required",
                 )
             src_path = Path(source)
             dst_path = Path(destination)
@@ -238,7 +242,7 @@ class RemoveTool(Tool):
             force = kwargs.get("force", False)
 
             if not path:
-                return ToolResult(success=False, error="Path is required")
+                return ToolResult(success=False, output="", error="Path is required")
 
             target_path = Path(path)
 

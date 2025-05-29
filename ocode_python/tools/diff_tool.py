@@ -57,7 +57,9 @@ class DiffTool(Tool):
 
             if not file1 or not file2:
                 return ToolResult(
-                    success=False, error="Both file1 and file2 paths are required"
+                    success=False,
+                    output="",
+                    error="Both file1 and file2 paths are required",
                 )
             path1 = Path(file1)
             path2 = Path(file2)
