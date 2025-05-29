@@ -29,6 +29,10 @@ setup(
         "aiofiles>=23",
         "watchdog>=3",
         "requests>=2.31.0",
+        "pexpect>=4.9.0",
+        "psutil>=5.9.0",
+        "jsonpath-ng>=1.5.3",
+        "python-dotenv>=1.0.0",
     ],
     extras_require={
         "dev": [

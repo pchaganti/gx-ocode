@@ -270,7 +270,8 @@ class MCPProtocol:
 
     async def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle initialize request."""
-        _client_info = params.get("clientInfo", {})
+        # Client info is available but not used in current implementation
+        # _client_info = params.get("clientInfo", {})
         protocol_version = params.get("protocolVersion", self.VERSION)
 
         # Validate protocol version
@@ -292,7 +293,8 @@ class MCPProtocol:
 
     async def _handle_list_resources(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle resources/list request."""
-        _cursor = params.get("cursor")
+        # Cursor for pagination - not implemented in this version
+        # _cursor = params.get("cursor")
 
         # Simple implementation without pagination
         resources = [resource.to_dict() for resource in self.resources.values()]
@@ -322,7 +324,8 @@ class MCPProtocol:
 
     async def _handle_list_tools(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle tools/list request."""
-        _cursor = params.get("cursor")
+        # Cursor for pagination - not implemented in this version
+        # _cursor = params.get("cursor")
 
         tools = [tool.to_dict() for tool in self.tools.values()]
 
@@ -352,7 +355,8 @@ class MCPProtocol:
 
     async def _handle_list_prompts(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle prompts/list request."""
-        _cursor = params.get("cursor")
+        # Cursor for pagination - not implemented in this version
+        # _cursor = params.get("cursor")
 
         prompts = [prompt.to_dict() for prompt in self.prompts.values()]
 

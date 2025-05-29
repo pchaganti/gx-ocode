@@ -724,7 +724,7 @@ Examples:
         elif query_category.startswith("workflow_"):
             lines.extend(
                 [
-                    f"GUIDANCE: This is a complex workflow. Consider using multiple tools in sequence:",
+                    "GUIDANCE: This is a complex workflow. Consider using multiple tools in sequence:",
                     f"- Suggested workflow tools: {', '.join(suggested_tools)}",
                     "- Start with analysis tools, then proceed with implementation",
                     "",

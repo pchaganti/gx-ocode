@@ -408,7 +408,7 @@ class AgentTool(Tool):
         self.task_queue.append(task_id)
 
         # Simulate task execution
-        _result = await self._execute_task(task, target_agent, timeout)
+        await self._execute_task(task, target_agent, timeout)
 
         output = f"Task delegated to {target_agent.name} (ID: {target_agent.id})\n"
         output += f"Task ID: {task_id}\n"

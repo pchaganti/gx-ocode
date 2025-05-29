@@ -58,7 +58,7 @@ function helloWorld(): void {
 
 class TestClass implements TestInterface {
     name: string = "test";
-    
+
     method(): boolean {
         return true;
     }
@@ -72,7 +72,7 @@ public class TestClass {
     public void helloWorld() {
         System.out.println("Hello, World!");
     }
-    
+
     private String name = "test";
 }
 """

@@ -339,7 +339,7 @@ class GitBranchTool(Tool):
                         error="Branch name required for create action",
                     )
 
-                _new_branch = repo.create_head(branch_name)
+                repo.create_head(branch_name)
                 return ToolResult(
                     success=True,
                     output=f"Created branch '{branch_name}'",

@@ -34,7 +34,7 @@ class TestEnvironmentTool:
         # Cleanup
         try:
             os.unlink(temp_path)
-        except:
+        except Exception:
             pass
 
     def test_tool_definition(self, tool):

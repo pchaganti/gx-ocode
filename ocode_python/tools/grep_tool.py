@@ -405,7 +405,7 @@ class GrepTool(Tool):
                 text_chars = set(range(32, 127)) | {9, 10, 13}
                 non_text = sum(1 for b in chunk if b not in text_chars)
                 return non_text / len(chunk) > 0.3 if chunk else False
-        except:
+        except Exception:
             return True
 
     async def _search_files_parallel(
@@ -499,7 +499,6 @@ class GrepTool(Tool):
         include_line_numbers: bool,
     ) -> List[Dict[str, Any]]:
         """Search for pattern in a single file."""
-        matches: List[Dict[str, Any]] = []
 
         try:
             # Check file size before processing

@@ -159,7 +159,7 @@ class TestCLIIntegration:
         # This test is complex due to async nature
         # For now, just test that it doesn't crash on setup
         with patch("asyncio.run") as mock_asyncio_run:
-            _result = runner.invoke(cli, [])
+            runner.invoke(cli, [])
             # The actual async execution is mocked
             assert mock_asyncio_run.called
 
@@ -191,7 +191,7 @@ class TestCLIWithRealComponents:
             # Mock async execution to avoid actual async complexity in tests
             mock_run.return_value = None
 
-            _result = runner.invoke(cli, ["-p", "Test prompt", "--model", "test-model"])
+            runner.invoke(cli, ["-p", "Test prompt", "--model", "test-model"])
 
             # Should attempt to run async function
             assert mock_run.called
