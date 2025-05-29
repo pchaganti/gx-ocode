@@ -41,6 +41,8 @@ setup(
             "black>=23.0",
             "flake8>=6.0",
             "mypy>=1.0",
+            "types-pyyaml>=6.0",
+            "types-requests>=2.31",
         ]
     },
     entry_points={"console_scripts": ["ocode=ocode_python.core.cli:main"]},
