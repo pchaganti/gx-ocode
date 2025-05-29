@@ -21,7 +21,7 @@ By participating in this project, you agree to abide by our Code of Conduct: be 
 
 ### Suggesting Features
 
-1. Open a discussion in the [Ideas category](https://github.com/ocode-ai/ocode/discussions)
+1. Open a discussion in the [Ideas category](https://github.com/haasonsaas/ocode/discussions)
 2. Describe the use case and benefits
 3. Consider implementation complexity
 4. Be open to feedback and alternatives
@@ -34,7 +34,7 @@ By participating in this project, you agree to abide by our Code of Conduct: be 
 # Fork on GitHub, then:
 git clone https://github.com/YOUR-USERNAME/ocode.git
 cd ocode
-git remote add upstream https://github.com/ocode-ai/ocode.git
+git remote add upstream https://github.com/haasonsaas/ocode.git
 ```
 
 #### 2. Set Up Development Environment

@@ -18,7 +18,7 @@ Get up and running with OCode in 5 minutes.
 pip install ocode-ai
 
 # Or from source
-git clone https://github.com/ocode-ai/ocode.git
+git clone https://github.com/haasonsaas/ocode.git
 cd ocode
 pip install -e .
 ```
@@ -346,7 +346,7 @@ ocode -p "How do I use the grep tool?"
 ocode -p "Show me examples of file operations"
 
 # Community
-# Visit: https://github.com/ocode-ai/ocode/discussions
+# Visit: https://github.com/haasonsaas/ocode/discussions
 ```
 
 ## Quick Reference Card

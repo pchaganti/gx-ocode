@@ -91,8 +91,8 @@ ocode -p "How do I search for text in files?"
 ```
 
 ### Community
-- [GitHub Discussions](https://github.com/ocode-ai/ocode/discussions) - Ask questions
-- [Issue Tracker](https://github.com/ocode-ai/ocode/issues) - Report bugs
+- [GitHub Discussions](https://github.com/haasonsaas/ocode/discussions) - Ask questions
+- [Issue Tracker](https://github.com/haasonsaas/ocode/issues) - Report bugs
 - [Discord Server](https://discord.gg/ocode) - Live chat with community
 
 ## Contributing to Documentation
@@ -109,4 +109,4 @@ See our [Contributing Guide](../CONTRIBUTING.md) for details.
 
 ## Version
 
-This documentation is for OCode v2.0+. For older versions, see the [releases page](https://github.com/ocode-ai/ocode/releases).
+This documentation is for OCode v2.0+. For older versions, see the [releases page](https://github.com/haasonsaas/ocode/releases).
