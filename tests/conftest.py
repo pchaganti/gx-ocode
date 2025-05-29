@@ -235,7 +235,7 @@ def context_manager(mock_project_dir: Path):
 
 
 @pytest.fixture
-async def ocode_engine(mock_project_dir: Path, mock_ollama_client, mock_config: dict):
+def ocode_engine(mock_project_dir: Path, mock_ollama_client, mock_config: dict):
     """Create a test OCode engine."""
     engine = OCodeEngine(
         model="test-model",
