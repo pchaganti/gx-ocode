@@ -5,7 +5,6 @@ Which tool for finding executable programs in PATH.
 import os
 import shutil
 from pathlib import Path
-from typing import List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -35,19 +34,22 @@ class WhichTool(Tool):
             ],
         )
 
-    async def execute(self, command: str, all: bool = False, **kwargs) -> ToolResult:
+    async def execute(self, **kwargs) -> ToolResult:
         """Execute which command."""
         try:
+            command = kwargs.get("command", "")
+            all = kwargs.get("all", False)
+
             if all:
                 # Find all instances of the command in PATH
                 paths = []
                 path_env = os.environ.get("PATH", "")
 
-                for path_dir in path_env.split(os.pathsep):
-                    if not path_dir:
+                for path_dir_str in path_env.split(os.pathsep):
+                    if not path_dir_str:
                         continue
 
-                    path_dir = Path(path_dir)
+                    path_dir = Path(path_dir_str)
                     if not path_dir.exists() or not path_dir.is_dir():
                         continue
 

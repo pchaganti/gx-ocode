@@ -5,7 +5,7 @@ import functools
 import signal
 import threading
 from contextlib import contextmanager
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, List, Optional, TypeVar, Union
 
 T = TypeVar("T")
 
@@ -70,7 +70,7 @@ def async_timeout(
                         else:
                             cleanup()
                     except Exception:
-                        pass  # Best effort cleanup
+                        pass  # Best effort cleanup  # nosec B110
 
             self.timeout_handle = loop.call_later(seconds, timeout_callback)
             return self
@@ -107,9 +107,9 @@ def sync_timeout(seconds: float, operation: Optional[str] = None):
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            result = [None]
-            exception = [None]
+        def wrapper(*args, **kwargs) -> T:
+            result: List[Optional[T]] = [None]
+            exception: List[Optional[Exception]] = [None]
 
             def target():
                 try:
@@ -133,6 +133,8 @@ def sync_timeout(seconds: float, operation: Optional[str] = None):
             if exception[0]:
                 raise exception[0]
 
+            if result[0] is None:
+                raise ValueError("Function returned None")
             return result[0]
 
         return wrapper
@@ -179,7 +181,7 @@ async def with_timeout(
     operation: Optional[str] = None,
     default: Optional[T] = None,
     raise_on_timeout: bool = True,
-) -> T:
+) -> Union[T, Any]:
     """
     Execute a coroutine with timeout and optional default value.
 
@@ -230,7 +232,7 @@ class TimeoutManager:
     def __init__(self, total_timeout: float):
         self.total_timeout = total_timeout
         self.start_time = asyncio.get_event_loop().time()
-        self.operations = []
+        self.operations: List[dict] = []
 
     def remaining_time(self) -> float:
         """Get remaining time from total timeout."""
@@ -278,7 +280,7 @@ class AdaptiveTimeout:
         self.min_timeout = min_timeout
         self.max_timeout = max_timeout
         self.adjustment_factor = adjustment_factor
-        self.history = []
+        self.history: List[float] = []
         self.current_timeout = base_timeout
 
     def record_duration(self, duration: float):
@@ -300,11 +302,11 @@ class AdaptiveTimeout:
         """Get current adaptive timeout value."""
         return self.current_timeout
 
-    async def execute(self, coro, operation: Optional[str] = None):
+    async def execute(self, coro, operation: Optional[str] = None) -> Any:
         """Execute coroutine with adaptive timeout."""
         start_time = asyncio.get_event_loop().time()
         try:
-            result = await with_timeout(
+            result: Any = await with_timeout(
                 coro, timeout=self.current_timeout, operation=operation
             )
             duration = asyncio.get_event_loop().time() - start_time

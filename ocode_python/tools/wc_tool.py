@@ -3,7 +3,6 @@ Word count tool for counting lines, words, and characters.
 """
 
 from pathlib import Path
-from typing import List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -47,16 +46,14 @@ class WcTool(Tool):
             ],
         )
 
-    async def execute(
-        self,
-        file_path: str,
-        lines_only: bool = False,
-        words_only: bool = False,
-        chars_only: bool = False,
-        **kwargs,
-    ) -> ToolResult:
+    async def execute(self, **kwargs) -> ToolResult:
         """Execute wc command."""
         try:
+            file_path = kwargs.get("file_path", "")
+            lines_only = kwargs.get("lines_only", False)
+            words_only = kwargs.get("words_only", False)
+            chars_only = kwargs.get("chars_only", False)
+
             path = Path(file_path)
 
             if not path.exists():

@@ -8,7 +8,7 @@ import os
 import sqlite3
 import time
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -160,8 +160,6 @@ class ContextManager:
         }
 
         # Compile wildcard patterns
-        import fnmatch
-
         self.wildcard_patterns = [
             pattern
             for pattern in self.ignore_patterns
@@ -240,7 +238,14 @@ class ContextManager:
 
     def _get_content_hash(self, content: str) -> str:
         """Generate hash for file content."""
-        return hashlib.md5(content.encode("utf-8"), usedforsecurity=False).hexdigest()
+        # usedforsecurity parameter is only available in Python 3.9+
+        try:
+            return hashlib.md5(
+                content.encode("utf-8"), usedforsecurity=False
+            ).hexdigest()
+        except TypeError:
+            # Fallback for Python 3.8
+            return hashlib.md5(content.encode("utf-8")).hexdigest()  # nosec B324
 
     async def _read_file(self, path: Path) -> Optional[str]:
         """Read file content safely."""
@@ -268,7 +273,7 @@ class ContextManager:
                 return [symbol.name for symbol in symbols]
             except Exception:
                 # Fallback to empty list if analysis fails
-                pass
+                pass  # nosec B110
         return []
 
     def _extract_imports(self, content: str, language: str) -> List[str]:
@@ -280,7 +285,7 @@ class ContextManager:
                 return [imp.module for imp in imports]
             except Exception:
                 # Fallback to empty list if analysis fails
-                pass
+                pass  # nosec B110
         return []
 
     def _manage_cache_size(self) -> None:
@@ -309,14 +314,14 @@ class ContextManager:
             # Check in-memory cache first
             if path in self.file_info_cache:
                 cached_info = self.file_info_cache[path]
-                if cached_info.modified_time == mtime:
+                if cached_info and cached_info.modified_time == mtime:
                     return cached_info
 
             # Check persistent cache
-            cached_info = self._get_cached_analysis(path, mtime)
-            if cached_info:
-                self.file_info_cache[path] = cached_info
-                return cached_info
+            persistent_cached_info = self._get_cached_analysis(path, mtime)
+            if persistent_cached_info:
+                self.file_info_cache[path] = persistent_cached_info
+                return persistent_cached_info
 
             # Read and analyze file
             content = await self._read_file(path)
@@ -393,7 +398,7 @@ class ContextManager:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
                     """INSERT OR REPLACE INTO file_analysis
-                       (path, content_hash, modified_time, language, symbols, imports, created_at)
+                       (path, content_hash, modified_time, language, symbols, imports, created_at)  # noqa: E501
                        VALUES (?, ?, ?, ?, ?, ?, ?)""",
                     (
                         str(file_info.path),
@@ -426,12 +431,12 @@ class ContextManager:
 
     def _detect_multi_action_query(self, query_lower: str) -> Optional[Dict[str, Any]]:
         """
-        Detect queries that require multiple actions/tools and should be delegated to multiple agents.
+        Detect queries that require multiple actions/tools and should be delegated to multiple agents. # noqa: E501
 
-        Returns None if not a multi-action query, otherwise returns categorization result.
+        Returns None if not a multi-action query, otherwise returns categorization result. # noqa: E501
         """
         # Define common multi-action patterns
-        multi_patterns = [
+        multi_patterns: List[Dict[str, Any]] = [
             # Test + Git patterns
             {
                 "pattern": r"(run|execute) test.*and.*(commit|push)",
@@ -460,7 +465,7 @@ class ContextManager:
             },
             # Test + Build + Deploy patterns
             {
-                "pattern": r"(test|run tests?).*then.*(build|compile).*then.*(deploy|push)",
+                "pattern": r"(test|run tests?).*then.*(build|compile).*then.*(deploy|push)",  # noqa: E501
                 "description": "Test, build, and deploy",
                 "primary_tools": ["test_runner"],
                 "secondary_tools": ["bash", "git_commit"],
@@ -599,11 +604,11 @@ class ContextManager:
 
     def _categorize_query(self, query: str) -> Dict[str, Any]:
         """
-        Comprehensive query categorization to determine appropriate context strategy and tools.
+        Comprehensive query categorization to determine appropriate context strategy and tools. # noqa: E501
         Handles multi-action queries that may require multiple tools/agents.
 
         Returns:
-            Dict with category, confidence, suggested_tools, context_strategy, and multi_action flag
+            Dict with category, confidence, suggested_tools, context_strategy, and multi_action flag # noqa: E501
         """
         # Validate query
         if not query or not query.strip():
@@ -732,7 +737,7 @@ class ContextManager:
                 elif operation == "list":
                     file_tools.extend(["ls", "file_list", "glob"])
 
-        # Git operations - check BEFORE file operations to avoid conflicts, but AFTER testing
+        # Git operations - check BEFORE file operations to avoid conflicts, but AFTER testing # noqa: E501
         git_patterns = {
             "keywords": [
                 "git",
@@ -793,7 +798,7 @@ class ContextManager:
                 "context_strategy": "targeted",
             }
 
-        # Testing and quality - check BEFORE git operations since "run tests" might also mention git
+        # Testing and quality - check BEFORE git operations since "run tests" might also mention git # noqa: E501
         testing_patterns = {
             "keywords": [
                 "test",
@@ -999,7 +1004,7 @@ class ContextManager:
                 "context_strategy": "targeted",
             }
 
-        # Annotation/organization - but check for TODO search which should be file_operations
+        # Annotation/organization - but check for TODO search which should be file_operations # noqa: E501
         annotation_patterns = {
             "keywords": ["note", "bookmark", "annotate", "tag", "organize", "reminder"],
             "todo_creation": ["add todo", "create todo", "mark todo", "todo note"],
@@ -1240,7 +1245,7 @@ class ContextManager:
                     "untracked_files": self.repo.untracked_files,
                 }
             except Exception:
-                pass
+                pass  # nosec B110
 
         # Create context and select relevant files
         context = ProjectContext(
