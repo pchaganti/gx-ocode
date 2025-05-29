@@ -270,7 +270,7 @@ class TestCLIEndToEnd:
 
         # This would be a real end-to-end test if we had a test Ollama instance
         # For now, we test the structure
-        with patch("ocode_python.core.engine.OCodeEngine") as mock_engine_class:
+        with patch("ocode_python.core.cli.OCodeEngine") as mock_engine_class:
             mock_engine = AsyncMock()
 
             async def mock_process(prompt):

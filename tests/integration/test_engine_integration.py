@@ -120,6 +120,9 @@ class TestOCodeEngineIntegration:
 
         # Mock API client to raise an error
         async def mock_stream_error(*args, **kwargs):
+            # Make it an async generator that raises an error
+            if False:
+                yield  # Make it a generator
             raise Exception("API Error")
 
         ocode_engine.api_client.stream_chat = mock_stream_error

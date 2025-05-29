@@ -26,14 +26,35 @@ class Session:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert session to dictionary for serialization."""
-        return {
+        result = {
             "id": self.id,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "messages": [asdict(msg) for msg in self.messages],
-            "context": asdict(self.context) if self.context else None,
+            "context": None,
             "metadata": self.metadata,
         }
+
+        # Custom serialization for context to handle Path objects
+        if self.context:
+            context_dict = {
+                "files": {str(k): v for k, v in self.context.files.items()},
+                "file_info": {
+                    str(k): asdict(v) for k, v in self.context.file_info.items()
+                },
+                "dependencies": {
+                    str(k): [str(p) for p in v]
+                    for k, v in self.context.dependencies.items()
+                },
+                "symbols": {
+                    k: [str(p) for p in v] for k, v in self.context.symbols.items()
+                },
+                "project_root": str(self.context.project_root),
+                "git_info": self.context.git_info,
+            }
+            result["context"] = context_dict
+
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Session":
@@ -41,13 +62,26 @@ class Session:
         messages = [Message(**msg) for msg in data.get("messages", [])]
         context = None
         if data.get("context"):
-            # Reconstruct ProjectContext (simplified)
+            # Reconstruct ProjectContext
             context_data = data["context"]
+            from .context_manager import FileInfo
+
+            # Reconstruct file_info
+            file_info = {}
+            for path_str, info_dict in context_data.get("file_info", {}).items():
+                file_info[Path(path_str)] = FileInfo(**info_dict)
+
             context = ProjectContext(
                 files={Path(k): v for k, v in context_data.get("files", {}).items()},
-                file_info={},  # Skip complex reconstruction for now
-                dependencies={},
-                symbols={},
+                file_info=file_info,
+                dependencies={
+                    Path(k): {Path(p) for p in v}
+                    for k, v in context_data.get("dependencies", {}).items()
+                },
+                symbols={
+                    k: [Path(p) for p in v]
+                    for k, v in context_data.get("symbols", {}).items()
+                },
                 project_root=Path(context_data.get("project_root", ".")),
                 git_info=context_data.get("git_info"),
             )
@@ -248,7 +282,7 @@ class SessionManager:
 
             except Exception:
                 # Skip corrupted session files
-                continue
+                continue  # nosec B112
 
         return sessions
 
@@ -303,7 +337,7 @@ class SessionManager:
                         del self._session_cache[session_id]
 
             except Exception:
-                continue
+                continue  # nosec B112
 
         return deleted_count
 
@@ -319,7 +353,7 @@ class SessionManager:
                     latest_time = mtime
                     latest_file = session_file
             except Exception:
-                continue
+                continue  # nosec B112
 
         return latest_file.stem if latest_file else None
 
@@ -329,8 +363,8 @@ async def export_session_to_markdown(session: Session, output_file: Path) -> Non
     """Export session to markdown format."""
     lines = [
         f"# OCode Session: {session.id}",
-        f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(session.created_at))}",
-        f"Updated: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(session.updated_at))}",
+        f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(session.created_at))}",  # noqa: E501
+        f"Updated: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(session.updated_at))}",  # noqa: E501
         "",
     ]
 

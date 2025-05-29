@@ -1073,6 +1073,9 @@ When a user asks you to perform an action, call the appropriate function."""
                 self.current_response = ""
                 self.response_complete = False
 
+            # Add user message to conversation history
+            self.conversation_history.append(Message("user", query))
+
             # Prepare context
             context = await self._prepare_context(query)
             metrics.files_analyzed = len(context.files)
@@ -1265,6 +1268,12 @@ When a user asks you to perform an action, call the appropriate function."""
             if self.verbose:
                 print(
                     f"\n📊 Metrics: {metrics.duration:.1f}s, {metrics.tokens_processed} tokens, {metrics.files_analyzed} files, {metrics.tools_executed} tools\n"  # noqa: E501
+                )
+
+            # Add assistant response to conversation history
+            if self.current_response:
+                self.conversation_history.append(
+                    Message("assistant", self.current_response)
                 )
 
     def is_response_complete(self) -> bool:
