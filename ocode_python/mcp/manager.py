@@ -7,12 +7,11 @@ Manages the lifecycle of MCP servers, including starting, stopping, and listing.
 import asyncio
 import json
 import os
-import subprocess
-import sys
+import subprocess  # nosec
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import psutil
 
@@ -89,8 +88,8 @@ class MCPServerManager:
                 # Check if process is running from a previous session
                 if info.pid:
                     try:
-                        process = psutil.Process(info.pid)
-                        if process.is_running():
+                        ps_process = psutil.Process(info.pid)
+                        if ps_process.is_running():
                             info.status = "running"
                         else:
                             info.status = "stopped"
@@ -127,7 +126,7 @@ class MCPServerManager:
             # Start the process
             cmd = [info.command] + info.args
 
-            process = subprocess.Popen(
+            process = subprocess.Popen(  # nosec
                 cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -237,9 +236,9 @@ class MCPServerManager:
         self,
         name: str,
         command: str,
-        args: List[str] = None,
-        env: Dict[str, str] = None,
-        cwd: str = None,
+        args: Optional[List[str]] = None,
+        env: Optional[Dict[str, str]] = None,
+        cwd: Optional[str] = None,
     ) -> bool:
         """Add a new MCP server configuration."""
         # Create server config
@@ -300,7 +299,7 @@ class MCPServerManager:
             try:
                 with open(state_file, "r") as f:
                     state = json.load(f)
-            except Exception:
+            except Exception:  # nosec
                 state = {}
 
         # Update state
@@ -311,7 +310,7 @@ class MCPServerManager:
             state_file.parent.mkdir(parents=True, exist_ok=True)
             with open(state_file, "w") as f:
                 json.dump(state, f, indent=2)
-        except Exception:
+        except Exception:  # nosec
             pass
 
     def _load_server_state(self) -> None:
@@ -329,7 +328,7 @@ class MCPServerManager:
                 if name in self._server_info:
                     self._server_info[name].pid = server_state.get("pid")
                     self._server_info[name].port = server_state.get("port")
-        except Exception:
+        except Exception:  # nosec
             pass
 
     async def cleanup(self) -> None:

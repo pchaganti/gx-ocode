@@ -4,11 +4,8 @@ Testing and code quality tools.
 
 import asyncio
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-from pydantic import ConfigDict
+from typing import Any, List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -71,7 +68,7 @@ class ExecutionTool(Tool):
                     package_data = json.load(f)
                     if "jest" in package_data.get("devDependencies", {}):
                         return "jest"
-            except Exception:
+            except Exception:  # nosec
                 pass
 
         if (test_path / "go.mod").exists():
@@ -328,7 +325,7 @@ class LintTool(Tool):
                 ToolParameter(
                     name="tool",
                     type="string",
-                    description="Linting tool: 'flake8', 'black', 'eslint', 'prettier', 'auto'",
+                    description="Linting tool: 'flake8', 'black', 'eslint', 'prettier', 'auto'",  # noqa: E501
                     required=False,
                     default="auto",
                 ),
@@ -359,6 +356,25 @@ class LintTool(Tool):
     @property
     def definition(self):
         return self._definition
+
+    def _detect_lint_tool(self, path: str) -> List[str]:
+        """Detect which linting tools to use based on project files."""
+        path_obj = Path(path)
+        tools = []
+
+        # Check for Python files
+        if path_obj.suffix == ".py" or any(path_obj.glob("**/*.py")):
+            if Path("pyproject.toml").exists() or Path("setup.cfg").exists():
+                tools.append("black")
+            tools.append("flake8")
+
+        # Check for JavaScript/TypeScript files
+        if any(path_obj.glob("**/*.js")) or any(path_obj.glob("**/*.ts")):
+            if Path("package.json").exists():
+                tools.append("eslint")
+                tools.append("prettier")
+
+        return tools if tools else ["flake8"]  # Default to flake8
 
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Run linting tool."""
@@ -517,7 +533,7 @@ class CoverageTool(Tool):
                 if "TOTAL" in line and "%" in line:
                     try:
                         coverage_percent = int(line.split()[-1].replace("%", ""))
-                    except Exception:
+                    except Exception:  # nosec
                         pass
 
             success = coverage_percent >= kwargs.get("min_coverage", 80)

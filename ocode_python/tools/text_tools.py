@@ -3,7 +3,7 @@ Text processing tools for sort, uniq, and other text operations.
 """
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -20,7 +20,7 @@ class SortTool(Tool):
                 ToolParameter(
                     name="file_path",
                     type="string",
-                    description="Path to file to sort (optional, can sort text directly)",
+                    description="Path to file to sort (optional, can sort text directly)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -153,7 +153,7 @@ class UniqTool(Tool):
                 ToolParameter(
                     name="file_path",
                     type="string",
-                    description="Path to file to process (optional, can process text directly)",
+                    description="Path to file to process (optional, can process text directly)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -216,7 +216,7 @@ class UniqTool(Tool):
                 )
 
             # Process lines for uniqueness
-            line_counts = {}
+            line_counts: Dict[str, int] = {}
             for line in lines:
                 line_counts[line] = line_counts.get(line, 0) + 1
 

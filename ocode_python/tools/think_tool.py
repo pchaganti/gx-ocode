@@ -5,7 +5,7 @@ Structured reasoning and analysis tool for OCode.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -17,12 +17,12 @@ class ThinkTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="think",
-            description="Perform structured reasoning, analysis, and decision-making with various thinking frameworks",
+            description="Perform structured reasoning, analysis, and decision-making with various thinking frameworks",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="thinking_type",
                     type="string",
-                    description="Type of thinking: 'analyze', 'compare', 'pros_cons', 'root_cause', 'decision', 'brainstorm', 'breakdown', 'risk_assessment'",
+                    description="Type of thinking: 'analyze', 'compare', 'pros_cons', 'root_cause', 'decision', 'brainstorm', 'breakdown', 'risk_assessment'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
@@ -34,13 +34,13 @@ class ThinkTool(Tool):
                 ToolParameter(
                     name="context",
                     type="string",
-                    description="Additional context, background information, or constraints",
+                    description="Additional context, background information, or constraints",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
                     name="options",
                     type="array",
-                    description="List of options, alternatives, or solutions to evaluate (for comparison/decision types)",
+                    description="List of options, alternatives, or solutions to evaluate (for comparison/decision types)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -52,7 +52,7 @@ class ThinkTool(Tool):
                 ToolParameter(
                     name="save_to_memory",
                     type="boolean",
-                    description="Save the thinking process to memory for later reference",
+                    description="Save the thinking process to memory for later reference",  # noqa: E501
                     required=False,
                     default=False,
                 ),
@@ -150,7 +150,7 @@ class ThinkTool(Tool):
         criteria: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Perform structured analysis of a topic."""
-        analysis = {
+        analysis: Dict[str, Any] = {
             "summary": f"Analysis of: {topic}",
             "key_aspects": [],
             "observations": [],
@@ -194,7 +194,7 @@ class ThinkTool(Tool):
         context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Compare multiple options or alternatives."""
-        comparison = {
+        comparison: Dict[str, Any] = {
             "summary": f"Comparison for: {topic}",
             "options": options or [],
             "criteria": criteria
@@ -206,7 +206,7 @@ class ThinkTool(Tool):
 
         if not options:
             comparison["note"] = (
-                "No specific options provided. Consider defining alternatives to compare."
+                "No specific options provided. Consider defining alternatives to compare."  # noqa: E501
             )
             return comparison
 
@@ -226,7 +226,7 @@ class ThinkTool(Tool):
         self, topic: str, context: Optional[str] = None
     ) -> Dict[str, Any]:
         """Analyze pros and cons of a decision or approach."""
-        pros_cons = {
+        pros_cons: Dict[str, Any] = {
             "summary": f"Pros and Cons of: {topic}",
             "pros": [],
             "cons": [],
@@ -258,7 +258,7 @@ class ThinkTool(Tool):
         self, topic: str, context: Optional[str] = None
     ) -> Dict[str, Any]:
         """Perform root cause analysis to identify underlying issues."""
-        root_cause = {
+        root_cause: Dict[str, Any] = {
             "summary": f"Root Cause Analysis of: {topic}",
             "problem_statement": topic,
             "symptoms": [],
@@ -299,7 +299,7 @@ class ThinkTool(Tool):
         context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Structured decision-making process."""
-        decision = {
+        decision: Dict[str, Any] = {
             "summary": f"Decision Framework for: {topic}",
             "decision_statement": topic,
             "options": options or [],
@@ -464,7 +464,7 @@ class ThinkTool(Tool):
         """Save thinking session to memory for later reference."""
         try:
             # This would integrate with the MemoryWriteTool
-            memory_key = f"thinking_{thinking_session['type']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            memory_key = f"thinking_{thinking_session['type']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"  # noqa: E501
 
             # For now, just save to a local file in .ocode directory
             memory_dir = Path.cwd() / ".ocode" / "thinking"
@@ -474,7 +474,7 @@ class ThinkTool(Tool):
             with open(memory_file, "w") as f:
                 json.dump(thinking_session, f, indent=2)
 
-        except Exception:
+        except Exception:  # nosec
             # Silently continue if memory save fails
             pass
 

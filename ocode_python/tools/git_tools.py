@@ -2,10 +2,7 @@
 Git integration tools.
 """
 
-import asyncio
-import subprocess
-from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 from git import InvalidGitRepositoryError, Repo
 
@@ -32,7 +29,7 @@ class GitStatusTool(Tool):
             ],
         )
 
-    async def execute(self, **kwargs: Any) -> ToolResult:  # type: ignore[override]
+    async def execute(self, **kwargs: Any) -> ToolResult:
         """Get git status."""
         path = kwargs.get("path", ".")
         try:
@@ -139,7 +136,10 @@ class GitCommitTool(Tool):
 
                 all_files = modified_files + untracked_files
                 if all_files:
-                    repo.index.add(all_files)
+                    # Filter out None values and ensure strings
+                    valid_files = [f for f in all_files if f is not None]
+                    if valid_files:
+                        repo.index.add(valid_files)
 
             # Check if there are changes to commit
             if not repo.index.diff("HEAD"):
@@ -148,6 +148,11 @@ class GitCommitTool(Tool):
                 )
 
             # Create commit
+            # Ensure message is not None
+            if not message:
+                return ToolResult(
+                    success=False, output="", error="Commit message cannot be empty"
+                )
             commit = repo.index.commit(message)
 
             return ToolResult(
@@ -228,7 +233,11 @@ class GitDiffTool(Tool):
 
             # Filter by file if specified
             if file:
-                diff = [d for d in diff if d.a_path == file or d.b_path == file]
+                diff_list = list(diff)
+                diff_list = [
+                    d for d in diff_list if d.a_path == file or d.b_path == file
+                ]
+                diff = diff_list  # type: ignore
 
             if not diff:
                 return ToolResult(
@@ -251,7 +260,14 @@ class GitDiffTool(Tool):
 
                 # Show actual diff content
                 try:
-                    diff_text = change.diff.decode("utf-8")
+                    if hasattr(change, "diff") and change.diff:
+                        diff_text = (
+                            change.diff.decode("utf-8")
+                            if isinstance(change.diff, bytes)
+                            else str(change.diff)
+                        )
+                    else:
+                        diff_text = ""
                     diff_lines.append(diff_text)
                 except Exception:
                     diff_lines.append("(binary file)")
@@ -380,7 +396,7 @@ class GitBranchTool(Tool):
                 return ToolResult(
                     success=False,
                     output="",
-                    error=f"Invalid action: {action}. Use 'list', 'create', 'checkout', or 'delete'",
+                    error=f"Invalid action: {action}. Use 'list', 'create', 'checkout', or 'delete'",  # noqa: E501
                 )
 
         except InvalidGitRepositoryError:
