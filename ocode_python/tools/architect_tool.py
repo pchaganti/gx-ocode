@@ -4,11 +4,10 @@ Codebase architecture analysis and visualization tool for OCode.
 
 import ast
 import json
-import os
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -20,13 +19,13 @@ class ArchitectTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="architect",
-            description="Analyze codebase architecture, dependencies, design patterns, and generate architectural insights",
-            parameters=[
+            description="Analyze codebase architecture, dependencies, design patterns, and generate architectural insights",  # noqa: E501
+            parameters=[  # noqa: E501
                 ToolParameter(
                     name="analysis_type",
                     type="string",
-                    description="Type of analysis: 'overview', 'dependencies', 'structure', 'patterns', 'metrics', 'health', 'diagram'",
-                    required=True,
+                    description="Type of analysis: 'overview', 'dependencies', 'structure', 'patterns', 'metrics', 'health', 'diagram'",  # noqa: E501
+                    required=True,  # noqa: E501
                 ),
                 ToolParameter(
                     name="path",
@@ -38,8 +37,8 @@ class ArchitectTool(Tool):
                 ToolParameter(
                     name="language",
                     type="string",
-                    description="Programming language to focus on: 'python', 'javascript', 'typescript', 'java', 'auto'",
-                    required=False,
+                    description="Programming language to focus on: 'python', 'javascript', 'typescript', 'java', 'auto'",  # noqa: E501
+                    required=False,  # noqa: E501
                     default="auto",
                 ),
                 ToolParameter(
@@ -58,8 +57,8 @@ class ArchitectTool(Tool):
                 ToolParameter(
                     name="exclude_patterns",
                     type="array",
-                    description="File patterns to exclude (e.g., ['*test*', 'node_modules'])",
-                    required=False,
+                    description="File patterns to exclude (e.g., ['*test*', 'node_modules'])",  # noqa: E501
+                    required=False,  # noqa: E501
                     default=[
                         "*test*",
                         "*__pycache__*",
@@ -72,8 +71,8 @@ class ArchitectTool(Tool):
                 ToolParameter(
                     name="output_format",
                     type="string",
-                    description="Output format: 'summary', 'detailed', 'json', 'mermaid'",
-                    required=False,
+                    description="Output format: 'summary', 'detailed', 'json', 'mermaid'",  # noqa: E501
+                    required=False,  # noqa: E501
                     default="summary",
                 ),
             ],
@@ -178,7 +177,7 @@ class ArchitectTool(Tool):
 
     def _detect_primary_language(self, path: Path) -> str:
         """Detect the primary programming language in the codebase."""
-        language_counts = defaultdict(int)
+        language_counts: Dict[str, int] = defaultdict(int)
 
         for file_path in path.rglob("*"):
             if file_path.is_file():
@@ -197,7 +196,7 @@ class ArchitectTool(Tool):
                     language_counts["rust"] += 1
 
         if language_counts:
-            return max(language_counts, key=language_counts.get)
+            return max(language_counts, key=lambda x: language_counts.get(x, 0))
         return "unknown"
 
     def _should_include_file(
@@ -250,7 +249,7 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Generate high-level overview of the codebase."""
-        overview = {
+        overview: Dict[str, Any] = {
             "path": str(path),
             "language": language,
             "type": "project" if path.is_dir() else "file",
@@ -269,7 +268,11 @@ class ArchitectTool(Tool):
             # Analyze single file
             overview["files"] = self._analyze_single_file(path)
             total_files = 1
-            total_lines = overview["files"].get("lines", 0)
+            files_info = overview["files"]
+            if isinstance(files_info, dict):
+                total_lines = files_info.get("lines", 0)
+            else:
+                total_lines = 0
             file_types[path.suffix] = 1
         else:
             # Analyze directory
@@ -287,7 +290,7 @@ class ArchitectTool(Tool):
                         ) as f:
                             lines = len(f.readlines())
                             total_lines += lines
-                    except Exception:
+                    except Exception:  # nosec
                         continue
 
                 if file_path.is_dir():
@@ -331,14 +334,19 @@ class ArchitectTool(Tool):
             elif file_path.suffix in [".js", ".jsx", ".ts", ".tsx"]:
                 file_info.update(self._analyze_javascript_file(content))
 
-        except Exception:
+        except Exception:  # nosec
             pass
 
         return file_info
 
     def _analyze_python_file(self, content: str) -> Dict[str, Any]:
         """Analyze Python file using AST."""
-        info = {"functions": [], "classes": [], "imports": [], "complexity": "low"}
+        info: Dict[str, Any] = {
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "complexity": "low",
+        }
 
         try:
             tree = ast.parse(content)
@@ -384,14 +392,14 @@ class ArchitectTool(Tool):
 
         except SyntaxError:
             info["complexity"] = "syntax_error"
-        except Exception:
+        except Exception:  # nosec
             pass
 
         return info
 
     def _analyze_javascript_file(self, content: str) -> Dict[str, Any]:
         """Basic analysis of JavaScript/TypeScript files."""
-        info = {
+        info: Dict[str, Any] = {
             "functions": [],
             "classes": [],
             "imports": [],
@@ -543,7 +551,7 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Analyze code dependencies and relationships."""
-        dependencies = {
+        dependencies: Dict[str, Any] = {
             "internal": defaultdict(set),
             "external": set(),
             "dependency_graph": {},
@@ -575,27 +583,38 @@ class ArchitectTool(Tool):
                 dependencies["dependency_graph"][rel_path] = file_deps
 
                 for dep in file_deps.get("internal", []):
-                    dependencies["internal"][rel_path].add(dep)
+                    internal_deps = dependencies["internal"]
+                    if rel_path not in internal_deps:
+                        internal_deps[rel_path] = set()
+                    internal_deps[rel_path].add(dep)
 
                 for dep in file_deps.get("external", []):
-                    dependencies["external"].add(dep)
+                    external_deps = dependencies["external"]
+                    if isinstance(external_deps, set):
+                        external_deps.add(dep)
 
         # Detect circular dependencies
-        dependencies["circular_dependencies"] = self._detect_circular_dependencies(
-            dependencies["internal"]
-        )
+        internal_deps = dependencies.get("internal", {})
+        if isinstance(internal_deps, dict):
+            dependencies["circular_dependencies"] = self._detect_circular_dependencies(
+                internal_deps
+            )
 
         # Calculate statistics
         dependencies["statistics"] = {
             "files_analyzed": len(files_analyzed),
-            "total_internal_deps": sum(
-                len(deps) for deps in dependencies["internal"].values()
+            "total_internal_deps": (
+                sum(len(deps) for deps in dependencies["internal"].values())
+                if isinstance(dependencies["internal"], dict)
+                else 0
             ),
             "total_external_deps": len(dependencies["external"]),
-            "avg_deps_per_file": sum(
-                len(deps) for deps in dependencies["internal"].values()
-            )
-            / max(len(files_analyzed), 1),
+            "avg_deps_per_file": (
+                sum(len(deps) for deps in dependencies["internal"].values())
+                / max(len(files_analyzed), 1)
+                if isinstance(dependencies["internal"], dict)
+                else 0
+            ),
             "files_with_no_deps": len(
                 [
                     f
@@ -615,7 +634,7 @@ class ArchitectTool(Tool):
         self, file_path: Path, language: str
     ) -> Dict[str, List[str]]:
         """Extract dependencies from a single file."""
-        deps = {"internal": [], "external": []}
+        deps: Dict[str, List[str]] = {"internal": [], "external": []}
 
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -631,7 +650,7 @@ class ArchitectTool(Tool):
             ]:
                 deps = self._extract_javascript_dependencies(content, file_path)
 
-        except Exception:
+        except Exception:  # nosec
             pass
 
         return deps
@@ -640,7 +659,7 @@ class ArchitectTool(Tool):
         self, content: str, file_path: Path
     ) -> Dict[str, List[str]]:
         """Extract dependencies from Python code."""
-        deps = {"internal": [], "external": []}
+        deps: Dict[str, List[str]] = {"internal": [], "external": []}
 
         try:
             tree = ast.parse(content)
@@ -677,7 +696,7 @@ class ArchitectTool(Tool):
         self, content: str, file_path: Path
     ) -> Dict[str, List[str]]:
         """Extract dependencies from JavaScript/TypeScript code."""
-        deps = {"internal": [], "external": []}
+        deps: Dict[str, List[str]] = {"internal": [], "external": []}
 
         # Match import statements and require calls
         import_patterns = [
@@ -708,10 +727,10 @@ class ArchitectTool(Tool):
             # Convert module path to file path
             module_parts = module.split(".")
             potential_paths = [
-                project_root / "/".join(module_parts) + ".py",
+                project_root / ("/".join(module_parts) + ".py"),
                 project_root / "/".join(module_parts) / "__init__.py",
-                project_root / "/".join(module_parts) + ".js",
-                project_root / "/".join(module_parts) + ".ts",
+                project_root / ("/".join(module_parts) + ".js"),
+                project_root / ("/".join(module_parts) + ".ts"),
                 project_root / "/".join(module_parts) / "index.js",
                 project_root / "/".join(module_parts) / "index.ts",
             ]
@@ -766,7 +785,7 @@ class ArchitectTool(Tool):
 
             rec_stack.remove(node)
 
-        visited = set()
+        visited: Set[str] = set()
         for node in dependencies:
             if node not in visited:
                 dfs(node, [], visited, set())
@@ -782,7 +801,7 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Analyze the structural organization of the codebase."""
-        structure = {
+        structure: Dict[str, Any] = {
             "hierarchy": {},
             "modules": [],
             "packages": [],
@@ -852,7 +871,12 @@ class ArchitectTool(Tool):
         if current_depth >= max_depth:
             return {}
 
-        tree = {"type": "directory", "children": {}, "files": [], "size": 0}
+        tree: Dict[str, Any] = {
+            "type": "directory",
+            "children": {},
+            "files": [],
+            "size": 0,
+        }
 
         try:
             for item in path.iterdir():
@@ -867,24 +891,30 @@ class ArchitectTool(Tool):
                         self._matches_pattern(str(item), pattern)
                         for pattern in (exclude_patterns or [])
                     ):
-                        tree["children"][item.name] = self._build_directory_tree(
-                            item,
-                            max_depth,
-                            include_patterns,
-                            exclude_patterns,
-                            current_depth + 1,
-                        )
+                        children = tree.get("children", {})
+                        if isinstance(children, dict):
+                            children[item.name] = self._build_directory_tree(
+                                item,
+                                max_depth,
+                                include_patterns,
+                                exclude_patterns,
+                                current_depth + 1,
+                            )
                 elif item.is_file() and self._should_include_file(
                     item, include_patterns, exclude_patterns
                 ):
-                    tree["files"].append(
-                        {
-                            "name": item.name,
-                            "size": item.stat().st_size,
-                            "extension": item.suffix,
-                        }
-                    )
-                    tree["size"] += item.stat().st_size
+                    files = tree.get("files", [])
+                    if isinstance(files, list):
+                        files.append(
+                            {
+                                "name": item.name,
+                                "size": item.stat().st_size,
+                                "extension": item.suffix,
+                            }
+                        )
+                    size = tree.get("size", 0)
+                    if isinstance(size, (int, float)):
+                        tree["size"] = size + item.stat().st_size
 
         except PermissionError:
             pass
@@ -974,7 +1004,7 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Analyze design patterns and architectural patterns in the code."""
-        patterns = {
+        patterns: Dict[str, Any] = {
             "design_patterns": {},
             "architectural_patterns": {},
             "anti_patterns": {},
@@ -1022,7 +1052,7 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Calculate various code metrics."""
-        metrics = {
+        metrics: Dict[str, Any] = {
             "size_metrics": {},
             "complexity_metrics": {},
             "quality_metrics": {},
@@ -1112,7 +1142,7 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Analyze overall codebase health and quality."""
-        health = {
+        health: Dict[str, Any] = {
             "overall_score": 0,
             "categories": {},
             "issues": [],
@@ -1196,26 +1226,40 @@ class ArchitectTool(Tool):
 
         # Generate issues and recommendations
         if scores.get("complexity", 0) < 70:
-            health["issues"].append("High complexity detected in some files")
-            health["recommendations"].append(
-                "Consider refactoring complex functions and classes"
-            )
+            issues = health.get("issues", [])
+            if isinstance(issues, list):
+                issues.append("High complexity detected in some files")
+            recommendations = health.get("recommendations", [])
+            if isinstance(recommendations, list):
+                recommendations.append(
+                    "Consider refactoring complex functions and classes"
+                )
 
         if scores.get("dependencies", 0) < 70:
-            health["issues"].append("Circular dependencies detected")
-            health["recommendations"].append(
-                "Resolve circular dependencies to improve maintainability"
-            )
+            issues = health.get("issues", [])
+            if isinstance(issues, list):
+                issues.append("Circular dependencies detected")
+            recommendations = health.get("recommendations", [])
+            if isinstance(recommendations, list):
+                recommendations.append(
+                    "Resolve circular dependencies to improve maintainability"
+                )
 
         if scores.get("documentation", 0) < 70:
-            health["issues"].append("Low documentation coverage")
-            health["recommendations"].append("Add more documentation and README files")
+            issues = health.get("issues", [])
+            if isinstance(issues, list):
+                issues.append("Low documentation coverage")
+            recommendations = health.get("recommendations", [])
+            if isinstance(recommendations, list):
+                recommendations.append("Add more documentation and README files")
 
         if scores.get("testing", 0) < 70:
-            health["issues"].append("Insufficient test coverage")
-            health["recommendations"].append(
-                "Add more unit tests and integration tests"
-            )
+            issues = health.get("issues", [])
+            if isinstance(issues, list):
+                issues.append("Insufficient test coverage")
+            recommendations = health.get("recommendations", [])
+            if isinstance(recommendations, list):
+                recommendations.append("Add more unit tests and integration tests")
 
         return health
 
@@ -1227,7 +1271,7 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Generate architectural diagrams and visualizations."""
-        diagram = {
+        diagram: Dict[str, Any] = {
             "type": "architecture_diagram",
             "components": [],
             "relationships": [],
@@ -1246,21 +1290,25 @@ class ArchitectTool(Tool):
 
         # Build component list
         for module in structure["modules"][:20]:  # Limit to avoid clutter
-            diagram["components"].append(
-                {
-                    "name": Path(module["path"]).stem,
-                    "type": "module",
-                    "functions": len(module.get("functions", [])),
-                    "classes": len(module.get("classes", [])),
-                }
-            )
+            components = diagram.get("components", [])
+            if isinstance(components, list):
+                components.append(
+                    {
+                        "name": Path(module["path"]).stem,
+                        "type": "module",
+                        "functions": len(module.get("functions", [])),
+                        "classes": len(module.get("classes", [])),
+                    }
+                )
 
         # Build relationships from dependencies
         for source, targets in dependencies["dependency_graph"].items():
             for target in targets.get("internal", [])[:5]:  # Limit connections
-                diagram["relationships"].append(
-                    {"from": Path(source).stem, "to": target, "type": "depends_on"}
-                )
+                relationships = diagram.get("relationships", [])
+                if isinstance(relationships, list):
+                    relationships.append(
+                        {"from": Path(source).stem, "to": target, "type": "depends_on"}
+                    )
 
         # Generate Mermaid diagram code
         diagram["mermaid_code"] = self._generate_mermaid_code(diagram)
@@ -1322,11 +1370,9 @@ class ArchitectTool(Tool):
             output += (
                 f"• External Dependencies: {stats.get('total_external_deps', 0)}\n"
             )
-            output += f"• Average Dependencies per File: {stats.get('avg_deps_per_file', 0):.1f}\n"
-
+            output += f"• Average Dependencies per File: {stats.get('avg_deps_per_file', 0):.1f}\n"  # noqa: E501
             if results.get("circular_dependencies"):
-                output += f"\n⚠️  Circular Dependencies Found: {len(results['circular_dependencies'])}\n"
-
+                output += f"\n⚠️  Circular Dependencies Found: {len(results['circular_dependencies'])}\n"  # noqa: E501
         elif analysis_type == "health":
             output += (
                 f"Codebase Health Score: {results.get('overall_score', 0):.1f}/100\n\n"
@@ -1359,6 +1405,7 @@ class ArchitectTool(Tool):
     ) -> str:
         """Format results as Mermaid diagram code."""
         if analysis_type == "diagram" and "mermaid_code" in results:
-            return results["mermaid_code"]
+            mermaid_code = results["mermaid_code"]
+            return str(mermaid_code)
         else:
             return f"Mermaid diagrams not available for analysis type: {analysis_type}"

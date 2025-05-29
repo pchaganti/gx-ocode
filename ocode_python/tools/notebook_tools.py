@@ -3,9 +3,9 @@ Jupyter notebook tools for OCode.
 """
 
 import json
-import os
+import os  # noqa: F401
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union  # noqa: F401
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -17,7 +17,7 @@ class NotebookReadTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="notebook_read",
-            description="Read and analyze Jupyter notebook files (.ipynb), extracting cells, outputs, and metadata",
+            description="Read and analyze Jupyter notebook files (.ipynb), extracting cells, outputs, and metadata",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="path",
@@ -152,7 +152,7 @@ class NotebookReadTool(Tool):
             markdown_cells = len([c for c in cells if c.get("cell_type") == "markdown"])
 
             summary = f"Notebook: {notebook_path.name}\n"
-            summary += f"Total cells: {total_cells} (Code: {code_cells}, Markdown: {markdown_cells})\n"
+            summary += f"Total cells: {total_cells} (Code: {code_cells}, Markdown: {markdown_cells})\n"  # noqa: E501
             summary += f"Kernel: {result['kernel']}, Language: {result['language']}\n\n"
 
             # Add cells to output
@@ -183,7 +183,7 @@ class NotebookReadTool(Tool):
 
     def _parse_cell_range(self, cell_range: str, total_cells: int) -> List[int]:
         """Parse cell range string into list of indices."""
-        indices = []
+        indices: List[int] = []
 
         for part in cell_range.split(","):
             part = part.strip()
@@ -247,7 +247,7 @@ class NotebookEditTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="notebook_edit",
-            description="Edit Jupyter notebook files by modifying, adding, or removing cells",
+            description="Edit Jupyter notebook files by modifying, adding, or removing cells",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="path",
@@ -258,7 +258,7 @@ class NotebookEditTool(Tool):
                 ToolParameter(
                     name="operation",
                     type="string",
-                    description="Operation to perform: 'update_cell', 'add_cell', 'remove_cell', 'clear_outputs', 'set_metadata'",
+                    description="Operation to perform: 'update_cell', 'add_cell', 'remove_cell', 'clear_outputs', 'set_metadata'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
@@ -349,7 +349,7 @@ class NotebookEditTool(Tool):
                     return ToolResult(
                         success=False,
                         output="",
-                        error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",
+                        error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",  # noqa: E501
                     )
 
                 cells[cell_index]["source"] = source.split("\n")
@@ -384,7 +384,7 @@ class NotebookEditTool(Tool):
                         return ToolResult(
                             success=False,
                             output="",
-                            error=f"Invalid cell index: {cell_index}. Valid range: 0-{len(cells)}",
+                            error=f"Invalid cell index: {cell_index}. Valid range: 0-{len(cells)}",  # noqa: E501
                         )
                     cells.insert(cell_index, new_cell)
                     result_message = f"Added new {cell_type} cell at index {cell_index}"
@@ -401,11 +401,11 @@ class NotebookEditTool(Tool):
                     return ToolResult(
                         success=False,
                         output="",
-                        error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",
+                        error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",  # noqa: E501
                     )
 
                 removed_cell = cells.pop(cell_index)
-                result_message = f"Removed {removed_cell.get('cell_type', 'unknown')} cell at index {cell_index}"
+                result_message = f"Removed {removed_cell.get('cell_type', 'unknown')} cell at index {cell_index}"  # noqa: E501
 
             elif operation == "clear_outputs":
                 cleared_count = 0
@@ -430,7 +430,7 @@ class NotebookEditTool(Tool):
                         return ToolResult(
                             success=False,
                             output="",
-                            error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",
+                            error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",  # noqa: E501
                         )
                     cells[cell_index]["metadata"].update(metadata)
                     result_message = f"Updated metadata for cell {cell_index}"

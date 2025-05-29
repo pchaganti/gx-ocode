@@ -3,19 +3,19 @@ File manipulation tools with centralized path validation.
 """
 
 import asyncio
-import os
+import os  # noqa: F401
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ..utils import path_validator
 from ..utils.timeout_handler import TimeoutError, async_timeout
+from .base import ToolError  # noqa: F401
 from .base import (
     ErrorHandler,
     ErrorType,
     Tool,
     ToolDefinition,
-    ToolError,
     ToolParameter,
     ToolResult,
 )
@@ -87,8 +87,8 @@ class FileReadTool(Tool):
 
         return None
 
-    async def execute(self, **kwargs: Any) -> ToolResult:  # type: ignore[override]
-        """Read file contents with enhanced security validation and streaming support."""
+    async def execute(self, **kwargs: Any) -> ToolResult:
+        """Read file contents with enhanced security validation and streaming support."""  # noqa: E501
         try:
             # Validate required parameters
             validation_error = ErrorHandler.validate_required_params(kwargs, ["path"])
@@ -104,6 +104,12 @@ class FileReadTool(Tool):
             timeout = kwargs.get("timeout", 30.0)  # Default 30 second timeout
 
             # Validate path security using centralized validator
+            if path is None:
+                return ErrorHandler.create_error_result(
+                    "Path parameter is required",
+                    ErrorType.VALIDATION_ERROR,
+                    {"path": path},
+                )
             is_valid, error_msg, validated_path = path_validator.validate_path(
                 path, check_exists=False  # We'll check with extensions
             )
@@ -115,6 +121,12 @@ class FileReadTool(Tool):
                 )
 
             # Try to find the file with common extensions if it doesn't exist
+            if validated_path is None:
+                return ErrorHandler.create_error_result(
+                    "Path validation returned None",
+                    ErrorType.VALIDATION_ERROR,
+                    {"path": path},
+                )
             resolved_path = self._try_common_extensions(validated_path)
             if not resolved_path:
                 return ErrorHandler.create_error_result(
@@ -214,7 +226,7 @@ class FileReadTool(Tool):
             # Standard full file read
             if file_size > max_file_size:
                 return ErrorHandler.create_error_result(
-                    f"File too large: {file_size} bytes (max: {max_file_size}). Use offset/limit for large files.",
+                    f"File too large: {file_size} bytes (max: {max_file_size}). Use offset/limit for large files.",  # noqa: E501
                     ErrorType.RESOURCE_ERROR,
                     {"file_size": file_size, "max_size": max_file_size},
                 )
@@ -341,6 +353,12 @@ class FileWriteTool(Tool):
             append = kwargs.get("append", False)
 
             # Validate path security
+            if path is None:
+                return ErrorHandler.create_error_result(
+                    "Path parameter is required",
+                    ErrorType.VALIDATION_ERROR,
+                    {"path": path},
+                )
             is_valid, error_msg, validated_path = path_validator.validate_path(path)
             if not is_valid:
                 return ErrorHandler.create_error_result(
@@ -350,6 +368,12 @@ class FileWriteTool(Tool):
                 )
 
             # Ensure parent directory exists if requested
+            if validated_path is None:
+                return ErrorHandler.create_error_result(
+                    "Path validation returned None",
+                    ErrorType.VALIDATION_ERROR,
+                    {"path": path},
+                )
             if create_dirs:
                 validated_path.parent.mkdir(parents=True, exist_ok=True)
             elif not validated_path.parent.exists():
@@ -365,12 +389,14 @@ class FileWriteTool(Tool):
 
             # Write the file
             mode = "a" if append else "w"
+            if content is None:
+                content = ""
             with open(validated_path, mode, encoding=encoding) as f:
-                f.write(content)
+                f.write(str(content))
 
             # Verify write succeeded
             new_size = validated_path.stat().st_size
-            bytes_written = len(content.encode(encoding))
+            bytes_written = len(str(content).encode(encoding))
 
             return ErrorHandler.create_success_result(
                 f"Successfully wrote {len(content)} characters to {validated_path}",

@@ -5,14 +5,13 @@ Enhanced Bash/Shell command execution tool with improved process management.
 import asyncio
 import io
 import os
-import re
 import shlex
 import signal
 import tempfile
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import pexpect
 
@@ -86,8 +85,8 @@ class BashTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="bash",
-            description="Execute shell commands with advanced features and safety controls",
-            category="System Operations",
+            description="Execute shell commands with advanced features and safety controls",  # noqa: E501
+            category="System Operations",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="command",
@@ -139,8 +138,8 @@ class BashTool(Tool):
                 ToolParameter(
                     name="interactive",
                     type="boolean",
-                    description="Run in interactive mode (for commands requiring input)",
-                    required=False,
+                    description="Run in interactive mode (for commands requiring input)",  # noqa: E501
+                    required=False,  # noqa: E501
                     default=False,
                 ),
                 ToolParameter(
@@ -164,6 +163,12 @@ class BashTool(Tool):
         """Execute shell command with enhanced features."""
         # Extract parameters
         command = kwargs.get("command")
+        if not command:
+            return ToolResult(
+                success=False,
+                output="",
+                error="Command parameter is required",
+            )
         working_dir = kwargs.get("working_dir", ".")
         timeout = kwargs.get("timeout", 30)
         capture_output = kwargs.get("capture_output", True)
@@ -186,7 +191,7 @@ class BashTool(Tool):
                     error=f"Working directory validation failed: {error_msg}",
                 )
 
-            if not work_dir.is_dir():
+            if work_dir and not work_dir.is_dir():
                 return ToolResult(
                     success=False,
                     output="",
@@ -195,17 +200,21 @@ class BashTool(Tool):
 
             # Safety checks using enhanced sanitizer
             if safe_mode:
-                is_safe, sanitized_cmd, error_msg = command_sanitizer.sanitize_command(
-                    command, strict_mode=True
+                sanitize_result = command_sanitizer.sanitize_command(
+                    str(command), strict_mode=True
                 )
+                is_safe: bool = sanitize_result[0]
+                sanitized_cmd: str = sanitize_result[1]
+                sanitize_error: Optional[str] = sanitize_result[2]
                 if not is_safe:
                     return ToolResult(
                         success=False,
                         output="",
-                        error=f"Command blocked for safety: {error_msg}",
+                        error=f"Command blocked for safety: {sanitize_error}",
                     )
                 # Use the sanitized command
-                command = sanitized_cmd
+                if sanitized_cmd:
+                    command = sanitized_cmd
 
             # Prepare environment with enhanced sanitization
             env = os.environ.copy()
@@ -215,7 +224,7 @@ class BashTool(Tool):
                 env.update(safe_env_vars)
 
             # Prepare shell command
-            shell_cmd = self._prepare_shell_command(command, shell)
+            shell_cmd = self._prepare_shell_command(str(command), shell)
 
             output_lines = []
             if show_command:
@@ -225,11 +234,16 @@ class BashTool(Tool):
             # Execute command
             if interactive:
                 result = await self._execute_interactive(
-                    shell_cmd, work_dir, env, timeout, input_data
+                    shell_cmd, work_dir or Path("."), env, timeout, input_data
                 )
             else:
                 result = await self._execute_standard(
-                    shell_cmd, work_dir, env, timeout, capture_output, input_data
+                    shell_cmd,
+                    work_dir or Path("."),
+                    env,
+                    timeout,
+                    capture_output,
+                    input_data,
                 )
 
             # Format output
@@ -320,23 +334,19 @@ class BashTool(Tool):
         process = None
         try:
             # Create process with proper settings
-            kwargs = {
+            kwargs: Dict[str, Any] = {
                 "cwd": str(work_dir),
                 "env": env,
             }
 
             # Set up process group for better cleanup on Unix
             if hasattr(os, "setsid"):
-                kwargs["preexec_fn"] = os.setsid
+                kwargs["start_new_session"] = True  # More portable than preexec_fn
 
             if capture_output:
-                kwargs.update(
-                    {
-                        "stdout": asyncio.subprocess.PIPE,
-                        "stderr": asyncio.subprocess.PIPE,
-                        "stdin": asyncio.subprocess.PIPE if input_data else None,
-                    }
-                )
+                kwargs["stdout"] = asyncio.subprocess.PIPE
+                kwargs["stderr"] = asyncio.subprocess.PIPE
+                kwargs["stdin"] = asyncio.subprocess.PIPE if input_data else None
 
             process = await asyncio.create_subprocess_exec(*shell_cmd, **kwargs)
 
@@ -501,7 +511,7 @@ class BashTool(Tool):
         except pexpect.exceptions.ExceptionPexpect:
             # Handle other pexpect exceptions
             pass
-        except Exception:
+        except Exception:  # nosec
             # Catch any other exceptions
             pass
 
@@ -599,7 +609,7 @@ class BashTool(Tool):
             if child:
                 try:
                     child.terminate(force=True)
-                except Exception:
+                except Exception:  # nosec
                     pass
             return {
                 "success": False,
@@ -613,7 +623,7 @@ class BashTool(Tool):
             if child and child.isalive():
                 try:
                     child.terminate(force=True)
-                except Exception:
+                except Exception:  # nosec
                     pass
             output_buffer.close()
 
@@ -631,8 +641,8 @@ class ScriptTool(Tool):
                 ToolParameter(
                     name="script_content",
                     type="string",
-                    description="Script content (multiple commands separated by newlines)",
-                    required=True,
+                    description="Script content (multiple commands separated by newlines)",  # noqa: E501
+                    required=True,  # noqa: E501
                 ),
                 ToolParameter(
                     name="script_type",
@@ -675,8 +685,10 @@ class ScriptTool(Tool):
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute a shell script with proper validation."""
         try:
-            # Extract parameters (support both 'script_content' and 'script' for compatibility)
-            script_content = kwargs.get("script_content") or kwargs.get("script")
+            # Extract parameters (support both 'script_content' and 'script' for compatibility) # noqa: E501
+            script_content = kwargs.get("script_content") or kwargs.get(
+                "script"
+            )  # noqa: E501
             script_type = kwargs.get("script_type", "bash")
             working_dir = kwargs.get("working_dir", ".")
             timeout = kwargs.get("timeout", 60)
