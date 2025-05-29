@@ -22,6 +22,8 @@ DEFAULT_CONFIG = {
     "max_concurrent_tools": 5,
     "tool_timeout": 300,
     "ollama_host": "http://localhost:11434",
+    "use_ripgrep": True,
+    "parallel_grep_workers": 4,
     "permissions": {
         "allow_file_read": True,
         "allow_file_write": True,
