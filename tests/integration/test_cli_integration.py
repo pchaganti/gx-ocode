@@ -46,20 +46,29 @@ class TestCLIIntegration:
         mock_auth_instance.token.return_value = "test-token"
         mock_auth.return_value = mock_auth_instance
 
-        # Mock engine
-        async def mock_process(prompt):
+        # Mock engine with async generator
+        async def mock_process(prompt, continue_previous=False):
             yield "This is a test response."
 
-        mock_engine_instance = Mock()
+        # Create AsyncMock for the engine instance
+        from unittest.mock import AsyncMock
+
+        mock_engine_instance = AsyncMock()
         mock_engine_instance.process = mock_process
         mock_engine.return_value = mock_engine_instance
 
         runner = CliRunner()
         result = runner.invoke(cli, ["-p", "Hello, world!"])
 
-        # Note: This test is limited because CliRunner doesn't handle async well
-        # The actual async execution is mocked
+        # Check exit code - should be 0 for successful completion
+        if result.exit_code != 0:
+            print(f"Exit code: {result.exit_code}")
+            print(f"Output: {result.output}")
+            if result.exception:
+                print(f"Exception: {result.exception}")
+
         assert result.exit_code == 0
+        assert "This is a test response." in result.output
 
     def test_cli_init_command(self, temp_dir: Path):
         """Test CLI init command."""
