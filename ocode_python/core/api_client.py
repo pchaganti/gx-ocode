@@ -20,6 +20,11 @@ class Message:
     content: str
 
     def to_dict(self) -> Dict[str, str]:
+        """Convert message to dictionary format.
+
+        Returns:
+            Dictionary with role and content fields.
+        """
         return {"role": self.role, "content": self.content}
 
 
@@ -44,7 +49,13 @@ class StreamChunk:
 
     @property
     def type(self) -> str:
-        """Get the type of this chunk."""
+        """Get the type of this chunk.
+
+        Determines chunk type based on its content.
+
+        Returns:
+            One of: "tool_call", "content", "done", or "unknown".
+        """
         if self.tool_call:
             return "tool_call"
         elif self.content:
@@ -90,22 +101,49 @@ class OllamaAPIClient:
         self.session: Optional[aiohttp.ClientSession] = None
 
     async def __aenter__(self) -> "OllamaAPIClient":
-        """Async context manager entry."""
+        """Async context manager entry.
+
+        Creates and returns an aiohttp ClientSession.
+
+        Returns:
+            Self for use in async with statements.
+        """
         self.session = aiohttp.ClientSession(timeout=self.timeout)
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Async context manager exit."""
+        """Async context manager exit.
+
+        Closes the aiohttp session if it exists.
+
+        Args:
+            exc_type: Exception type if an exception occurred.
+            exc_val: Exception value if an exception occurred.
+            exc_tb: Exception traceback if an exception occurred.
+        """
         if self.session:
             await self.session.close()
 
     async def _ensure_session(self) -> None:
-        """Ensure we have an active session."""
+        """Ensure we have an active session.
+
+        Creates a new aiohttp ClientSession if one doesn't exist
+        or if the existing one is closed.
+        """
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession(timeout=self.timeout)
 
     def _convert_messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
-        """Convert chat messages to a single prompt for /api/generate endpoint."""
+        """Convert chat messages to a single prompt for /api/generate endpoint.
+
+        Formats messages with role prefixes for the generate API.
+
+        Args:
+            messages: List of message dictionaries with role and content.
+
+        Returns:
+            Formatted prompt string with role-prefixed messages.
+        """
         prompt_parts = []
 
         for message in messages:
@@ -203,7 +241,17 @@ class OllamaAPIClient:
             raise RuntimeError(f"Streaming error: {e}")
 
     def _parse_chunk(self, data: Dict[str, Any]) -> StreamChunk:
-        """Parse raw response data into StreamChunk."""
+        """Parse raw response data into StreamChunk.
+
+        Handles different response formats from /api/generate and /api/chat endpoints.
+        Extracts content and tool calls as appropriate.
+
+        Args:
+            data: Raw JSON response data from Ollama API.
+
+        Returns:
+            Parsed StreamChunk object.
+        """
         chunk = StreamChunk(
             done=data.get("done", False),
             model=data.get("model"),
@@ -359,7 +407,11 @@ class OllamaAPIClient:
             raise ConnectionError(f"Failed to generate embeddings: {e}")
 
     def close(self) -> None:
-        """Close the session (for non-async usage)."""
+        """Close the session (for non-async usage).
+
+        Creates an async task to close the session. This method
+        allows non-async code to trigger session cleanup.
+        """
         if self.session and not self.session.closed:
             asyncio.create_task(self.session.close())
 

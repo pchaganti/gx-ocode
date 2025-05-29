@@ -29,6 +29,11 @@ class JSONRPCRequest:
     id: Optional[Union[str, int]] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert request to JSON-RPC dictionary format.
+
+        Returns:
+            Dictionary representation of the JSON-RPC request.
+        """
         result: Dict[str, Any] = {"jsonrpc": self.jsonrpc, "method": self.method}
         if self.params is not None:
             result["params"] = self.params
@@ -47,6 +52,11 @@ class JSONRPCResponse:
     error: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert response to JSON-RPC dictionary format.
+
+        Returns:
+            Dictionary representation of the JSON-RPC response.
+        """
         response: Dict[str, Any] = {"jsonrpc": self.jsonrpc}
         if self.id is not None:
             response["id"] = self.id
@@ -67,6 +77,11 @@ class MCPResource:
     mime_type: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert resource to dictionary representation.
+
+        Returns:
+            Dictionary containing all resource fields.
+        """
         return asdict(self)
 
 
@@ -79,6 +94,11 @@ class MCPTool:
     input_schema: Dict[str, Any]
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert resource to dictionary representation.
+
+        Returns:
+            Dictionary containing all resource fields.
+        """
         return asdict(self)
 
 
@@ -91,6 +111,11 @@ class MCPPrompt:
     arguments: Optional[List[Dict[str, Any]]] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert resource to dictionary representation.
+
+        Returns:
+            Dictionary containing all resource fields.
+        """
         return asdict(self)
 
 
@@ -417,6 +442,12 @@ class MCPServer(MCPProtocol):
     """MCP Server implementation."""
 
     def __init__(self, name: str, version: str = "1.0.0"):
+        """Initialize MCP server.
+
+        Args:
+            name: Server name.
+            version: Server version.
+        """
         super().__init__(name, version)
 
     async def start_stdio(self):
@@ -455,6 +486,12 @@ class MCPClient(MCPProtocol):
     """MCP Client implementation."""
 
     def __init__(self, name: str, version: str = "1.0.0"):
+        """Initialize MCP client.
+
+        Args:
+            name: Client name.
+            version: Client version.
+        """
         super().__init__(name, version)
         self.pending_requests: Dict[str, asyncio.Future] = {}
 

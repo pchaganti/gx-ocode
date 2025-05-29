@@ -14,6 +14,12 @@ class CopyTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the cp (copy) tool specification.
+
+        Returns:
+            ToolDefinition with parameters for copying files and directories
+            with options for recursive copy, preservation, and overwrite control.
+        """
         return ToolDefinition(
             name="cp",
             description="Copy files or directories",
@@ -141,6 +147,12 @@ class MoveTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the mv (move) tool specification.
+
+        Returns:
+            ToolDefinition with parameters for moving or renaming files
+            and directories with force and interactive options.
+        """
         return ToolDefinition(
             name="mv",
             description="Move or rename files and directories",
@@ -207,6 +219,12 @@ class RemoveTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the rm (remove) tool specification.
+
+        Returns:
+            ToolDefinition with parameters for safely removing files and
+            directories with options for recursive deletion and force mode.
+        """
         return ToolDefinition(
             name="rm",
             description="Remove files and directories (with safety checks)",

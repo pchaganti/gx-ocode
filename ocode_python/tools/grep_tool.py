@@ -34,6 +34,13 @@ class GrepTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the grep tool specification.
+
+        Returns:
+            ToolDefinition with parameters for advanced text searching including
+            regex patterns, file filtering, case sensitivity, context lines,
+            and support for ripgrep optimization when available.
+        """
         return ToolDefinition(
             name="grep",
             description="Search for patterns in files using regular expressions",
@@ -925,7 +932,14 @@ class CodeGrepTool(GrepTool):
         return matches
 
     def _get_python_comment_ranges(self, content: str) -> List[tuple]:
-        """Get line ranges for Python comments."""
+        """Get line ranges for Python comments.
+
+        Args:
+            content: The full content of the Python file.
+
+        Returns:
+            List of tuples containing (start_line, end_line) for each comment.
+        """
         ranges = []
         for pattern in self._comment_patterns["python"]:
             for match in re.finditer(pattern, content, re.MULTILINE | re.DOTALL):
@@ -935,7 +949,14 @@ class CodeGrepTool(GrepTool):
         return ranges
 
     def _get_python_string_ranges(self, tree: ast.AST) -> List[tuple]:
-        """Get line ranges for Python string literals."""
+        """Get line ranges for Python string literals.
+
+        Args:
+            tree: The AST tree of the Python file.
+
+        Returns:
+            List of tuples containing (start_line, end_line) for each string literal.
+        """
         ranges = []
         for node in ast.walk(tree):
             if isinstance(node, (ast.Str, ast.JoinedStr)):
@@ -943,7 +964,14 @@ class CodeGrepTool(GrepTool):
         return ranges
 
     def _get_js_comment_ranges(self, content: str) -> List[tuple]:
-        """Get line ranges for JavaScript/TypeScript comments."""
+        """Get line ranges for JavaScript/TypeScript comments.
+
+        Args:
+            content: The full content of the JavaScript/TypeScript file.
+
+        Returns:
+            List of tuples containing (start_line, end_line) for each comment.
+        """
         ranges = []
         for pattern in self._comment_patterns["javascript"]:
             for match in re.finditer(pattern, content, re.MULTILINE | re.DOTALL):
@@ -953,7 +981,14 @@ class CodeGrepTool(GrepTool):
         return ranges
 
     def _get_js_string_ranges(self, content: str) -> List[tuple]:
-        """Get line ranges for JavaScript/TypeScript string literals."""
+        """Get line ranges for JavaScript/TypeScript string literals.
+
+        Args:
+            content: The full content of the JavaScript/TypeScript file.
+
+        Returns:
+            List of tuples containing (start_line, end_line) for each string literal.
+        """
         ranges = []
         for pattern in self._string_patterns["javascript"]:
             for match in re.finditer(pattern, content, re.MULTILINE | re.DOTALL):
@@ -963,7 +998,15 @@ class CodeGrepTool(GrepTool):
         return ranges
 
     def _is_in_range(self, line_num: int, ranges: List[tuple]) -> bool:
-        """Check if a line number falls within any of the given ranges."""
+        """Check if a line number falls within any of the given ranges.
+
+        Args:
+            line_num: The line number to check.
+            ranges: List of tuples containing (start_line, end_line) ranges.
+
+        Returns:
+            True if line_num falls within any of the ranges, False otherwise.
+        """
         return any(start <= line_num <= end for start, end in ranges)
 
     def _create_match_info(
@@ -975,7 +1018,19 @@ class CodeGrepTool(GrepTool):
         context_lines: int,
         include_line_numbers: bool,
     ) -> Dict[str, Any]:
-        """Create a match info dictionary with context."""
+        """Create a match info dictionary with context.
+
+        Args:
+            file_path: Path to the file containing the match.
+            line_num: Zero-based line number of the match.
+            line_text: Text content of the matching line.
+            all_lines: List of all lines in the file.
+            context_lines: Number of context lines to include before and after.
+            include_line_numbers: Whether to include line numbers in output.
+
+        Returns:
+            Dictionary containing file, line_num (1-based), text, and context.
+        """
         match_info: Dict[str, Any] = {
             "file": str(file_path),
             "line_num": line_num + 1,
@@ -1001,7 +1056,19 @@ class CodeGrepTool(GrepTool):
         return match_info
 
     async def _enhanced_search(self, **kwargs: Any) -> ToolResult:
-        """Enhanced search with language-specific features."""
+        """Enhanced search with language-specific features.
+
+        Performs language-aware searching with support for excluding comments
+        and string literals, language-specific file filtering, and enhanced
+        pattern matching.
+
+        Args:
+            **kwargs: Keyword arguments including pattern, path, language,
+                     exclude_comments, exclude_strings, etc.
+
+        Returns:
+            ToolResult containing search results with language-specific enhancements.
+        """
         try:
             pattern = kwargs.get("pattern")
             if not pattern:

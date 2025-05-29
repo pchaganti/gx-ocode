@@ -15,6 +15,12 @@ class MemoryReadTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the memory_read tool specification.
+
+        Returns:
+            ToolDefinition with parameters for reading different types of memory
+            including session, context, persistent, and filtered access options.
+        """
         return ToolDefinition(
             name="memory_read",
             description="Read session memory, context data, and persistent information from various sources",  # noqa: E501  # noqa: E501
@@ -350,6 +356,12 @@ class MemoryWriteTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the memory_write tool specification.
+
+        Returns:
+            ToolDefinition with parameters for writing to different memory types
+            including key-value storage, operations (set/append/delete), and categories.
+        """
         return ToolDefinition(
             name="memory_write",
             description="Write and manage session memory, context data, and persistent information",  # noqa: E501

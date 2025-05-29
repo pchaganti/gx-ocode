@@ -15,6 +15,12 @@ class FindTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the find tool specification.
+
+        Returns:
+            ToolDefinition with parameters for finding files and directories
+            by name patterns, type, size, modification time, and content.
+        """
         return ToolDefinition(
             name="find",
             description="Find files and directories by name, size, type, etc.",

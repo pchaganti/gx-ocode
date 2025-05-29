@@ -52,6 +52,12 @@ class StickerRequestTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the sticker tool specification.
+
+        Returns:
+            ToolDefinition with parameters for creating and managing code
+            annotations including notes, TODOs, warnings, and bookmarks.
+        """
         return ToolDefinition(
             name="sticker",
             description="Create, manage, and organize code annotations, notes, TODOs, and markers",  # noqa: E501

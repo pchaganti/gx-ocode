@@ -12,6 +12,12 @@ class WcTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the wc (word count) tool specification.
+
+        Returns:
+            ToolDefinition with parameters for counting lines, words,
+            and characters in files.
+        """
         return ToolDefinition(
             name="wc",
             description="Count lines, words, and characters in files",

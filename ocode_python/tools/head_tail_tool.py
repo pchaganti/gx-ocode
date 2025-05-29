@@ -12,6 +12,12 @@ class HeadTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the head tool specification.
+
+        Returns:
+            ToolDefinition with parameters for displaying the first N lines
+            of a file.
+        """
         return ToolDefinition(
             name="head",
             description="Display the first lines of a file",
@@ -78,6 +84,12 @@ class TailTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the tail tool specification.
+
+        Returns:
+            ToolDefinition with parameters for displaying the last N lines
+            of a file with optional follow mode.
+        """
         return ToolDefinition(
             name="tail",
             description="Display the last lines of a file",

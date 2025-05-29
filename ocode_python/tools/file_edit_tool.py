@@ -15,6 +15,12 @@ class FileEditTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the file_edit tool specification.
+
+        Returns:
+            ToolDefinition with parameters for in-place file editing including
+            replace, insert, delete, append, and prepend operations.
+        """
         return ToolDefinition(
             name="file_edit",
             description="Edit files in-place with find/replace, line operations, and transformations",  # noqa: E501

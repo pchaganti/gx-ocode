@@ -25,6 +25,12 @@ class ProcessMonitorTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the ps (process monitor) tool specification.
+
+        Returns:
+            ToolDefinition with parameters for monitoring system processes
+            including list, find, info, and check actions.
+        """
         return ToolDefinition(
             name="ps",
             description="Monitor and query system processes",

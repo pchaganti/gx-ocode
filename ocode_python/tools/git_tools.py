@@ -14,6 +14,12 @@ class GitStatusTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the git_status tool specification.
+
+        Returns:
+            ToolDefinition with parameters for checking git repository status
+            including optional path parameter.
+        """
         return ToolDefinition(
             name="git_status",
             description="Get the current git repository status",
@@ -90,6 +96,12 @@ class GitCommitTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the git_commit tool specification.
+
+        Returns:
+            ToolDefinition with parameters for creating git commits
+            including message and optional path parameter.
+        """
         return ToolDefinition(
             name="git_commit",
             description="Create a git commit with specified message",
@@ -178,6 +190,12 @@ class GitDiffTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the git_diff tool specification.
+
+        Returns:
+            ToolDefinition with parameters for showing git differences
+            including staged, file, and path options.
+        """
         return ToolDefinition(
             name="git_diff",
             description="Show git diff for files or commits",
@@ -296,6 +314,12 @@ class GitBranchTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the git_branch tool specification.
+
+        Returns:
+            ToolDefinition with parameters for managing git branches
+            including action, name, and path options.
+        """
         return ToolDefinition(
             name="git_branch",
             description="Manage git branches",

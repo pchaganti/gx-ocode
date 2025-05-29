@@ -32,6 +32,7 @@ class AgentTask:
     completed_at: Optional[str] = None
 
     def __post_init__(self):
+        """Initialize timestamp if not provided."""
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
 
@@ -50,6 +51,7 @@ class SubAgent:
     created_at: str = ""
 
     def __post_init__(self):
+        """Initialize timestamp if not provided."""
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
 
@@ -58,6 +60,7 @@ class AgentTool(Tool):
     """Tool for creating and managing specialized sub-agents for task delegation."""
 
     def __init__(self):
+        """Initialize agent tool with empty agent and task registries."""
         super().__init__()
         self.agents: Dict[str, SubAgent] = {}
         self.tasks: Dict[str, AgentTask] = {}
@@ -65,6 +68,12 @@ class AgentTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the agent tool specification.
+
+        Returns:
+            ToolDefinition with parameters for creating and managing sub-agents,
+            delegating tasks, monitoring status, and organizing work queues.
+        """
         return ToolDefinition(
             name="agent",
             description="Create, manage, and delegate tasks to specialized sub-agents",

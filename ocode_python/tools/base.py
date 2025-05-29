@@ -30,7 +30,14 @@ class ToolDefinition:
     category: str = "General"  # Default category for backward compatibility
 
     def to_ollama_format(self) -> Dict[str, Any]:
-        """Convert to Ollama function calling format."""
+        """Convert to Ollama function calling format.
+
+        Transforms the tool definition into the format expected by
+        Ollama's function calling API.
+
+        Returns:
+            Dictionary with type="function" and nested function definition.
+        """
         properties = {}
         required = []
 
@@ -70,6 +77,11 @@ class ToolResult:
     metadata: Optional[Dict[str, Any]] = None
 
     def __str__(self) -> str:
+        """String representation of the tool result.
+
+        Returns:
+            Output string if successful, error message if not.
+        """
         if self.success:
             return self.output
         else:
@@ -98,6 +110,13 @@ class ToolError(Exception):
         error_type: ErrorType = ErrorType.INTERNAL_ERROR,
         details: Optional[Dict[str, Any]] = None,
     ):
+        """Initialize tool error with type and details.
+
+        Args:
+            message: Error message.
+            error_type: Type of error from ErrorType enum.
+            details: Additional error details.
+        """
         super().__init__(message)
         self.error_type = error_type
         self.details = details or {}
@@ -108,7 +127,18 @@ class ErrorHandler:
 
     @staticmethod
     def handle_exception(e: Exception, context: str = "") -> ToolResult:
-        """Convert any exception to a standardized ToolResult."""
+        """Convert any exception to a standardized ToolResult.
+
+        Provides consistent error handling and categorization for
+        different exception types.
+
+        Args:
+            e: The exception to handle.
+            context: Additional context about where the error occurred.
+
+        Returns:
+            ToolResult with error details and appropriate metadata.
+        """
         if isinstance(e, ToolError):
             error_msg = str(e)
             metadata = {
@@ -154,7 +184,15 @@ class ErrorHandler:
     def validate_required_params(
         kwargs: Dict[str, Any], required_params: List[str]
     ) -> Optional[ToolResult]:
-        """Validate that required parameters are present."""
+        """Validate that required parameters are present.
+
+        Args:
+            kwargs: Dictionary of provided parameters.
+            required_params: List of parameter names that must be present.
+
+        Returns:
+            ToolResult with error if validation fails, None if valid.
+        """
         missing_params = [
             param
             for param in required_params
@@ -181,7 +219,18 @@ class ErrorHandler:
         max_length: int = 10000,
         pattern: Optional[str] = None,
     ) -> Optional[ToolResult]:
-        """Validate string parameter with length and pattern constraints."""
+        """Validate string parameter with length and pattern constraints.
+
+        Args:
+            value: Value to validate.
+            param_name: Name of the parameter (for error messages).
+            min_length: Minimum string length.
+            max_length: Maximum string length.
+            pattern: Optional regex pattern to match.
+
+        Returns:
+            ToolResult with error if validation fails, None if valid.
+        """
         if not isinstance(value, str):
             return ErrorHandler.create_error_result(
                 f"Parameter '{param_name}' must be a string, got {type(value).__name__}",  # noqa: E501
@@ -227,7 +276,15 @@ class ErrorHandler:
     def create_success_result(
         output: str, metadata: Optional[Dict[str, Any]] = None
     ) -> ToolResult:
-        """Create a standardized success result."""
+        """Create a standardized success result.
+
+        Args:
+            output: The output string from the tool.
+            metadata: Optional metadata dictionary.
+
+        Returns:
+            ToolResult with success=True.
+        """
         return ToolResult(success=True, output=output, metadata=metadata or {})
 
     @staticmethod
@@ -236,7 +293,16 @@ class ErrorHandler:
         error_type: ErrorType = ErrorType.INTERNAL_ERROR,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> ToolResult:
-        """Create a standardized error result."""
+        """Create a standardized error result.
+
+        Args:
+            error_msg: The error message.
+            error_type: Type of error from ErrorType enum.
+            metadata: Optional error metadata.
+
+        Returns:
+            ToolResult with success=False and error details.
+        """
         result_metadata = {"error_type": error_type.value}
         if metadata:
             result_metadata.update(metadata)
@@ -260,7 +326,36 @@ class Tool(ABC):
     @property
     @abstractmethod
     def definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling."""
+        """Get tool definition for LLM function calling.
+
+        This property must be implemented by all tool subclasses to provide
+        metadata about the tool including its name, description, parameters,
+        and category. The definition is used by the LLM to understand what
+        tools are available and how to call them.
+
+        Returns:
+            ToolDefinition object containing:
+            - name: Unique identifier for the tool
+            - description: Clear explanation of what the tool does
+            - parameters: List of ToolParameter objects defining inputs
+            - category: Functional category for tool organization
+
+        Example:
+            >>> def definition(self) -> ToolDefinition:
+            ...     return ToolDefinition(
+            ...         name="file_read",
+            ...         description="Read the contents of a file",
+            ...         category="File Operations",
+            ...         parameters=[
+            ...             ToolParameter(
+            ...                 name="path",
+            ...                 type="string",
+            ...                 description="Path to the file to read",
+            ...                 required=True
+            ...             )
+            ...         ]
+            ...     )
+        """
         pass
 
     @abstractmethod
@@ -269,7 +364,17 @@ class Tool(ABC):
         pass
 
     def validate_parameters(self, kwargs: Dict[str, Any]) -> bool:
-        """Validate parameters against tool definition."""
+        """Validate parameters against tool definition.
+
+        Checks that required parameters are present and have correct types.
+        Special handling for 'value' parameter in memory tools.
+
+        Args:
+            kwargs: Dictionary of provided parameters.
+
+        Returns:
+            True if parameters are valid, False otherwise.
+        """
         definition = self.definition
 
         # Check required parameters
@@ -313,11 +418,19 @@ class ToolRegistry:
         self.tools: Dict[str, Tool] = {}
 
     def register(self, tool: Tool):
-        """Register a tool."""
+        """Register a tool.
+
+        Args:
+            tool: Tool instance to register.
+        """
         self.tools[tool.name] = tool
 
     def register_core_tools(self):
-        """Register all core tools."""
+        """Register all core tools.
+
+        Imports and registers all built-in OCode tools including
+        file operations, git tools, shell tools, and more.
+        """
         from .agent_tool import AgentTool
         from .architect_tool import ArchitectTool
         from .bash_tool import BashTool, ScriptTool
@@ -401,19 +514,44 @@ class ToolRegistry:
             self.register(tool)
 
     def get_tool(self, name: str) -> Optional[Tool]:
-        """Get tool by name."""
+        """Get tool by name.
+
+        Args:
+            name: Name of the tool to retrieve.
+
+        Returns:
+            Tool instance if found, None otherwise.
+        """
         return self.tools.get(name)
 
     def get_all_tools(self) -> List[Tool]:
-        """Get all registered tools."""
+        """Get all registered tools.
+
+        Returns:
+            List of all registered Tool instances.
+        """
         return list(self.tools.values())
 
     def get_tool_definitions(self) -> List[Dict[str, Any]]:
-        """Get all tool definitions in Ollama format."""
+        """Get all tool definitions in Ollama format.
+
+        Returns:
+            List of tool definitions formatted for Ollama's function calling API.
+        """
         return [tool.definition.to_ollama_format() for tool in self.tools.values()]
 
     async def execute_tool(self, tool_name: str, **kwargs) -> ToolResult:
-        """Execute a tool by name."""
+        """Execute a tool by name.
+
+        Validates parameters and executes the specified tool.
+
+        Args:
+            tool_name: Name of the tool to execute.
+            **kwargs: Parameters to pass to the tool.
+
+        Returns:
+            ToolResult from the tool execution.
+        """
         tool = self.get_tool(tool_name)
         if not tool:
             return ToolResult(

@@ -43,7 +43,16 @@ class PermissionRule:
     description: str
 
     def matches(self, target: str) -> bool:
-        """Check if this rule matches the target."""
+        """Check if this rule matches the target.
+
+        Uses fnmatch for glob-style pattern matching.
+
+        Args:
+            target: Path or command to match against.
+
+        Returns:
+            True if the pattern matches the target.
+        """
         # Support glob-style patterns
         import fnmatch
 
@@ -82,7 +91,11 @@ class PermissionManager:
             self._load_config(config_path)
 
     def _load_default_rules(self):
-        """Load default security rules."""
+        """Load default security rules.
+
+        Sets up default blocked paths, dangerous commands, and
+        safe commands with appropriate permission levels.
+        """
         # Default blocked paths (high-security system directories)
         default_blocked = [
             "/etc/*",
@@ -215,7 +228,14 @@ class PermissionManager:
         )
 
     def _load_config(self, config_path: Path):
-        """Load configuration from file."""
+        """Load configuration from file.
+
+        Loads custom security rules and path/command restrictions
+        from a JSON configuration file.
+
+        Args:
+            config_path: Path to the security configuration file.
+        """
         try:
             import json
 
@@ -251,11 +271,22 @@ class PermissionManager:
             print(f"Warning: Failed to load security config: {e}")
 
     def add_rule(self, rule: PermissionRule):
-        """Add a permission rule."""
+        """Add a permission rule.
+
+        Args:
+            rule: PermissionRule to add to the security policy.
+        """
         self.rules.append(rule)
 
     def add_validator(self, operation: OperationType, validator: Callable[[str], bool]):
-        """Add a custom validator for an operation type."""
+        """Add a custom validator for an operation type.
+
+        Custom validators are called before rule-based checks.
+
+        Args:
+            operation: Operation type to validate.
+            validator: Function that returns True if operation is allowed.
+        """
         if operation not in self.validators:
             self.validators[operation] = []
         self.validators[operation].append(validator)
@@ -319,7 +350,14 @@ class PermissionManager:
         return PermissionLevel.RESTRICTED
 
     def _is_path_blocked(self, path: str) -> bool:
-        """Check if path is explicitly blocked."""
+        """Check if path is explicitly blocked.
+
+        Args:
+            path: Path to check.
+
+        Returns:
+            True if path matches any blocked pattern.
+        """
         import fnmatch
 
         abs_path = os.path.abspath(path)
@@ -331,7 +369,14 @@ class PermissionManager:
         return False
 
     def _is_path_allowed(self, path: str) -> bool:
-        """Check if path is explicitly allowed."""
+        """Check if path is explicitly allowed.
+
+        Args:
+            path: Path to check.
+
+        Returns:
+            True if path matches any allowed pattern.
+        """
         import fnmatch
 
         abs_path = os.path.abspath(path)
@@ -343,22 +388,50 @@ class PermissionManager:
         return False
 
     def can_read_file(self, file_path: str) -> bool:
-        """Check if file can be read."""
+        """Check if file can be read.
+
+        Args:
+            file_path: Path to the file.
+
+        Returns:
+            True if read access is allowed.
+        """
         permission = self.check_permission(OperationType.FILE_READ, file_path)
         return permission != PermissionLevel.DENIED
 
     def can_write_file(self, file_path: str) -> bool:
-        """Check if file can be written."""
+        """Check if file can be written.
+
+        Args:
+            file_path: Path to the file.
+
+        Returns:
+            True if write access is allowed.
+        """
         permission = self.check_permission(OperationType.FILE_WRITE, file_path)
         return permission in [PermissionLevel.RESTRICTED, PermissionLevel.FULL]
 
     def can_delete_file(self, file_path: str) -> bool:
-        """Check if file can be deleted."""
+        """Check if file can be deleted.
+
+        Args:
+            file_path: Path to the file.
+
+        Returns:
+            True if delete access is allowed (requires FULL permission).
+        """
         permission = self.check_permission(OperationType.FILE_DELETE, file_path)
         return permission == PermissionLevel.FULL
 
     def can_execute_command(self, command: str) -> bool:
-        """Check if command can be executed."""
+        """Check if command can be executed.
+
+        Args:
+            command: Command string to check.
+
+        Returns:
+            True if command execution is allowed.
+        """
         permission = self.check_permission(OperationType.SHELL_EXEC, command)
         return permission != PermissionLevel.DENIED
 
@@ -392,7 +465,14 @@ class PermissionManager:
         return command
 
     def get_safe_environment(self) -> Dict[str, str]:
-        """Get sanitized environment variables."""
+        """Get sanitized environment variables.
+
+        Only includes a whitelist of safe environment variables
+        to prevent information leakage.
+
+        Returns:
+            Dictionary of safe environment variables.
+        """
         safe_env = {}
 
         # Only include safe environment variables
@@ -490,7 +570,14 @@ class PermissionManager:
             return False, f"Validation error: {str(e)}"
 
     def export_policy(self, output_path: Path):
-        """Export current security policy to file."""
+        """Export current security policy to file.
+
+        Exports all rules and restrictions to a JSON file for
+        backup or sharing.
+
+        Args:
+            output_path: Path where the policy JSON will be written.
+        """
         policy = {
             "rules": [
                 {
@@ -517,6 +604,11 @@ class SecureShellExecutor:
     """Secure shell command executor with sandboxing."""
 
     def __init__(self, permission_manager: PermissionManager):
+        """Initialize secure shell executor.
+
+        Args:
+            permission_manager: PermissionManager instance for security checks.
+        """
         self.permission_manager = permission_manager
 
     async def execute(
@@ -575,7 +667,11 @@ class SecureShellExecutor:
 
 
 def main():
-    """Example usage of security system."""
+    """Example usage of security system.
+
+    Demonstrates permission checking for various file operations
+    and command executions.
+    """
     manager = PermissionManager()
 
     # Test file operations

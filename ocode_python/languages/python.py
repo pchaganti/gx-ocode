@@ -17,7 +17,16 @@ from .base import (
 
 
 def safe_unparse(node: ast.AST) -> str:
-    """Safely unparse AST node, handling version compatibility."""
+    """Safely unparse AST node, handling version compatibility.
+
+    Uses ast.unparse on Python 3.9+, falls back to class name on older versions.
+
+    Args:
+        node: AST node to unparse.
+
+    Returns:
+        String representation of the node.
+    """
     try:
         if hasattr(ast, "unparse"):
             result = ast.unparse(node)
@@ -34,14 +43,35 @@ class PythonAnalyzer(LanguageAnalyzer):
 
     @property
     def file_extensions(self) -> List[str]:
+        """File extensions handled by this analyzer.
+
+        Returns:
+            List of Python file extensions.
+        """
         return [".py", ".pyw", ".pyi"]
 
     @property
     def comment_patterns(self) -> List[str]:
+        """Comment patterns for Python.
+
+        Returns:
+            List containing the hash comment pattern.
+        """
         return ["#"]
 
     def parse_file(self, file_path: Path, content: str) -> AnalysisResult:
-        """Parse Python file using AST."""
+        """Parse Python file using AST.
+
+        Extracts symbols, imports, metrics, and dependencies from Python source.
+        Handles syntax errors gracefully.
+
+        Args:
+            file_path: Path to the Python file.
+            content: File content to parse.
+
+        Returns:
+            AnalysisResult with extracted information.
+        """
         symbols = []
         imports = []
         syntax_errors = []
@@ -92,7 +122,14 @@ class PythonAnalyzer(LanguageAnalyzer):
         )
 
     def extract_symbols(self, content: str) -> List[Symbol]:
-        """Extract symbols using AST."""
+        """Extract symbols using AST.
+
+        Args:
+            content: Python source code.
+
+        Returns:
+            List of Symbol objects found in the code.
+        """
         try:
             tree = ast.parse(content)
             visitor = PythonASTVisitor()
@@ -102,7 +139,14 @@ class PythonAnalyzer(LanguageAnalyzer):
             return []
 
     def extract_imports(self, content: str) -> List[Import]:
-        """Extract imports using AST."""
+        """Extract imports using AST.
+
+        Args:
+            content: Python source code.
+
+        Returns:
+            List of Import objects found in the code.
+        """
         try:
             tree = ast.parse(content)
             visitor = PythonASTVisitor()
@@ -116,13 +160,25 @@ class PythonASTVisitor(ast.NodeVisitor):
     """AST visitor for extracting Python symbols and imports."""
 
     def __init__(self):
+        """Initialize AST visitor.
+
+        Sets up empty lists for symbols and imports, and tracking
+        variables for current class and scope.
+        """
         self.symbols: List[Symbol] = []
         self.imports: List[Import] = []
         self.current_class: Optional[str] = None
         self.scope_stack: List[str] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
-        """Visit function definition."""
+        """Visit function definition.
+
+        Extracts function information including parameters, return type,
+        docstring, decorators, and visibility.
+
+        Args:
+            node: AST FunctionDef node.
+        """
         # Determine if this is a method or function
         symbol_type = SymbolType.METHOD if self.current_class else SymbolType.FUNCTION
 
@@ -183,7 +239,13 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.scope_stack.pop()
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
-        """Visit async function definition."""
+        """Visit async function definition.
+
+        Similar to regular functions but for async def statements.
+
+        Args:
+            node: AST AsyncFunctionDef node.
+        """
         # Handle async function like regular function
         scope = ".".join(self.scope_stack) if self.scope_stack else ""
 
@@ -239,7 +301,14 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.scope_stack.pop()
 
     def visit_ClassDef(self, node: ast.ClassDef):
-        """Visit class definition."""
+        """Visit class definition.
+
+        Extracts class information including docstring, decorators,
+        and tracks class context for method definitions.
+
+        Args:
+            node: AST ClassDef node.
+        """
         # Get scope
         scope = ".".join(self.scope_stack) if self.scope_stack else None
 
@@ -285,7 +354,14 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.current_class = old_class
 
     def visit_Assign(self, node: ast.Assign):
-        """Visit assignment (for module-level variables)."""
+        """Visit assignment (for module-level variables).
+
+        Only processes module-level assignments, detecting constants
+        (all uppercase) and regular variables.
+
+        Args:
+            node: AST Assign node.
+        """
         # Only handle module-level assignments (not inside functions/classes)
         if not self.scope_stack:
             for target in node.targets:
@@ -313,7 +389,13 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign):
-        """Visit annotated assignment."""
+        """Visit annotated assignment.
+
+        Handles type-annotated assignments at module level.
+
+        Args:
+            node: AST AnnAssign node.
+        """
         # Only handle module-level assignments
         if not self.scope_stack and isinstance(node.target, ast.Name):
             symbol_type = (
@@ -340,7 +422,13 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Import(self, node: ast.Import):
-        """Visit import statement."""
+        """Visit import statement.
+
+        Handles 'import module' statements.
+
+        Args:
+            node: AST Import node.
+        """
         for alias in node.names:
             import_obj = Import(module=alias.name, alias=alias.asname, line=node.lineno)
             self.imports.append(import_obj)
@@ -348,7 +436,14 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
-        """Visit from...import statement."""
+        """Visit from...import statement.
+
+        Handles 'from module import item' statements, including
+        relative imports.
+
+        Args:
+            node: AST ImportFrom node.
+        """
         module = node.module or ""
         level = node.level or 0
         is_relative = level > 0

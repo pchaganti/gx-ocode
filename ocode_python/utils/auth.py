@@ -21,13 +21,21 @@ class AuthToken:
     scope: Optional[str] = None
 
     def is_expired(self) -> bool:
-        """Check if token is expired."""
+        """Check if token is expired.
+
+        Returns:
+            True if token has an expiry time and it has passed.
+        """
         if self.expires_at is None:
             return False
         return time.time() >= self.expires_at
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary."""
+        """Convert to dictionary.
+
+        Returns:
+            Dictionary representation of the token.
+        """
         return {
             "token": self.token,
             "expires_at": self.expires_at,
@@ -37,7 +45,14 @@ class AuthToken:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AuthToken":
-        """Create from dictionary."""
+        """Create from dictionary.
+
+        Args:
+            data: Dictionary containing token data.
+
+        Returns:
+            AuthToken instance.
+        """
         return cls(
             token=data["token"],
             expires_at=data.get("expires_at"),
@@ -67,7 +82,12 @@ class AuthenticationManager:
         self._cached_token: Optional[AuthToken] = None
 
     def _load_auth_file(self) -> Dict[str, Any]:
-        """Load authentication data from file."""
+        """Load authentication data from file.
+
+        Returns:
+            Dictionary of authentication data, empty dict if file doesn't exist
+            or contains invalid data.
+        """
         if not self.auth_file.exists():
             return {}
 
@@ -80,7 +100,16 @@ class AuthenticationManager:
             return {}
 
     def _save_auth_file(self, data: Dict[str, Any]) -> bool:
-        """Save authentication data to file."""
+        """Save authentication data to file.
+
+        Sets restrictive file permissions (0o600) for security.
+
+        Args:
+            data: Authentication data to save.
+
+        Returns:
+            True if saved successfully, False on error.
+        """
         try:
             with open(self.auth_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
@@ -94,12 +123,23 @@ class AuthenticationManager:
             return False
 
     def is_authenticated(self) -> bool:
-        """Check if user is currently authenticated."""
+        """Check if user is currently authenticated.
+
+        Returns:
+            True if a valid, non-expired token exists.
+        """
         token = self.get_token()
         return token is not None and not token.is_expired()
 
     def get_token(self) -> Optional[AuthToken]:
-        """Get current authentication token."""
+        """Get current authentication token.
+
+        Uses caching to avoid repeated file reads. Returns None
+        if no token exists or token is expired.
+
+        Returns:
+            AuthToken if valid token exists, None otherwise.
+        """
         if self._cached_token and not self._cached_token.is_expired():
             return self._cached_token
 
@@ -121,7 +161,13 @@ class AuthenticationManager:
         return None
 
     def token(self) -> Optional[str]:
-        """Get current token string."""
+        """Get current token string.
+
+        Convenience method to get just the token string.
+
+        Returns:
+            Token string if authenticated, None otherwise.
+        """
         auth_token = self.get_token()
         return auth_token.token if auth_token else None
 
@@ -173,7 +219,11 @@ class AuthenticationManager:
         return self._save_auth_file(auth_data)
 
     def get_api_key(self) -> Optional[str]:
-        """Get saved API key."""
+        """Get saved API key.
+
+        Returns:
+            API key string if saved, None otherwise.
+        """
         auth_data = self._load_auth_file()
         return auth_data.get("api_key")
 
@@ -288,7 +338,11 @@ class AuthenticationManager:
         return self._save_auth_file(auth_data)
 
     def get_credentials(self) -> Dict[str, Any]:
-        """Get saved credentials."""
+        """Get saved credentials.
+
+        Returns:
+            Dictionary of saved credentials, empty dict if none exist.
+        """
         auth_data = self._load_auth_file()
         credentials = auth_data.get("credentials", {})
         return credentials if isinstance(credentials, dict) else {}
@@ -428,7 +482,11 @@ class OIDCAuthenticator:
 
 
 def main() -> None:
-    """Example usage of AuthenticationManager."""
+    """Example usage of AuthenticationManager.
+
+    Demonstrates basic authentication operations including
+    status checking, API key management, and header generation.
+    """
     auth = AuthenticationManager()
 
     print("Authentication Status:")

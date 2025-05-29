@@ -17,6 +17,13 @@ class ArchitectTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the architect tool specification.
+
+        Returns:
+            ToolDefinition with parameters for comprehensive codebase analysis
+            including architecture overview, dependencies, patterns, metrics,
+            and diagram generation.
+        """
         return ToolDefinition(
             name="architect",
             description="Analyze codebase architecture, dependencies, design patterns, and generate architectural insights",  # noqa: E501
@@ -550,7 +557,19 @@ class ArchitectTool(Tool):
         include_patterns: Optional[List[str]],
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
-        """Analyze code dependencies and relationships."""
+        """Analyze code dependencies and relationships.
+
+        Args:
+            path: Path to analyze (file or directory).
+            language: Primary programming language.
+            depth: Analysis depth (not currently used).
+            include_patterns: List of glob patterns for files to include.
+            exclude_patterns: List of glob patterns for files to exclude.
+
+        Returns:
+            Dictionary containing internal/external dependencies, dependency graph,
+            circular dependencies, and statistics.
+        """
         dependencies: Dict[str, Any] = {
             "internal": defaultdict(set),
             "external": set(),
@@ -633,7 +652,15 @@ class ArchitectTool(Tool):
     def _extract_file_dependencies(
         self, file_path: Path, language: str
     ) -> Dict[str, List[str]]:
-        """Extract dependencies from a single file."""
+        """Extract dependencies from a single file.
+
+        Args:
+            file_path: Path to the file to analyze.
+            language: Programming language hint.
+
+        Returns:
+            Dictionary with 'internal' and 'external' dependency lists.
+        """
         deps: Dict[str, List[str]] = {"internal": [], "external": []}
 
         try:
@@ -658,7 +685,17 @@ class ArchitectTool(Tool):
     def _extract_python_dependencies(
         self, content: str, file_path: Path
     ) -> Dict[str, List[str]]:
-        """Extract dependencies from Python code."""
+        """Extract dependencies from Python code.
+
+        Uses AST parsing with regex fallback for syntax errors.
+
+        Args:
+            content: String content of the Python file.
+            file_path: Path to the file being analyzed.
+
+        Returns:
+            Dictionary with 'internal' and 'external' dependency lists.
+        """
         deps: Dict[str, List[str]] = {"internal": [], "external": []}
 
         try:
@@ -695,7 +732,17 @@ class ArchitectTool(Tool):
     def _extract_javascript_dependencies(
         self, content: str, file_path: Path
     ) -> Dict[str, List[str]]:
-        """Extract dependencies from JavaScript/TypeScript code."""
+        """Extract dependencies from JavaScript/TypeScript code.
+
+        Uses regex to match import statements and require calls.
+
+        Args:
+            content: String content of the JavaScript/TypeScript file.
+            file_path: Path to the file being analyzed.
+
+        Returns:
+            Dictionary with 'internal' and 'external' dependency lists.
+        """
         deps: Dict[str, List[str]] = {"internal": [], "external": []}
 
         # Match import statements and require calls
@@ -716,7 +763,15 @@ class ArchitectTool(Tool):
         return deps
 
     def _is_internal_module(self, module: str, file_path: Path) -> bool:
-        """Check if a module is internal to the project."""
+        """Check if a module is internal to the project.
+
+        Args:
+            module: Module name to check.
+            file_path: Current file path for context.
+
+        Returns:
+            True if the module is internal to the project, False if external.
+        """
         # Relative imports are internal
         if module.startswith("."):
             return True
@@ -740,7 +795,16 @@ class ArchitectTool(Tool):
         return False
 
     def _find_project_root(self, file_path: Path) -> Optional[Path]:
-        """Find the project root directory."""
+        """Find the project root directory.
+
+        Searches up the directory tree for common project root indicators.
+
+        Args:
+            file_path: Starting file path.
+
+        Returns:
+            Path to project root if found, None otherwise.
+        """
         current = file_path.parent if file_path.is_file() else file_path
 
         while current != current.parent:
@@ -763,7 +827,16 @@ class ArchitectTool(Tool):
     def _detect_circular_dependencies(
         self, dependencies: Dict[str, Set[str]]
     ) -> List[List[str]]:
-        """Detect circular dependencies in the dependency graph."""
+        """Detect circular dependencies in the dependency graph.
+
+        Uses depth-first search to find cycles in the dependency graph.
+
+        Args:
+            dependencies: Dictionary mapping file/module names to their dependencies.
+
+        Returns:
+            List of cycles, where each cycle is a list of file/module names.
+        """
         circular_deps = []
 
         def dfs(
@@ -800,7 +873,19 @@ class ArchitectTool(Tool):
         include_patterns: Optional[List[str]],
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
-        """Analyze the structural organization of the codebase."""
+        """Analyze the structural organization of the codebase.
+
+        Args:
+            path: Path to analyze (file or directory).
+            language: Primary programming language.
+            depth: Maximum depth for directory tree analysis.
+            include_patterns: List of glob patterns for files to include.
+            exclude_patterns: List of glob patterns for files to exclude.
+
+        Returns:
+            Dictionary containing hierarchy, modules, packages, entry points,
+            test files, documentation, configuration, and structural metrics.
+        """
         structure: Dict[str, Any] = {
             "hierarchy": {},
             "modules": [],
@@ -867,7 +952,19 @@ class ArchitectTool(Tool):
         exclude_patterns: Optional[List[str]],
         current_depth: int = 0,
     ) -> Dict[str, Any]:
-        """Build a tree representation of the directory structure."""
+        """Build a tree representation of the directory structure.
+
+        Args:
+            path: Directory path to analyze.
+            max_depth: Maximum depth to traverse.
+            include_patterns: List of glob patterns for files to include.
+            exclude_patterns: List of glob patterns for files to exclude.
+            current_depth: Current recursion depth.
+
+        Returns:
+            Dictionary representing the directory tree with type, children,
+            files, and size information.
+        """
         if current_depth >= max_depth:
             return {}
 
@@ -922,14 +1019,28 @@ class ArchitectTool(Tool):
         return tree
 
     def _is_test_file(self, file_path: Path) -> bool:
-        """Check if a file is a test file."""
+        """Check if a file is a test file.
+
+        Args:
+            file_path: Path to check.
+
+        Returns:
+            True if the file appears to be a test file based on naming conventions.
+        """
         name_lower = file_path.name.lower()
         return any(
             pattern in name_lower for pattern in ["test", "spec", "_test", ".test"]
         )
 
     def _is_documentation_file(self, file_path: Path) -> bool:
-        """Check if a file is documentation."""
+        """Check if a file is documentation.
+
+        Args:
+            file_path: Path to check.
+
+        Returns:
+            True if the file appears to be documentation based on name or extension.
+        """
         name_lower = file_path.name.lower()
         return any(
             pattern in name_lower
@@ -937,7 +1048,14 @@ class ArchitectTool(Tool):
         ) or file_path.suffix.lower() in [".md", ".txt", ".rst"]
 
     def _is_configuration_file(self, file_path: Path) -> bool:
-        """Check if a file is a configuration file."""
+        """Check if a file is a configuration file.
+
+        Args:
+            file_path: Path to check.
+
+        Returns:
+            True if the file appears to be a configuration file.
+        """
         name_lower = file_path.name.lower()
         return any(
             pattern in name_lower for pattern in ["config", "settings", ".env", "setup"]
@@ -951,7 +1069,14 @@ class ArchitectTool(Tool):
         ]
 
     def _is_entry_point(self, file_path: Path) -> bool:
-        """Check if a file is likely an entry point."""
+        """Check if a file is likely an entry point.
+
+        Args:
+            file_path: Path to check.
+
+        Returns:
+            True if the file appears to be an application entry point.
+        """
         name_lower = file_path.name.lower()
         return name_lower in [
             "main.py",
@@ -963,7 +1088,14 @@ class ArchitectTool(Tool):
         ]
 
     def _calculate_max_depth(self, hierarchy: Dict[str, Any]) -> int:
-        """Calculate the maximum depth of the directory tree."""
+        """Calculate the maximum depth of the directory tree.
+
+        Args:
+            hierarchy: Directory tree structure.
+
+        Returns:
+            Maximum depth of the tree.
+        """
         if not hierarchy or "children" not in hierarchy:
             return 0
 
@@ -975,7 +1107,14 @@ class ArchitectTool(Tool):
         return 1 + max_child_depth
 
     def _calculate_avg_files_per_dir(self, hierarchy: Dict[str, Any]) -> float:
-        """Calculate average number of files per directory."""
+        """Calculate average number of files per directory.
+
+        Args:
+            hierarchy: Directory tree structure.
+
+        Returns:
+            Average number of files per directory.
+        """
         total_files = 0
         total_dirs = 0
 
@@ -1003,7 +1142,18 @@ class ArchitectTool(Tool):
         include_patterns: Optional[List[str]],
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
-        """Analyze design patterns and architectural patterns in the code."""
+        """Analyze design patterns and architectural patterns in the code.
+
+        Args:
+            path: Path to analyze (file or directory).
+            language: Primary programming language.
+            include_patterns: List of glob patterns for files to include.
+            exclude_patterns: List of glob patterns for files to exclude.
+
+        Returns:
+            Dictionary containing identified design patterns, architectural patterns,
+            anti-patterns, code smells, and recommendations.
+        """
         patterns: Dict[str, Any] = {
             "design_patterns": {},
             "architectural_patterns": {},
@@ -1051,7 +1201,18 @@ class ArchitectTool(Tool):
         include_patterns: Optional[List[str]],
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
-        """Calculate various code metrics."""
+        """Calculate various code metrics.
+
+        Args:
+            path: Path to analyze (file or directory).
+            language: Primary programming language.
+            include_patterns: List of glob patterns for files to include.
+            exclude_patterns: List of glob patterns for files to exclude.
+
+        Returns:
+            Dictionary containing size metrics, complexity metrics,
+            quality metrics, and maintainability assessment.
+        """
         metrics: Dict[str, Any] = {
             "size_metrics": {},
             "complexity_metrics": {},
@@ -1141,7 +1302,20 @@ class ArchitectTool(Tool):
         include_patterns: Optional[List[str]],
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
-        """Analyze overall codebase health and quality."""
+        """Analyze overall codebase health and quality.
+
+        Combines various analyses to provide an overall health assessment.
+
+        Args:
+            path: Path to analyze (file or directory).
+            language: Primary programming language.
+            include_patterns: List of glob patterns for files to include.
+            exclude_patterns: List of glob patterns for files to exclude.
+
+        Returns:
+            Dictionary containing overall score, category scores,
+            identified issues, and recommendations.
+        """
         health: Dict[str, Any] = {
             "overall_score": 0,
             "categories": {},
@@ -1270,7 +1444,18 @@ class ArchitectTool(Tool):
         include_patterns: Optional[List[str]],
         exclude_patterns: Optional[List[str]],
     ) -> Dict[str, Any]:
-        """Generate architectural diagrams and visualizations."""
+        """Generate architectural diagrams and visualizations.
+
+        Args:
+            path: Path to analyze (file or directory).
+            language: Primary programming language.
+            include_patterns: List of glob patterns for files to include.
+            exclude_patterns: List of glob patterns for files to exclude.
+
+        Returns:
+            Dictionary containing components, relationships, layers,
+            and generated diagram code (Mermaid and GraphViz).
+        """
         diagram: Dict[str, Any] = {
             "type": "architecture_diagram",
             "components": [],
@@ -1316,7 +1501,14 @@ class ArchitectTool(Tool):
         return diagram
 
     def _generate_mermaid_code(self, diagram: Dict[str, Any]) -> str:
-        """Generate Mermaid diagram code."""
+        """Generate Mermaid diagram code.
+
+        Args:
+            diagram: Dictionary containing components and relationships.
+
+        Returns:
+            String containing Mermaid diagram syntax.
+        """
         mermaid = "graph TD\n"
 
         # Add components
@@ -1341,7 +1533,15 @@ class ArchitectTool(Tool):
     def _format_summary_output(
         self, results: Dict[str, Any], analysis_type: str
     ) -> str:
-        """Format results as summary output."""
+        """Format results as summary output.
+
+        Args:
+            results: Analysis results dictionary.
+            analysis_type: Type of analysis performed.
+
+        Returns:
+            Formatted string with human-readable summary.
+        """
         output = f"🏗️  Architecture Analysis: {analysis_type.title()}\n"
         output += "=" * 50 + "\n\n"
 
@@ -1394,7 +1594,15 @@ class ArchitectTool(Tool):
     def _format_detailed_output(
         self, results: Dict[str, Any], analysis_type: str
     ) -> str:
-        """Format results as detailed output."""
+        """Format results as detailed output.
+
+        Args:
+            results: Analysis results dictionary.
+            analysis_type: Type of analysis performed.
+
+        Returns:
+            Formatted string with summary plus full JSON details.
+        """
         output = self._format_summary_output(results, analysis_type)
         output += "\n" + "=" * 50 + "\nDetailed Results:\n"
         output += json.dumps(results, indent=2)
@@ -1403,7 +1611,15 @@ class ArchitectTool(Tool):
     def _format_mermaid_output(
         self, results: Dict[str, Any], analysis_type: str
     ) -> str:
-        """Format results as Mermaid diagram code."""
+        """Format results as Mermaid diagram code.
+
+        Args:
+            results: Analysis results dictionary.
+            analysis_type: Type of analysis performed.
+
+        Returns:
+            Mermaid diagram code or error message if not available.
+        """
         if analysis_type == "diagram" and "mermaid_code" in results:
             mermaid_code = results["mermaid_code"]
             return str(mermaid_code)

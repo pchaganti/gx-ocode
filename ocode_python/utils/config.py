@@ -80,7 +80,14 @@ class ConfigManager:
         self.defaults = DEFAULT_CONFIG.copy()
 
     def _get_config_paths(self) -> List[Path]:
-        """Get all possible configuration file paths in priority order."""
+        """Get all possible configuration file paths in priority order.
+
+        Returns:
+            List of paths ordered from highest to lowest priority:
+            - .ocode/settings.local.json (project-specific, local)
+            - .ocode/settings.json (project-specific, shared)
+            - ~/.ocode/settings.json (user global)
+        """
         paths = []
 
         # Project-specific configs
@@ -97,7 +104,14 @@ class ConfigManager:
         return paths
 
     def _load_config_file(self, path: Path) -> Dict[str, Any]:
-        """Load configuration from a JSON file."""
+        """Load configuration from a JSON file.
+
+        Args:
+            path: Path to the JSON configuration file.
+
+        Returns:
+            Dictionary of configuration values, empty dict on error.
+        """
         if not path.exists():
             return {}
 
@@ -110,7 +124,14 @@ class ConfigManager:
             return {}
 
     def _get_env_config(self) -> Dict[str, Any]:
-        """Get configuration from environment variables."""
+        """Get configuration from environment variables.
+
+        Maps OCODE_* and OLLAMA_HOST environment variables to
+        configuration keys with appropriate type conversion.
+
+        Returns:
+            Dictionary of configuration values from environment.
+        """
         env_config = {}
 
         # Map environment variables to config keys
@@ -141,7 +162,17 @@ class ConfigManager:
         return env_config
 
     def _merge_configs(self, *configs: Dict[str, Any]) -> Dict[str, Any]:
-        """Merge multiple configuration dictionaries."""
+        """Merge multiple configuration dictionaries.
+
+        Later configs override earlier ones. Nested dictionaries
+        are merged recursively.
+
+        Args:
+            *configs: Configuration dictionaries to merge.
+
+        Returns:
+            Merged configuration dictionary.
+        """
         result: Dict[str, Any] = {}
 
         for config in reversed(configs):  # Start with lowest priority
@@ -159,7 +190,14 @@ class ConfigManager:
         return result
 
     def _load_all_config(self) -> Dict[str, Any]:
-        """Load and merge all configuration sources."""
+        """Load and merge all configuration sources.
+
+        Loads configuration from all sources in priority order
+        and merges them into a single configuration dictionary.
+
+        Returns:
+            Complete merged configuration.
+        """
         configs = [self.defaults]
 
         # Load file-based configs
@@ -176,11 +214,19 @@ class ConfigManager:
         return self._merge_configs(*configs)
 
     def reload(self) -> None:
-        """Reload configuration from all sources."""
+        """Reload configuration from all sources.
+
+        Clears the configuration cache to force reloading from
+        files and environment on next access.
+        """
         self._config_cache = None
 
     def get_all(self) -> Dict[str, Any]:
-        """Get all configuration as a dictionary."""
+        """Get all configuration as a dictionary.
+
+        Returns:
+            Copy of the complete configuration dictionary.
+        """
         if self._config_cache is None:
             self._config_cache = self._load_all_config()
         return self._config_cache.copy()
@@ -340,7 +386,17 @@ class ConfigManager:
         return errors
 
     def show_config_sources(self) -> Dict[str, Any]:
-        """Show which configuration sources are being used."""
+        """Show which configuration sources are being used.
+
+        Useful for debugging configuration precedence issues.
+
+        Returns:
+            Dictionary showing:
+            - defaults: Default configuration
+            - files: Configuration from each file
+            - environment: Environment variable configuration
+            - final: Merged final configuration
+        """
         sources = {
             "defaults": self.defaults,
             "files": {},
@@ -357,7 +413,10 @@ class ConfigManager:
 
 
 def main() -> None:
-    """Example usage of ConfigManager."""
+    """Example usage of ConfigManager.
+
+    Demonstrates configuration loading, access, and validation.
+    """
     config = ConfigManager()
 
     print("Current configuration:")

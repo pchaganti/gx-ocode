@@ -30,6 +30,12 @@ class ProcessingMetrics:
 
     @property
     def duration(self) -> float:
+        """Calculate the duration of processing in seconds.
+
+        Returns:
+            Time elapsed since start_time. If processing is complete (end_time is set),
+            returns the total duration. Otherwise, returns time elapsed so far.
+        """
         if self.end_time:
             return self.end_time - self.start_time
         return time.time() - self.start_time
@@ -391,7 +397,17 @@ Before responding, consider:
         return base_prompt + context_guidance
 
     async def _prepare_context(self, query: str) -> ProjectContext:
-        """Prepare project context for the query."""
+        """Prepare project context for the query.
+
+        Analyzes the project and builds relevant context based on the query.
+        Shows progress information if verbose mode is enabled.
+
+        Args:
+            query: User query to analyze context for.
+
+        Returns:
+            ProjectContext object with relevant files and metadata.
+        """
         if self.verbose:
             print("🔍 Analyzing project context...")
 
@@ -410,7 +426,21 @@ Before responding, consider:
         return context
 
     async def _llm_should_use_tools(self, query: str) -> Dict[str, Any]:
-        """Use LLM to determine if and which tools should be used for the query."""
+        """Use LLM to determine if and which tools should be used for the query.
+
+        Sends the query to the LLM with detailed criteria for determining
+        whether tools are needed or if a direct knowledge response suffices.
+
+        Args:
+            query: User query to analyze.
+
+        Returns:
+            Dictionary containing:
+            - should_use_tools: Boolean indicating if tools are needed
+            - suggested_tools: List of recommended tool names
+            - reasoning: Explanation of the decision
+            - context_complexity: "simple" or "full"
+        """
         tool_names = [
             tool.definition.name for tool in self.tool_registry.get_all_tools()
         ]
@@ -647,13 +677,33 @@ Examples:
     def _should_use_simple_context(
         self, query: str, llm_analysis: Dict[str, Any]
     ) -> bool:
-        """Determine if query should use simple context based on LLM analysis."""
+        """Determine if query should use simple context based on LLM analysis.
+
+        Args:
+            query: User query (currently unused).
+            llm_analysis: Analysis result from _llm_should_use_tools.
+
+        Returns:
+            True if simple context should be used, False for full context.
+        """
         return bool(llm_analysis.get("context_complexity", "full") == "simple")
 
     def _build_context_message(
         self, context: ProjectContext, query: str, use_simple: bool = False
     ) -> str:
-        """Build context message with project information."""
+        """Build context message with project information.
+
+        Creates a formatted message containing project context, query analysis,
+        and guidance for the AI based on the query type.
+
+        Args:
+            context: Project context with files and metadata.
+            query: User query string.
+            use_simple: Whether to use simplified context format.
+
+        Returns:
+            Formatted context message string.
+        """
         # Categorize the query to provide better context to the AI
         query_analysis = self.context_manager._categorize_query(query)
         query_category = query_analysis["category"]
@@ -788,7 +838,19 @@ Examples:
         context: ProjectContext,
         llm_analysis: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, str]]:
-        """Prepare message history for API call."""
+        """Prepare message history for API call.
+
+        Constructs the message list including system prompt, conversation
+        history, and current query with appropriate context.
+
+        Args:
+            query: Current user query.
+            context: Project context information.
+            llm_analysis: Optional analysis of whether to use tools.
+
+        Returns:
+            List of message dictionaries ready for API submission.
+        """
         messages = []
 
         # Use provided LLM analysis or fallback to heuristics
@@ -862,7 +924,17 @@ When a user asks you to perform an action, call the appropriate function."""
         return messages
 
     def _map_tool_name(self, function_name: str) -> str:
-        """Map function definition names to registry names."""
+        """Map function definition names to registry names.
+
+        Ensures consistency between tool names in function calls
+        and the tool registry by converting to lowercase.
+
+        Args:
+            function_name: Name from function call.
+
+        Returns:
+            Normalized name for registry lookup.
+        """
         # The registry uses lowercase names with underscores preserved
         # This ensures consistency with tool definitions in the registry
         return function_name.lower()
@@ -870,7 +942,19 @@ When a user asks you to perform an action, call the appropriate function."""
     async def _execute_tool_call(
         self, tool_name: str, arguments: Dict[str, Any], query: Optional[str] = None
     ) -> ToolResult:
-        """Execute a tool call and return the result."""
+        """Execute a tool call and return the result.
+
+        Handles tool execution with smart defaults for memory operations,
+        confirmation requests for dangerous commands, and error handling.
+
+        Args:
+            tool_name: Name of the tool to execute.
+            arguments: Arguments to pass to the tool.
+            query: Optional original query for context.
+
+        Returns:
+            ToolResult with success status, output, and any errors.
+        """
         if self.verbose:
             print(f"🔧 Executing tool: {tool_name}")
             print(f"📋 Arguments: {arguments}")
@@ -987,7 +1071,18 @@ When a user asks you to perform an action, call the appropriate function."""
             )
 
     async def _request_user_confirmation(self, command: str, reason: str) -> bool:
-        """Request user confirmation for potentially dangerous commands."""
+        """Request user confirmation for potentially dangerous commands.
+
+        Uses the configured confirmation callback if available.
+        In API contexts without a callback, denies by default for safety.
+
+        Args:
+            command: The command requiring confirmation.
+            reason: Explanation of why confirmation is needed.
+
+        Returns:
+            True if confirmed, False otherwise.
+        """
         if self.confirmation_callback:
             try:
                 return bool(await self.confirmation_callback(command, reason))
@@ -1277,15 +1372,32 @@ When a user asks you to perform an action, call the appropriate function."""
                 )
 
     def is_response_complete(self) -> bool:
-        """Check if the current response is complete."""
+        """Check if the current response is complete.
+
+        Returns:
+            True if the response has been marked as complete.
+        """
         return self.response_complete
 
     def get_current_response(self) -> str:
-        """Get the current response content."""
+        """Get the current response content.
+
+        Returns:
+            The accumulated response text.
+        """
         return self.current_response
 
     async def continue_session(self, session_id: Optional[str] = None) -> bool:
-        """Continue a previous session."""
+        """Continue a previous session.
+
+        Loads a saved session and restores its conversation history.
+
+        Args:
+            session_id: ID of the session to continue.
+
+        Returns:
+            True if session was loaded successfully, False otherwise.
+        """
         if session_id:
             session = await self.session_manager.load_session(session_id)
             if session:
@@ -1294,7 +1406,16 @@ When a user asks you to perform an action, call the appropriate function."""
         return False
 
     async def save_session(self, session_id: Optional[str] = None) -> str:
-        """Save current session."""
+        """Save current session.
+
+        Persists the current conversation history and context.
+
+        Args:
+            session_id: Optional ID to save as (creates new if None).
+
+        Returns:
+            The session ID that was saved.
+        """
         return await self.session_manager.save_session(
             messages=self.conversation_history,
             context=self.current_context,
@@ -1302,12 +1423,24 @@ When a user asks you to perform an action, call the appropriate function."""
         )
 
     def clear_context(self) -> None:
-        """Clear current context and conversation history."""
+        """Clear current context and conversation history.
+
+        Resets the engine to a clean state for a new conversation.
+        """
         self.current_context = None
         self.conversation_history = []
 
     def get_status(self) -> Dict[str, Any]:
-        """Get current engine status."""
+        """Get current engine status.
+
+        Returns:
+            Dictionary containing:
+            - model: Current model name
+            - context_files: Number of files in context
+            - conversation_length: Number of messages
+            - tools_available: Number of registered tools
+            - project_root: Current project root path
+        """
         return {
             "model": self.model,
             "context_files": (

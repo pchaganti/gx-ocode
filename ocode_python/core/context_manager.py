@@ -49,7 +49,20 @@ class ProjectContext:
     git_info: Optional[Dict[str, Any]] = None
 
     def get_relevant_files(self, query: str, max_files: int = 10) -> List[Path]:
-        """Get files most relevant to the query."""
+        """Get files most relevant to the query.
+
+        Scores files based on:
+        - Query term frequency in file content
+        - Query terms in file path
+        - Symbol name matches
+
+        Args:
+            query: Search query string.
+            max_files: Maximum number of files to return.
+
+        Returns:
+            List of file paths sorted by relevance score.
+        """
         # Simple relevance scoring based on:
         # 1. Query terms in file content
         # 2. Query terms in file path
@@ -167,7 +180,11 @@ class ContextManager:
         ]
 
     def _init_db(self) -> None:
-        """Initialize SQLite database for caching."""
+        """Initialize SQLite database for caching.
+
+        Creates necessary tables for storing file analysis results
+        and dependency information if they don't already exist.
+        """
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 """
@@ -195,14 +212,28 @@ class ContextManager:
             )
 
     def _init_git(self) -> None:
-        """Initialize Git repository if available."""
+        """Initialize Git repository if available.
+
+        Attempts to initialize a Git repository object for the project.
+        Sets self.repo to None if not a git repository.
+        """
         try:
             self.repo = Repo(self.root, search_parent_directories=True)
         except InvalidGitRepositoryError:
             self.repo = None
 
     def _should_ignore(self, path: Path) -> bool:
-        """Check if file should be ignored."""
+        """Check if file should be ignored.
+
+        Checks against ignore patterns including exact matches and wildcards.
+        Also ignores files larger than 1MB.
+
+        Args:
+            path: Path to check.
+
+        Returns:
+            True if the file should be ignored, False otherwise.
+        """
         import fnmatch
 
         # Check if any part of the path matches ignore patterns
@@ -237,7 +268,17 @@ class ContextManager:
         return False
 
     def _get_content_hash(self, content: str) -> str:
-        """Generate hash for file content."""
+        """Generate hash for file content.
+
+        Uses MD5 for fast content comparison. Handles Python version
+        differences for the usedforsecurity parameter.
+
+        Args:
+            content: File content to hash.
+
+        Returns:
+            Hexadecimal MD5 hash of the content.
+        """
         # usedforsecurity parameter is only available in Python 3.9+
         # mypy doesn't recognize this parameter in its stubs
         import sys
@@ -251,7 +292,17 @@ class ContextManager:
             return hashlib.md5(content.encode("utf-8")).hexdigest()  # nosec B324
 
     async def _read_file(self, path: Path) -> Optional[str]:
-        """Read file content safely."""
+        """Read file content safely.
+
+        Reads file content asynchronously with proper error handling.
+        Returns None if file cannot be read (encoding errors, permissions, etc).
+
+        Args:
+            path: Path to the file to read.
+
+        Returns:
+            File content as string, or None if file cannot be read.
+        """
         try:
             async with aiofiles.open(path, "r", encoding="utf-8") as f:
                 content = await f.read()
@@ -260,7 +311,17 @@ class ContextManager:
             return None
 
     def _detect_language(self, path: Path) -> Optional[str]:
-        """Detect programming language from file extension."""
+        """Detect programming language from file extension.
+
+        Uses the language registry to find an appropriate analyzer
+        for the given file based on its extension.
+
+        Args:
+            path: Path to the file.
+
+        Returns:
+            Language name if detected, None otherwise.
+        """
         # Use language registry to get analyzer for file
         analyzer = language_registry.get_analyzer_for_file(path)
         if analyzer:
@@ -268,7 +329,18 @@ class ContextManager:
         return None
 
     def _extract_symbols(self, content: str, language: str) -> List[str]:
-        """Extract symbols (functions, classes, etc.) from code."""
+        """Extract symbols (functions, classes, etc.) from code.
+
+        Uses language-specific analyzers to extract symbol names
+        from source code. Falls back to empty list on errors.
+
+        Args:
+            content: Source code content.
+            language: Programming language name.
+
+        Returns:
+            List of symbol names found in the code.
+        """
         analyzer = language_registry.get_analyzer(language)
         if analyzer:
             try:
@@ -280,7 +352,18 @@ class ContextManager:
         return []
 
     def _extract_imports(self, content: str, language: str) -> List[str]:
-        """Extract import statements from code."""
+        """Extract import statements from code.
+
+        Uses language-specific analyzers to extract import/require
+        statements. Falls back to empty list on errors.
+
+        Args:
+            content: Source code content.
+            language: Programming language name.
+
+        Returns:
+            List of imported module names.
+        """
         analyzer = language_registry.get_analyzer(language)
         if analyzer:
             try:
@@ -292,7 +375,12 @@ class ContextManager:
         return []
 
     def _manage_cache_size(self) -> None:
-        """Manage cache size to prevent unbounded growth."""
+        """Manage cache size to prevent unbounded growth.
+
+        Implements a simple LRU cache by removing oldest entries
+        when cache exceeds max_cache_size. Removes entries from
+        both file_cache and file_info_cache.
+        """
         if len(self.file_cache) > self.max_cache_size:
             # Remove oldest entries (simple LRU)
             sorted_entries = sorted(
@@ -306,7 +394,19 @@ class ContextManager:
                     del self.file_info_cache[path]
 
     async def analyze_file(self, path: Path) -> Optional[FileInfo]:
-        """Analyze a single file and extract metadata."""
+        """Analyze a single file and extract metadata.
+
+        Performs comprehensive file analysis including language detection,
+        symbol extraction, and import analysis. Uses both in-memory and
+        persistent caching for performance.
+
+        Args:
+            path: Path to the file to analyze.
+
+        Returns:
+            FileInfo object with analysis results, or None if file
+            should be ignored or cannot be analyzed.
+        """
         if self._should_ignore(path) or not path.is_file():
             return None
 
@@ -369,7 +469,18 @@ class ContextManager:
             return None
 
     def _get_cached_analysis(self, path: Path, mtime: float) -> Optional[FileInfo]:
-        """Get cached file analysis if still valid."""
+        """Get cached file analysis if still valid.
+
+        Retrieves cached analysis from SQLite database if the file
+        hasn't been modified since the analysis was performed.
+
+        Args:
+            path: Path to the file.
+            mtime: Current modification time of the file.
+
+        Returns:
+            Cached FileInfo if valid and found, None otherwise.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -396,7 +507,14 @@ class ContextManager:
         return None
 
     def _cache_analysis(self, file_info: FileInfo) -> None:
-        """Cache file analysis to database."""
+        """Cache file analysis to database.
+
+        Stores file analysis results in SQLite database for
+        future retrieval. Silently handles database errors.
+
+        Args:
+            file_info: FileInfo object to cache.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute(
@@ -418,7 +536,14 @@ class ContextManager:
             pass
 
     async def scan_project(self) -> List[Path]:
-        """Scan project directory for relevant files."""
+        """Scan project directory for relevant files.
+
+        Recursively walks the project directory, filtering out
+        ignored directories and files based on ignore patterns.
+
+        Returns:
+            List of Path objects for files that should be analyzed.
+        """
         files = []
 
         for root, dirs, filenames in os.walk(self.root):
@@ -569,7 +694,17 @@ class ContextManager:
         return None
 
     def _quick_categorize_part(self, part: str) -> Optional[Dict[str, Any]]:
-        """Quick categorization of a query part for multi-action detection."""
+        """Quick categorization of a query part for multi-action detection.
+
+        Analyzes a single part of a multi-part query to determine
+        which tools it might need.
+
+        Args:
+            part: A single part of the query (split by conjunctions).
+
+        Returns:
+            Dictionary with suggested_tools list, or None if no tools detected.
+        """
         part_lower = part.strip().lower()
 
         # Test patterns
@@ -1176,6 +1311,17 @@ class ContextManager:
         semaphore = asyncio.Semaphore(10)  # Limit concurrent file operations
 
         async def analyze_with_semaphore(path):
+            """Analyze a file with semaphore-based concurrency control.
+
+            Wraps file analysis in a semaphore to limit concurrent file operations,
+            preventing resource exhaustion when analyzing many files simultaneously.
+
+            Args:
+                path: Path to the file to analyze.
+
+            Returns:
+                FileInfo object with analysis results, or exception if analysis fails.
+            """
             async with semaphore:
                 return await self.analyze_file(path)
 

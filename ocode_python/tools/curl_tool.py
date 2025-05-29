@@ -17,6 +17,12 @@ class CurlTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the curl tool specification.
+
+        Returns:
+            ToolDefinition with parameters for making HTTP requests including
+            URL, method, headers, data, authentication, timeout, and output options.
+        """
         return ToolDefinition(
             name="curl",
             description="Make HTTP requests and download files",

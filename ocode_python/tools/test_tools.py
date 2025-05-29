@@ -50,6 +50,12 @@ class ExecutionTool(Tool):
 
     @property
     def definition(self):
+        """Return the test_runner tool specification.
+
+        Returns:
+            ToolDefinition with parameters for running tests including
+            path, framework selection, verbosity, and timeout options.
+        """
         return self._definition
 
     def _detect_test_framework(self, path: str) -> str:
@@ -355,6 +361,12 @@ class LintTool(Tool):
 
     @property
     def definition(self):
+        """Return the lint tool specification.
+
+        Returns:
+            ToolDefinition with parameters for running linters and formatters
+            including tool selection, path, fix mode, and config options.
+        """
         return self._definition
 
     def _detect_lint_tool(self, path: str) -> List[str]:
@@ -488,6 +500,12 @@ class CoverageTool(Tool):
 
     @property
     def definition(self):
+        """Return the coverage tool specification.
+
+        Returns:
+            ToolDefinition with parameters for measuring test coverage
+            including path, report format, and minimum coverage threshold.
+        """
         return self._definition
 
     async def execute(self, **kwargs: Any) -> ToolResult:

@@ -13,6 +13,12 @@ class SortTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the sort tool specification.
+
+        Returns:
+            ToolDefinition with parameters for sorting text or file contents
+            with options for reverse order, numeric sort, and custom keys.
+        """
         return ToolDefinition(
             name="sort",
             description="Sort lines in a file or text",
@@ -94,6 +100,14 @@ class SortTool(Tool):
             if numeric:
 
                 def sort_key(line):
+                    """Extract numeric value from line for sorting.
+
+                    Args:
+                        line: Text line to extract number from.
+
+                    Returns:
+                        Float value for sorting, inf for non-numeric lines.
+                    """
                     # Try to extract numbers from the beginning of lines
                     try:
                         # Find first sequence of digits (with optional decimal)
@@ -146,6 +160,12 @@ class UniqTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the uniq tool specification.
+
+        Returns:
+            ToolDefinition with parameters for removing duplicate lines
+            with options for counting occurrences and showing duplicates.
+        """
         return ToolDefinition(
             name="uniq",
             description="Remove duplicate lines from sorted input",

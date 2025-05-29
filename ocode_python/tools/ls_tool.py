@@ -16,6 +16,12 @@ class LsTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the ls tool specification.
+
+        Returns:
+            ToolDefinition with parameters for listing directory contents
+            with options for filtering, sorting, and detailed information.
+        """
         return ToolDefinition(
             name="ls",
             description="List directory contents with detailed information and filtering",  # noqa: E501

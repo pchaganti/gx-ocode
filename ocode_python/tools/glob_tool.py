@@ -15,6 +15,12 @@ class GlobTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the glob tool specification.
+
+        Returns:
+            ToolDefinition with parameters for file pattern matching using
+            glob syntax including wildcards, recursive patterns, and filtering.
+        """
         return ToolDefinition(
             name="glob",
             description="Find files and directories using glob patterns",

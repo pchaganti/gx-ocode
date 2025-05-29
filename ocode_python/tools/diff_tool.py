@@ -14,6 +14,12 @@ class DiffTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the diff tool specification.
+
+        Returns:
+            ToolDefinition with parameters for comparing files including
+            file paths, diff format options, and context settings.
+        """
         return ToolDefinition(
             name="diff",
             description="Compare two files and show differences",

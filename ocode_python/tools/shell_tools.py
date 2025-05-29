@@ -20,6 +20,12 @@ class ShellCommandTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the shell_command tool specification.
+
+        Returns:
+            ToolDefinition with parameters for executing shell commands
+            with safety confirmation, working directory, and environment options.
+        """
         return ToolDefinition(
             name="shell_command",
             description="Execute shell commands with interactive safety confirmation",
@@ -227,6 +233,12 @@ class ProcessListTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the process_list tool specification.
+
+        Returns:
+            ToolDefinition with parameters for listing running processes
+            with filtering and sorting options.
+        """
         return ToolDefinition(
             name="process_list",
             description="List running processes",
@@ -316,6 +328,12 @@ class EnvironmentTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the environment tool specification.
+
+        Returns:
+            ToolDefinition with parameters for getting and setting
+            environment variables.
+        """
         return ToolDefinition(
             name="environment",
             description="Get or set environment variables",

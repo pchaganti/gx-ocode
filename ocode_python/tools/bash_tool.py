@@ -83,6 +83,13 @@ class BashTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the bash tool specification.
+
+        Returns:
+            ToolDefinition with parameters for executing shell commands including
+            command, working directory, environment variables, timeout, and
+            interactive mode options.
+        """
         return ToolDefinition(
             name="bash",
             description="Execute shell commands with advanced features and safety controls",  # noqa: E501

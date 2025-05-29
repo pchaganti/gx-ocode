@@ -20,6 +20,14 @@ class TimeoutError(Exception):
         duration: Optional[float] = None,
         context: Optional[dict] = None,
     ):
+        """Initialize TimeoutError with detailed context.
+
+        Args:
+            message: Base error message.
+            operation: Name of the operation that timed out.
+            duration: Timeout duration in seconds.
+            context: Additional context information as dictionary.
+        """
         self.operation = operation
         self.duration = duration
         self.context = context or {}
@@ -54,14 +62,26 @@ def async_timeout(
     """
 
     class TimeoutContext:
+        """Async context manager for timeout handling.
+
+        Manages timeout scheduling and cancellation for async operations.
+        """
+
         def __init__(self):
+            """Initialize timeout context."""
             self.timeout_handle = None
             self.timed_out = False
 
         async def __aenter__(self):
+            """Enter async context and set up timeout.
+
+            Returns:
+                Self for context manager usage.
+            """
             loop = asyncio.get_event_loop()
 
             def timeout_callback():
+                """Handle timeout expiration and run cleanup."""
                 self.timed_out = True
                 if cleanup:
                     try:
@@ -76,6 +96,16 @@ def async_timeout(
             return self
 
         async def __aexit__(self, exc_type, exc_val, exc_tb):
+            """Exit async context and handle timeout.
+
+            Args:
+                exc_type: Exception type if raised.
+                exc_val: Exception value if raised.
+                exc_tb: Exception traceback if raised.
+
+            Raises:
+                TimeoutError: If operation timed out.
+            """
             if self.timeout_handle:
                 self.timeout_handle.cancel()
 
@@ -106,12 +136,34 @@ def sync_timeout(seconds: float, operation: Optional[str] = None):
     """
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        """Decorator that adds timeout to a function.
+
+        Args:
+            func: Function to wrap with timeout.
+
+        Returns:
+            Wrapped function with timeout capability.
+        """
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> T:
+            """Execute function with timeout.
+
+            Args:
+                *args: Positional arguments for wrapped function.
+                **kwargs: Keyword arguments for wrapped function.
+
+            Returns:
+                Result from wrapped function.
+
+            Raises:
+                TimeoutError: If function execution exceeds timeout.
+            """
             result: List[Optional[T]] = [None]
             exception: List[Optional[Exception]] = [None]
 
             def target():
+                """Target function for thread execution."""
                 try:
                     result[0] = func(*args, **kwargs)
                 except Exception as e:
@@ -157,6 +209,15 @@ def signal_timeout(seconds: float, operation: Optional[str] = None):
     """
 
     def timeout_handler(signum, frame):
+        """Signal handler for timeout.
+
+        Args:
+            signum: Signal number received.
+            frame: Current stack frame.
+
+        Raises:
+            TimeoutError: Always raises to indicate timeout.
+        """
         raise TimeoutError(
             f"Operation timed out after {seconds} seconds",
             operation=operation,
@@ -230,6 +291,11 @@ class TimeoutManager:
     """
 
     def __init__(self, total_timeout: float):
+        """Initialize timeout manager with total timeout budget.
+
+        Args:
+            total_timeout: Total timeout in seconds for all operations.
+        """
         self.total_timeout = total_timeout
         self.start_time = asyncio.get_event_loop().time()
         self.operations: List[dict] = []
@@ -276,6 +342,14 @@ class AdaptiveTimeout:
         max_timeout: float = 300.0,
         adjustment_factor: float = 1.5,
     ):
+        """Initialize adaptive timeout manager.
+
+        Args:
+            base_timeout: Initial timeout value in seconds.
+            min_timeout: Minimum allowed timeout.
+            max_timeout: Maximum allowed timeout.
+            adjustment_factor: Multiplier for average duration to calculate timeout.
+        """
         self.base_timeout = base_timeout
         self.min_timeout = min_timeout
         self.max_timeout = max_timeout

@@ -14,6 +14,12 @@ class WhichTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the which tool specification.
+
+        Returns:
+            ToolDefinition with parameters for locating executable programs
+            in the system PATH.
+        """
         return ToolDefinition(
             name="which",
             description="Locate executable programs in PATH",

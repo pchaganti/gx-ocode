@@ -15,6 +15,12 @@ class ThinkTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the think tool specification.
+
+        Returns:
+            ToolDefinition with parameters for structured reasoning including
+            analysis types, topic, context, options, and output format.
+        """
         return ToolDefinition(
             name="think",
             description="Perform structured reasoning, analysis, and decision-making with various thinking frameworks",  # noqa: E501

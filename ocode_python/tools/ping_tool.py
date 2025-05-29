@@ -15,6 +15,12 @@ class PingTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the ping tool specification.
+
+        Returns:
+            ToolDefinition with parameters for testing network connectivity
+            including host, count, timeout, and detailed statistics options.
+        """
         return ToolDefinition(
             name="ping",
             description="Test network connectivity to a host using ping",

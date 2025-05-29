@@ -18,6 +18,12 @@ class EnvironmentTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the environment tool specification.
+
+        Returns:
+            ToolDefinition with parameters for managing environment variables
+            including get, set, unset, list, load from .env files, and save operations.
+        """
         return ToolDefinition(
             name="env",
             description="Get, set, and manage environment variables",

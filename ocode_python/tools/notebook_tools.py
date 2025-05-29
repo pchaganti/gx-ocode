@@ -15,6 +15,12 @@ class NotebookReadTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the notebook_read tool specification.
+
+        Returns:
+            ToolDefinition with parameters for reading Jupyter notebooks
+            including cells, outputs, metadata, and filtering options.
+        """
         return ToolDefinition(
             name="notebook_read",
             description="Read and analyze Jupyter notebook files (.ipynb), extracting cells, outputs, and metadata",  # noqa: E501
@@ -245,6 +251,12 @@ class NotebookEditTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the notebook_edit tool specification.
+
+        Returns:
+            ToolDefinition with parameters for editing Jupyter notebooks
+            including add, edit, delete, and clear operations on cells.
+        """
         return ToolDefinition(
             name="notebook_edit",
             description="Edit Jupyter notebook files by modifying, adding, or removing cells",  # noqa: E501

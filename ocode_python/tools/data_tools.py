@@ -18,6 +18,12 @@ class JsonYamlTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the json_yaml tool specification.
+
+        Returns:
+            ToolDefinition with parameters for JSON/YAML operations including
+            parsing, querying with JSONPath, setting values, and validation.
+        """
         return ToolDefinition(
             name="json_yaml",
             description="Parse, query, and manipulate JSON/YAML data files or strings",

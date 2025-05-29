@@ -20,7 +20,18 @@ console = Console()
 
 
 async def cli_confirmation_callback(command: str, reason: str) -> bool:
-    """Interactive confirmation callback for CLI."""
+    """Interactive confirmation callback for CLI.
+
+    Prompts the user to confirm potentially dangerous commands
+    with a yes/no prompt.
+
+    Args:
+        command: The command that requires confirmation.
+        reason: Explanation of why confirmation is needed.
+
+    Returns:
+        True if user confirms (yes/y), False otherwise.
+    """
     try:
         console.print("\n[yellow]⚠️  Command requires confirmation:[/yellow]")
         console.print(f"[white]{command}[/white]")
@@ -112,7 +123,14 @@ def cli(
 @cli.command()
 @click.argument("path", type=click.Path(), default=".")
 def init(path: str):
-    """Initialize OCode project configuration."""
+    """Initialize OCode project configuration.
+
+    Creates the .ocode directory structure and default configuration
+    file in the specified path.
+
+    Args:
+        path: Project path to initialize. Defaults to current directory.
+    """
     project_path = Path(path).resolve()
     ocode_dir = project_path / ".ocode"
 
@@ -449,7 +467,15 @@ def config(get: Optional[str], set: Optional[str], list: bool):
 
 
 async def handle_single_prompt(prompt: str, options: dict):
-    """Handle single prompt in non-interactive mode."""
+    """Handle single prompt in non-interactive mode.
+
+    Processes a single prompt and outputs the response according
+    to the specified output format.
+
+    Args:
+        prompt: The user prompt to process.
+        options: Dictionary containing CLI options (model, output_format, etc).
+    """
     try:
         auth = AuthenticationManager()
         engine = OCodeEngine(
@@ -488,7 +514,14 @@ async def handle_single_prompt(prompt: str, options: dict):
 
 
 async def interactive_mode(options: dict):
-    """Start interactive OCode session."""
+    """Start interactive OCode session.
+
+    Runs an interactive REPL with command history and auto-suggestions.
+    Supports special commands like /exit, /continue, etc.
+
+    Args:
+        options: Dictionary containing CLI options (model, output_format, etc).
+    """
     from prompt_toolkit import PromptSession
     from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
     from prompt_toolkit.history import FileHistory
@@ -570,7 +603,10 @@ async def interactive_mode(options: dict):
 
 
 def show_help():
-    """Show help message."""
+    """Show help message.
+
+    Displays available commands and usage tips for the interactive mode.
+    """
     console.print(
         """
 [bold]Available Commands:[/bold]
@@ -590,7 +626,11 @@ def show_help():
 
 
 def main():
-    """Entry point for the CLI."""
+    """Entry point for the CLI.
+
+    Handles exceptions and provides debug output when OCODE_DEBUG
+    environment variable is set.
+    """
     try:
         cli()
     except KeyboardInterrupt:

@@ -25,7 +25,13 @@ class Session:
     metadata: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert session to dictionary for serialization."""
+        """Convert session to dictionary for serialization.
+
+        Handles custom serialization for Path objects in the context.
+
+        Returns:
+            Dictionary representation suitable for JSON serialization.
+        """
         result = {
             "id": self.id,
             "created_at": self.created_at,
@@ -58,7 +64,17 @@ class Session:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Session":
-        """Create session from dictionary."""
+        """Create session from dictionary.
+
+        Reconstructs a Session object from its serialized form,
+        including proper Path object reconstruction in the context.
+
+        Args:
+            data: Dictionary containing session data.
+
+        Returns:
+            Reconstructed Session object.
+        """
         messages = [Message(**msg) for msg in data.get("messages", [])]
         context = None
         if data.get("context"):
@@ -125,7 +141,14 @@ class SessionManager:
         self._session_cache: Dict[str, Session] = {}
 
     def _get_session_file(self, session_id: str) -> Path:
-        """Get the file path for a session."""
+        """Get the file path for a session.
+
+        Args:
+            session_id: The session identifier.
+
+        Returns:
+            Path to the session JSON file.
+        """
         return self.sessions_dir / f"{session_id}.json"
 
     async def create_session(
@@ -342,7 +365,14 @@ class SessionManager:
         return deleted_count
 
     def get_last_session_id(self) -> Optional[str]:
-        """Get the ID of the most recently updated session."""
+        """Get the ID of the most recently updated session.
+
+        Scans session files to find the one with the most recent
+        modification time.
+
+        Returns:
+            Session ID string, or None if no sessions exist.
+        """
         latest_file = None
         latest_time = 0.0
 
@@ -360,7 +390,15 @@ class SessionManager:
 
 # Session utilities
 async def export_session_to_markdown(session: Session, output_file: Path) -> None:
-    """Export session to markdown format."""
+    """Export session to markdown format.
+
+    Creates a formatted markdown file with session metadata,
+    project context, and the full conversation history.
+
+    Args:
+        session: Session object to export.
+        output_file: Path where the markdown file will be written.
+    """
     lines = [
         f"# OCode Session: {session.id}",
         f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(session.created_at))}",  # noqa: E501

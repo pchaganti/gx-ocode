@@ -26,6 +26,12 @@ class FileReadTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the file_read tool specification.
+
+        Returns:
+            ToolDefinition with parameters for reading files including
+            path, encoding, offset, and limit options.
+        """
         return ToolDefinition(
             name="file_read",
             description="Read the contents of a file",
@@ -295,6 +301,12 @@ class FileWriteTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the file_write tool specification.
+
+        Returns:
+            ToolDefinition with parameters for writing files including
+            path, content, encoding, and create_directories options.
+        """
         return ToolDefinition(
             name="file_write",
             description="Write content to a file",
@@ -421,6 +433,12 @@ class FileListTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the file_list (ls) tool specification.
+
+        Returns:
+            ToolDefinition with parameters for listing directory contents
+            including path, recursive, pattern, and show_hidden options.
+        """
         return ToolDefinition(
             name="file_list",
             description="List files and directories in a path",
@@ -602,6 +620,12 @@ class FileSearchTool(Tool):
 
     @property
     def definition(self) -> ToolDefinition:
+        """Define the file_search (find) tool specification.
+
+        Returns:
+            ToolDefinition with parameters for searching files by name
+            or content including path, pattern, name_only, and recursive options.
+        """
         return ToolDefinition(
             name="file_search",
             description="Search for text patterns in files",
