@@ -31,7 +31,7 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies: [flake8-docstrings]
-        args: ["--extend-ignore=D200,D201,D202,D203,D204,D205,D212,D213,D102,D103,D105,D107,D415,D403"]
+        args: ["--extend-ignore=E203,D200,D201,D202,D203,D204,D205,D212,D213,D102,D103,D105,D107,D415,D403"]
 
   # - repo: https://github.com/pre-commit/mirrors-mypy
   #   rev: v1.9.0
