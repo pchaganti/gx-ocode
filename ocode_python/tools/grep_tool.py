@@ -10,7 +10,7 @@ import json
 import re
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Pattern, Set, Tuple, Union
+from typing import Any, Dict, List, Pattern, Tuple
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -54,7 +54,7 @@ class GrepTool(Tool):
                 ToolParameter(
                     name="file_pattern",
                     type="string",
-                    description="File pattern to filter files (e.g., '*.py', '*.{js,ts}')",
+                    description="File pattern to filter files (e.g., '*.py', '*.{js,ts}')",  # noqa: E501
                     required=False,
                     default="*",
                 ),
@@ -114,6 +114,10 @@ class GrepTool(Tool):
         """Execute text search."""
         try:
             pattern = kwargs.get("pattern")
+            if not pattern:
+                return ToolResult(
+                    success=False, output="", error="Pattern parameter is required"
+                )
             path = kwargs.get("path", ".")
             file_pattern = kwargs.get("file_pattern", "*")
             recursive = kwargs.get("recursive", True)
@@ -137,10 +141,10 @@ class GrepTool(Tool):
             regex_flags = 0 if case_sensitive else re.IGNORECASE
 
             if whole_word:
-                pattern = f"\\b{pattern}\\b"
+                pattern = f"\\b{str(pattern)}\\b"
 
             try:
-                compiled_pattern = re.compile(pattern, regex_flags)
+                compiled_pattern: Pattern[str] = re.compile(str(pattern), regex_flags)
             except re.error as e:
                 return ToolResult(
                     success=False, output="", error=f"Invalid regex pattern: {str(e)}"
@@ -149,7 +153,7 @@ class GrepTool(Tool):
             # Try ripgrep first if available
             if self.use_ripgrep and self.has_ripgrep:
                 success, rg_matches, rg_files = await self._search_with_ripgrep(
-                    pattern=pattern,
+                    pattern=str(pattern),
                     search_path=search_path,
                     file_pattern=file_pattern,
                     recursive=recursive,
@@ -202,7 +206,7 @@ class GrepTool(Tool):
                                 if len(all_matches) >= max_matches:
                                     all_matches = all_matches[:max_matches]
                                     break
-                            except Exception:
+                            except Exception:  # nosec
                                 continue
             else:
                 # Python implementation
@@ -243,7 +247,7 @@ class GrepTool(Tool):
                             if len(all_matches) >= max_matches:
                                 all_matches = all_matches[:max_matches]
                                 break
-                        except Exception:
+                        except Exception:  # nosec
                             continue
 
             # Format output
@@ -374,13 +378,15 @@ class GrepTool(Tool):
                         # Handle context lines if present
                         if "context" in data:
                             for ctx in data["context"]:
-                                match_info["context"].append(
-                                    {
-                                        "line_num": ctx["line_number"],
-                                        "text": ctx["lines"]["text"].rstrip(),
-                                        "type": ctx["type"],  # "before" or "after"
-                                    }
-                                )
+                                context = match_info.get("context", [])
+                                if isinstance(context, list):
+                                    context.append(
+                                        {
+                                            "line_num": ctx["line_number"],
+                                            "text": ctx["lines"]["text"].rstrip(),
+                                            "type": ctx["type"],  # "before" or "after"
+                                        }
+                                    )
 
                         matches.append(match_info)
 
@@ -508,7 +514,7 @@ class GrepTool(Tool):
                     {
                         "file": str(file_path),
                         "line_num": 0,
-                        "text": f"File too large ({file_size} bytes, max: {self.max_file_size})",
+                        "text": f"File too large ({file_size} bytes, max: {self.max_file_size})",  # noqa: E501
                         "context": [],
                     }
                 ]
@@ -546,7 +552,9 @@ class GrepTool(Tool):
         try:
             if context_lines > 0:
                 # Use sliding window for context
-                context_buffer = collections.deque(maxlen=context_lines)
+                context_buffer: collections.deque = collections.deque(
+                    maxlen=context_lines
+                )
                 pending_context = []
 
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -558,7 +566,7 @@ class GrepTool(Tool):
                         found_match = bool(pattern.search(line_stripped))
 
                         if found_match != invert_match:  # XOR logic for invert_match
-                            match_info: Dict[str, Any] = {
+                            match_info = {
                                 "file": str(file_path),
                                 "line_num": line_num,
                                 "text": line_stripped,
@@ -567,13 +575,15 @@ class GrepTool(Tool):
 
                             # Add before context
                             for ctx_line_num, ctx_text in context_buffer:
-                                match_info["context"].append(
-                                    {
-                                        "line_num": ctx_line_num,
-                                        "text": ctx_text,
-                                        "type": "before",
-                                    }
-                                )
+                                context = match_info.get("context", [])
+                                if isinstance(context, list):
+                                    context.append(
+                                        {
+                                            "line_num": ctx_line_num,
+                                            "text": ctx_text,
+                                            "type": "before",
+                                        }
+                                    )
 
                             matches.append(match_info)
                             pending_context = [match_info]  # Track for after context
@@ -582,14 +592,22 @@ class GrepTool(Tool):
                             # Add to pending after context if within range
                             if pending_context:
                                 for match in pending_context[:]:
-                                    if line_num - match["line_num"] <= context_lines:
-                                        match["context"].append(
-                                            {
-                                                "line_num": line_num,
-                                                "text": line_stripped,
-                                                "type": "after",
-                                            }
-                                        )
+                                    if isinstance(match, dict) and "line_num" in match:
+                                        match_line_num = match.get("line_num", 0)
+                                        if (
+                                            isinstance(match_line_num, int)
+                                            and line_num - match_line_num
+                                            <= context_lines
+                                        ):
+                                            match_context = match.get("context", [])
+                                            if isinstance(match_context, list):
+                                                match_context.append(
+                                                    {
+                                                        "line_num": line_num,
+                                                        "text": line_stripped,
+                                                        "type": "after",
+                                                    }
+                                                )
                                     else:
                                         pending_context.remove(match)
 
@@ -606,7 +624,7 @@ class GrepTool(Tool):
                         found_match = bool(pattern.search(line_stripped))
 
                         if found_match != invert_match:  # XOR logic for invert_match
-                            match_info: Dict[str, Any] = {
+                            match_info = {
                                 "file": str(file_path),
                                 "line_num": line_num,
                                 "text": line_stripped,
@@ -645,13 +663,13 @@ class CodeGrepTool(GrepTool):
                 ToolParameter(
                     name="language",
                     type="string",
-                    description="Programming language for syntax-aware search (python, javascript, etc.)",
+                    description="Programming language for syntax-aware search (python, javascript, etc.)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
                     name="search_type",
                     type="string",
-                    description="Type of search: 'function', 'class', 'variable', 'import', 'comment', 'string'",
+                    description="Type of search: 'function', 'class', 'variable', 'import', 'comment', 'string'",  # noqa: E501
                     required=False,
                     default="text",
                 ),
@@ -699,9 +717,9 @@ class CodeGrepTool(GrepTool):
                 if language == "python":
                     pattern = f"(?:def|async\\s+def)\\s+{pattern}\\s*\\("
                 elif language in ["javascript", "typescript"]:
-                    pattern = f"(?:function\\s+{pattern}\\s*\\(|const\\s+{pattern}\\s*=\\s*(?:async\\s+)?(?:function|\\([^)]*\\)\\s*=>)|{pattern}\\s*:\\s*(?:async\\s+)?(?:function|\\([^)]*\\)\\s*=>))"
+                    pattern = f"(?:function\\s+{pattern}\\s*\\(|const\\s+{pattern}\\s*=\\s*(?:async\\s+)?(?:function|\\([^)]*\\)\\s*=>)|{pattern}\\s*:\\s*(?:async\\s+)?(?:function|\\([^)]*\\)\\s*=>))"  # noqa: E501
                 elif language == "java":
-                    pattern = f"(?:public|private|protected|static|\\s)+\\w+\\s+{pattern}\\s*\\("
+                    pattern = f"(?:public|private|protected|static|\\s)+\\w+\\s+{pattern}\\s*\\("  # noqa: E501
                 elif language == "go":
                     pattern = f"func\\s+(?:\\([^)]+\\)\\s+)?{pattern}\\s*\\("
                 elif language == "rust":
@@ -712,16 +730,16 @@ class CodeGrepTool(GrepTool):
                 elif language in ["javascript", "typescript"]:
                     pattern = f"class\\s+{pattern}\\s*(?:extends\\s+\\w+\\s*)?[{{\\s]"
                 elif language == "java":
-                    pattern = f"(?:public\\s+)?class\\s+{pattern}\\s*(?:extends\\s+\\w+\\s*)?(?:implements\\s+[\\w,\\s]+\\s*)?\\{{"
+                    pattern = f"(?:public\\s+)?class\\s+{pattern}\\s*(?:extends\\s+\\w+\\s*)?(?:implements\\s+[\\w,\\s]+\\s*)?\\{{"  # noqa: E501
                 elif language == "go":
                     pattern = f"type\\s+{pattern}\\s+struct\\s*\\{{"
                 elif language == "rust":
                     pattern = f"(?:pub\\s+)?struct\\s+{pattern}\\s*[{{<]"
             elif search_type == "import":
                 if language == "python":
-                    pattern = f"(?:import\\s+{pattern}|from\\s+{pattern}\\s+import|from\\s+\\S+\\s+import.*{pattern})"
+                    pattern = f"(?:import\\s+{pattern}|from\\s+{pattern}\\s+import|from\\s+\\S+\\s+import.*{pattern})"  # noqa: E501
                 elif language in ["javascript", "typescript"]:
-                    pattern = f"(?:import.*from\\s+['\"].*{pattern}.*['\"]|import\\s+.*{pattern}|require\\(['\"].*{pattern}.*['\"]\\))"
+                    pattern = f"(?:import.*from\\s+['\"].*{pattern}.*['\"]|import\\s+.*{pattern}|require\\(['\"].*{pattern}.*['\"]\\))"  # noqa: E501
                 elif language == "java":
                     pattern = f"import\\s+(?:static\\s+)?.*{pattern}"
                 elif language == "go":
@@ -734,9 +752,9 @@ class CodeGrepTool(GrepTool):
                 if language == "python":
                     pattern = f"(?:{pattern}\\s*=|self\\.{pattern}\\s*=)"
                 elif language in ["javascript", "typescript"]:
-                    pattern = f"(?:(?:let|const|var)\\s+{pattern}\\s*[=;]|this\\.{pattern}\\s*=)"
+                    pattern = f"(?:(?:let|const|var)\\s+{pattern}\\s*[=;]|this\\.{pattern}\\s*=)"  # noqa: E501
                 elif language == "java":
-                    pattern = f"(?:(?:public|private|protected|static|final|\\s)+)?\\w+\\s+{pattern}\\s*[=;]"
+                    pattern = f"(?:(?:public|private|protected|static|final|\\s)+)?\\w+\\s+{pattern}\\s*[=;]"  # noqa: E501
                 elif language == "go":
                     pattern = f"(?:{pattern}\\s*:=|var\\s+{pattern}\\s+)"
                 elif language == "rust":
@@ -748,7 +766,7 @@ class CodeGrepTool(GrepTool):
                     pattern = f"(?://.*{pattern}|/\\*.*{pattern}.*\\*/)"
             elif search_type == "string":
                 if language == "python":
-                    pattern = f"(?:['\"].*{pattern}.*['\"]|['\"]['\"]['\"].*{pattern}.*['\"]['\"]['\"])"
+                    pattern = f"(?:['\"].*{pattern}.*['\"]|['\"]['\"]['\"].*{pattern}.*['\"]['\"]['\"])"  # noqa: E501
                 elif language in ["javascript", "typescript"]:
                     pattern = f"(?:['\"].*{pattern}.*['\"]|`.*{pattern}.*`)"
                 else:
@@ -807,7 +825,7 @@ class CodeGrepTool(GrepTool):
                     {
                         "file": str(file_path),
                         "line_num": 0,
-                        "text": f"File too large ({file_size} bytes, max: {self.max_file_size}) - skipping AST parsing",
+                        "text": f"File too large ({file_size} bytes, max: {self.max_file_size}) - skipping AST parsing",  # noqa: E501
                         "context": [],
                     }
                 ]
@@ -958,7 +976,7 @@ class CodeGrepTool(GrepTool):
         include_line_numbers: bool,
     ) -> Dict[str, Any]:
         """Create a match info dictionary with context."""
-        match_info = {
+        match_info: Dict[str, Any] = {
             "file": str(file_path),
             "line_num": line_num + 1,
             "text": line_text,
@@ -971,9 +989,14 @@ class CodeGrepTool(GrepTool):
 
             for ctx_i in range(start_line, end_line):
                 if ctx_i != line_num:
-                    match_info["context"].append(
-                        {"line_num": ctx_i + 1, "text": all_lines[ctx_i].rstrip("\n\r")}
-                    )
+                    context = match_info.get("context", [])
+                    if isinstance(context, list):
+                        context.append(
+                            {
+                                "line_num": ctx_i + 1,
+                                "text": all_lines[ctx_i].rstrip("\n\r"),
+                            }
+                        )
 
         return match_info
 
@@ -981,6 +1004,10 @@ class CodeGrepTool(GrepTool):
         """Enhanced search with language-specific features."""
         try:
             pattern = kwargs.get("pattern")
+            if not pattern:
+                return ToolResult(
+                    success=False, output="", error="Pattern parameter is required"
+                )
             path = kwargs.get("path", ".")
             file_pattern = kwargs.get("file_pattern", "*")
             recursive = kwargs.get("recursive", True)
@@ -1007,10 +1034,10 @@ class CodeGrepTool(GrepTool):
             regex_flags = 0 if case_sensitive else re.IGNORECASE
 
             if whole_word:
-                pattern = f"\\b{pattern}\\b"
+                pattern = f"\\b{str(pattern)}\\b"
 
             try:
-                compiled_pattern = re.compile(pattern, regex_flags)
+                compiled_pattern: Pattern[str] = re.compile(str(pattern), regex_flags)
             except re.error as e:
                 return ToolResult(
                     success=False, output="", error=f"Invalid regex pattern: {str(e)}"
@@ -1090,7 +1117,7 @@ class CodeGrepTool(GrepTool):
                         all_matches = all_matches[:max_matches]
                         break
 
-                except Exception:
+                except Exception:  # nosec
                     # Skip files that can't be read
                     continue
 

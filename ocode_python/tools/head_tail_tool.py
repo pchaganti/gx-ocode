@@ -2,10 +2,7 @@
 Head and tail tools for viewing file contents.
 """
 
-import asyncio
-import os
 from pathlib import Path
-from typing import List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -35,8 +32,13 @@ class HeadTool(Tool):
             ],
         )
 
-    async def execute(self, file_path: str, lines: int = 10, **kwargs) -> ToolResult:
+    async def execute(self, **kwargs) -> ToolResult:
         """Execute head command."""
+        file_path = kwargs.get("file_path")
+        lines = kwargs.get("lines", 10)
+
+        if not file_path:
+            return ToolResult(success=False, output="", error="file_path is required")
         try:
             path = Path(file_path)
 
@@ -96,8 +98,13 @@ class TailTool(Tool):
             ],
         )
 
-    async def execute(self, file_path: str, lines: int = 10, **kwargs) -> ToolResult:
+    async def execute(self, **kwargs) -> ToolResult:
         """Execute tail command."""
+        file_path = kwargs.get("file_path")
+        lines = kwargs.get("lines", 10)
+
+        if not file_path:
+            return ToolResult(success=False, output="", error="file_path is required")
         try:
             path = Path(file_path)
 
