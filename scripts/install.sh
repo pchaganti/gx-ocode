@@ -149,6 +149,51 @@ if ! command -v ocode &> /dev/null; then
     fi
 fi
 
+# Check for ripgrep
+echo "🔍 Checking for ripgrep (rg)..."
+if command -v rg &> /dev/null; then
+    echo "✅ ripgrep found"
+else
+    echo "⚠️  ripgrep not found"
+    echo "Installing ripgrep for enhanced search performance..."
+    
+    # Detect OS and install ripgrep
+    if [ "$(uname)" = "Darwin" ]; then
+        # macOS
+        if command -v brew &> /dev/null; then
+            print_status "Installing ripgrep via Homebrew..."
+            brew install ripgrep
+        else
+            print_warning "Homebrew not found. Please install ripgrep manually:"
+            echo "  • Install Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+            echo "  • Then run: brew install ripgrep"
+        fi
+    elif [ -f /etc/debian_version ]; then
+        # Debian/Ubuntu
+        print_status "Installing ripgrep via apt..."
+        sudo apt-get update && sudo apt-get install -y ripgrep
+    elif [ -f /etc/redhat-release ]; then
+        # RHEL/CentOS/Fedora
+        print_status "Installing ripgrep via dnf..."
+        sudo dnf install -y ripgrep
+    elif [ -f /etc/arch-release ]; then
+        # Arch Linux
+        print_status "Installing ripgrep via pacman..."
+        sudo pacman -S --noconfirm ripgrep
+    else
+        print_warning "Could not detect OS. Please install ripgrep manually:"
+        echo "  • Visit: https://github.com/BurntSushi/ripgrep#installation"
+        echo "  • Or use cargo: cargo install ripgrep"
+    fi
+    
+    # Check if installation succeeded
+    if command -v rg &> /dev/null; then
+        print_success "ripgrep installed successfully!"
+    else
+        print_warning "ripgrep installation failed. OCode will fall back to Python-based search."
+    fi
+fi
+
 # Check for Ollama
 echo "🔍 Checking for Ollama..."
 if command -v ollama &> /dev/null; then
@@ -170,6 +215,12 @@ if command -v ollama &> /dev/null; then
     if ! ollama pull llama3:8b; then
         echo "⚠️  Failed to pull llama3:8b. You can pull it later with: ollama pull llama3:8b"
     fi
+    
+    # Pull thinking model for advanced tool calling
+    echo "📥 Pulling thinking model (MFDoom/deepseek-coder-v2-tool-calling:latest)..."
+    if ! ollama pull MFDoom/deepseek-coder-v2-tool-calling:latest; then
+        echo "⚠️  Failed to pull thinking model. You can pull it later with: ollama pull MFDoom/deepseek-coder-v2-tool-calling:latest"
+    fi
 else
     echo "⚠️  Ollama not found"
     echo "OCode requires Ollama to function. Please install Ollama:"
@@ -182,11 +233,13 @@ echo "⚙️  Creating default configuration..."
 cat > "$OCODE_DIR/settings.json" << EOF
 {
   "model": "llama3:8b",
+  "thinking_model": "MFDoom/deepseek-coder-v2-tool-calling:latest",
   "temperature": 0.1,
   "max_tokens": 4096,
   "max_context_files": 20,
   "output_format": "text",
   "verbose": false,
+  "use_ripgrep": true,
   "permissions": {
     "allow_file_read": true,
     "allow_file_write": true,
@@ -266,6 +319,8 @@ if command -v ocode &> /dev/null; then
     echo "  • 22+ specialized tools for development workflows"
     echo "  • Agent delegation for complex tasks"
     echo "  • Performance-optimized context strategies"
+    echo "  • Thinking model for advanced tool calling"
+    echo "  • ripgrep integration for 10-100x faster searches"
     echo ""
     print_status "📖 Documentation:"
     echo "  • Installation guide: INSTALL.md"
