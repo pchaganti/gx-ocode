@@ -3,14 +3,11 @@ Python language analyzer using AST.
 """
 
 import ast
-import re
-import sys
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List, Optional
 
 from .base import (
     AnalysisResult,
-    CodeMetrics,
     Import,
     LanguageAnalyzer,
     Symbol,

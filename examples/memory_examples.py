@@ -10,8 +10,6 @@ Make sure you have the function calling model installed:
 """
 
 import asyncio
-import json
-from pathlib import Path
 
 from ocode_python.core.engine import OCodeEngine
 from ocode_python.tools.memory_tools import MemoryReadTool, MemoryWriteTool
@@ -216,7 +214,10 @@ async def example_advanced_memory_patterns():
     # Store temporary data for current session
     temp_data = [
         {"type": "debug_info", "data": "Current debugging session X"},
-        {"type": "temp_files", "data": ["/tmp/debug.log", "/tmp/output.json"]},
+        {
+            "type": "temp_files",
+            "data": ["/tmp/debug.log", "/tmp/output.json"],  # nosec B108
+        },
         {"type": "active_connections", "data": ["db_conn_1", "redis_conn_1"]},
     ]
 
@@ -311,27 +312,27 @@ def cli_examples():
     examples = [
         {
             "description": "Store personal information",
-            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Remember my name is John Smith"',
+            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Remember my name is John Smith"',  # noqa: E501
         },
         {
             "description": "Store project details",
-            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Save that this is a React project with TypeScript"',
+            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Save that this is a React project with TypeScript"',  # noqa: E501
         },
         {
             "description": "Store API credentials (be careful!)",
-            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Store my GitHub token as ghp_example123"',
+            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Store my GitHub token as ghp_example123"',  # noqa: E501
         },
         {
             "description": "Retrieve stored information",
-            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "What\'s my name?"',
+            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "What\'s my name?"',  # noqa: E501
         },
         {
             "description": "Show all stored data",
-            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Show me everything in my memory"',
+            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -p "Show me everything in my memory"',  # noqa: E501
         },
         {
             "description": "Verbose mode (see decision process)",
-            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -v -p "Remember my favorite color"',
+            "command": 'ocode -m MFDoom/deepseek-coder-v2-tool-calling:latest -v -p "Remember my favorite color"',  # noqa: E501
         },
     ]
 
@@ -368,7 +369,7 @@ async def main():
         print("💡 Make sure you have:")
         print("   1. Ollama installed and running")
         print(
-            "   2. The function calling model: MFDoom/deepseek-coder-v2-tool-calling:latest"
+            "   2. The function calling model: MFDoom/deepseek-coder-v2-tool-calling:latest"  # noqa: E501
         )
         print("   3. OCode properly installed")
 

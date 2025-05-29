@@ -6,9 +6,9 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
-from dotenv import dotenv_values, load_dotenv, set_key, unset_key
+from dotenv import dotenv_values, load_dotenv
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -137,7 +137,7 @@ class EnvironmentTool(Tool):
             elif action == "save":
                 return await self._action_save(file_path, pattern)
 
-            # This should never happen due to validation above, but included for completeness
+            # This should never happen due to validation above, but included for completeness  # noqa: E501
             return ToolResult(
                 success=False,
                 output="",
@@ -411,5 +411,5 @@ class EnvironmentTool(Tool):
 
     def _is_valid_var_name(self, name: str) -> bool:
         """Check if a variable name is valid."""
-        # Must start with letter or underscore, followed by letters, numbers, or underscores
+        # Must start with letter or underscore, followed by letters, numbers, or underscores  # noqa: E501
         return bool(re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name))

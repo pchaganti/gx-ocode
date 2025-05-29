@@ -41,7 +41,7 @@ class TestProcessMonitorTool:
 
         # Open files
         open_file = Mock()
-        open_file.path = "/tmp/test.txt"
+        open_file.path = "/tmp/test.txt"  # nosec B108
         process.open_files.return_value = [open_file]
 
         # Connections
@@ -357,7 +357,7 @@ class TestProcessMonitorTool:
 
             # Open files
             open_file = Mock()
-            open_file.path = "/tmp/test.txt"
+            open_file.path = "/tmp/test.txt"  # nosec B108
             process.open_files.return_value = [open_file]
 
             # Connections

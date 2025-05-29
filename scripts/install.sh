@@ -88,16 +88,16 @@ fi
 # Virtual environment setup
 if [ "$USE_VENV" = true ]; then
     VENV_DIR="$HOME/.ocode/venv"
-    
+
     if [ ! -d "$VENV_DIR" ]; then
         print_status "Creating virtual environment at $VENV_DIR..."
         mkdir -p "$HOME/.ocode"
         python3 -m venv "$VENV_DIR"
     fi
-    
+
     print_status "Activating virtual environment..."
     source "$VENV_DIR/bin/activate"
-    
+
     # Upgrade pip in venv
     pip install --upgrade pip
 fi
@@ -130,7 +130,7 @@ fi
 if ! command -v ocode &> /dev/null; then
     echo "⚠️  ocode command not found in PATH"
     echo "Adding ~/.local/bin to PATH..."
-    
+
     # Add to PATH in shell profile
     SHELL_PROFILE=""
     if [ -n "$ZSH_VERSION" ]; then
@@ -140,7 +140,7 @@ if ! command -v ocode &> /dev/null; then
     else
         SHELL_PROFILE="$HOME/.profile"
     fi
-    
+
     if [ -f "$SHELL_PROFILE" ]; then
         if ! grep -q "export PATH.*\.local/bin" "$SHELL_PROFILE"; then
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_PROFILE"
@@ -156,7 +156,7 @@ if command -v rg &> /dev/null; then
 else
     echo "⚠️  ripgrep not found"
     echo "Installing ripgrep for enhanced search performance..."
-    
+
     # Detect OS and install ripgrep
     if [ "$(uname)" = "Darwin" ]; then
         # macOS
@@ -185,7 +185,7 @@ else
         echo "  • Visit: https://github.com/BurntSushi/ripgrep#installation"
         echo "  • Or use cargo: cargo install ripgrep"
     fi
-    
+
     # Check if installation succeeded
     if command -v rg &> /dev/null; then
         print_success "ripgrep installed successfully!"
@@ -198,7 +198,7 @@ fi
 echo "🔍 Checking for Ollama..."
 if command -v ollama &> /dev/null; then
     echo "✅ Ollama found"
-    
+
     # Check if Ollama is running
     if ! ollama list &> /dev/null; then
         echo "⚠️  Ollama is not running. Starting Ollama service..."
@@ -209,13 +209,13 @@ if command -v ollama &> /dev/null; then
             echo "Please start Ollama manually: ollama serve"
         fi
     fi
-    
+
     # Pull default model
     echo "📥 Pulling default model (llama3:8b)..."
     if ! ollama pull llama3:8b; then
         echo "⚠️  Failed to pull llama3:8b. You can pull it later with: ollama pull llama3:8b"
     fi
-    
+
     # Pull thinking model for advanced tool calling
     echo "📥 Pulling thinking model (MFDoom/deepseek-coder-v2-tool-calling:latest)..."
     if ! ollama pull MFDoom/deepseek-coder-v2-tool-calling:latest; then
@@ -257,7 +257,7 @@ read -p "Do you want to set up shell completion? [Y/n]: " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     SHELL_NAME=$(basename "$SHELL")
-    
+
     case $SHELL_NAME in
         bash)
             COMPLETION_FILE="$HOME/.bashrc"
@@ -276,7 +276,7 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             COMPLETION_FILE=""
             ;;
     esac
-    
+
     if [ -n "$COMPLETION_FILE" ]; then
         if ! grep -q "_OCODE_COMPLETE" "$COMPLETION_FILE" 2>/dev/null; then
             echo "" >> "$COMPLETION_FILE"
@@ -295,14 +295,14 @@ if command -v ocode &> /dev/null; then
     print_success "OCode installed successfully!"
     ocode --help > /dev/null 2>&1
     print_success "OCode help command works"
-    
+
     # Test multi-action detection
     echo ""
     print_status "Testing enhanced features..."
     if ocode -p "What tools can you use?" --out text | grep -q "comprehensive list" 2>/dev/null; then
         print_success "Enhanced conversation parsing working"
     fi
-    
+
     echo ""
     print_success "🎉 Installation complete!"
     echo ""
@@ -330,7 +330,7 @@ if command -v ocode &> /dev/null; then
     print_success "Happy coding with OCode! 🚀"
 else
     print_error "Installation failed. Please check the errors above."
-    
+
     if [ "$USE_VENV" = true ]; then
         print_warning "Add the following to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
         echo "export PATH=\"$VENV_DIR/bin:\$PATH\""

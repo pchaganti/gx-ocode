@@ -3,7 +3,6 @@
 Script to fix trailing whitespace and basic formatting issues.
 """
 
-import os
 import re
 import sys
 from pathlib import Path

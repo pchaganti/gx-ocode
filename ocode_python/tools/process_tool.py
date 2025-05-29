@@ -2,11 +2,10 @@
 Process monitoring and management tool.
 """
 
-import asyncio
 import json
 import platform
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import psutil
 
@@ -147,7 +146,7 @@ class ProcessMonitorTool(Tool):
                     operation=f"process_check({name})",
                 )
 
-            # This should never happen due to validation above, but included for completeness
+            # This should never happen due to validation above, but included for completeness  # noqa: E501
             return ToolResult(
                 success=False,
                 output="",

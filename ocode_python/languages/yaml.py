@@ -4,7 +4,7 @@ YAML language analyzer.
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import List
 
 from .base import (
     AnalysisResult,
@@ -151,7 +151,7 @@ class YAMLAnalyzer(LanguageAnalyzer):
 
         # Look for file references in values
         file_patterns = [
-            r'(?:file|path|include|template|source)\s*:\s*["\']?([^"\'\s]+\.[a-zA-Z0-9]+)["\']?',
+            r'(?:file|path|include|template|source)\s*:\s*["\']?([^"\'\s]+\.[a-zA-Z0-9]+)["\']?',  # noqa: E501
             r'["\']([^"\']*\.(yaml|yml|json|xml|properties|env))["\']',
         ]
 

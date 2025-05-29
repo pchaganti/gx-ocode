@@ -65,6 +65,8 @@ class CompletionRequest(BaseModel):
     tools: Optional[List[Dict[str, Any]]] = None
 
     class Config:
+        """Pydantic config for ChatRequest."""
+
         extra = "allow"
 
 
@@ -133,13 +135,13 @@ class OllamaAPIClient:
         """
         await self._ensure_session()
 
-        # Use /api/chat endpoint if tools are provided, otherwise use /api/generate for compatibility
+        # Use /api/chat endpoint if tools are provided, otherwise use /api/generate for compatibility  # noqa: E501
         if request.tools:
             url = f"{self.base_url}/api/chat"
             payload = {
                 "model": request.model,
                 "messages": request.messages,
-                "stream": False,  # Disable streaming for tool calls - Ollama streaming doesn't work well with tools
+                "stream": False,  # Disable streaming for tool calls - Ollama streaming doesn't work well with tools  # noqa: E501
                 "tools": request.tools,
             }
         else:
@@ -230,7 +232,7 @@ class OllamaAPIClient:
                         try:
                             arguments = json.loads(arguments)
                         except json.JSONDecodeError as e:
-                            # Log the error for debugging and try to extract basic parameters
+                            # Log the error for debugging and try to extract basic parameters  # noqa: E501
                             print(f"Warning: Failed to parse tool arguments JSON: {e}")
                             print(f"Raw arguments: {arguments}")
                             arguments = {}

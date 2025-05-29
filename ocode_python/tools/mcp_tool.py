@@ -5,8 +5,7 @@ Model Context Protocol (MCP) integration tool for OCode.
 import asyncio
 import json
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from ..utils.timeout_handler import TimeoutError, with_timeout
 from .base import (
@@ -26,12 +25,12 @@ class MCPTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="mcp",
-            description="Integrate with Model Context Protocol (MCP) servers for extended capabilities",
+            description="Integrate with Model Context Protocol (MCP) servers for extended capabilities",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="action",
                     type="string",
-                    description="Action to perform: 'connect', 'list_servers', 'discover_tools', 'call_tool', 'get_resources', 'disconnect', 'status'",
+                    description="Action to perform: 'connect', 'list_servers', 'discover_tools', 'call_tool', 'get_resources', 'disconnect', 'status'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
@@ -188,7 +187,7 @@ class MCPTool(Tool):
             return ToolResult(
                 success=False,
                 output="",
-                error=f"No configuration provided for server '{server_name}' and no default available",
+                error=f"No configuration provided for server '{server_name}' and no default available",  # noqa: E501
             )
 
         # Simulate connection (in reality, this would start the MCP server process)
@@ -234,7 +233,7 @@ class MCPTool(Tool):
             output += (
                 f"Tools available: {len(self.server_tools.get(server_name, []))}\n"
             )
-            output += f"Resources available: {len(self.server_resources.get(server_name, []))}\n"
+            output += f"Resources available: {len(self.server_resources.get(server_name, []))}\n"  # noqa: E501
 
             return ToolResult(
                 success=True, output=output, metadata={"server": connection_info}
@@ -261,7 +260,7 @@ class MCPTool(Tool):
         if not self.connected_servers:
             return ToolResult(
                 success=True,
-                output="No MCP servers connected. Use action='connect' to connect to a server.",
+                output="No MCP servers connected. Use action='connect' to connect to a server.",  # noqa: E501
                 metadata={"servers": []},
             )
 
@@ -473,7 +472,7 @@ class MCPTool(Tool):
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Tool '{tool_name}' not found on server '{server_name}'. Available tools: {', '.join(available_tools)}",
+                error=f"Tool '{tool_name}' not found on server '{server_name}'. Available tools: {', '.join(available_tools)}",  # noqa: E501
             )
 
         # Simulate tool execution
@@ -504,7 +503,7 @@ class MCPTool(Tool):
 
         except TimeoutError as e:
             return ErrorHandler.create_error_result(
-                f"MCP tool call '{tool_name}' on server '{server_name}' timed out: {str(e)}",
+                f"MCP tool call '{tool_name}' on server '{server_name}' timed out: {str(e)}",  # noqa: E501
                 ErrorType.TIMEOUT_ERROR,
                 {
                     "server_name": server_name,
@@ -539,14 +538,14 @@ class MCPTool(Tool):
             if tool_name == "git_status":
                 return "On branch main\nNothing to commit, working tree clean"
             elif tool_name == "git_log":
-                return "commit abc123 (HEAD -> main)\nAuthor: Developer\nDate: Today\n\nLatest commit"
+                return "commit abc123 (HEAD -> main)\nAuthor: Developer\nDate: Today\n\nLatest commit"  # noqa: E501
             elif tool_name == "git_diff":
                 return "diff --git a/file.py b/file.py\n+Added line\n-Removed line"
 
         elif server_name == "web-search":
             if tool_name == "search":
                 query = arguments.get("query", "")
-                return f"Search results for '{query}':\n1. Example result 1\n2. Example result 2"
+                return f"Search results for '{query}':\n1. Example result 1\n2. Example result 2"  # noqa: E501
 
         return f"Result from {tool_name} on {server_name} with args {arguments}"
 
@@ -579,7 +578,7 @@ class MCPTool(Tool):
                 return ToolResult(
                     success=False,
                     output="",
-                    error=f"Resource '{resource_uri}' not found on server '{server_name}'",
+                    error=f"Resource '{resource_uri}' not found on server '{server_name}'",  # noqa: E501
                 )
 
             # Simulate resource fetching
@@ -623,7 +622,7 @@ class MCPTool(Tool):
         elif "status" in resource_uri:
             return '{"branch": "main", "status": "clean", "files": []}'
         elif "log" in resource_uri:
-            return '{"commits": [{"hash": "abc123", "message": "Latest commit", "author": "Developer"}]}'
+            return '{"commits": [{"hash": "abc123", "message": "Latest commit", "author": "Developer"}]}'  # noqa: E501
         else:
             return f"Content of resource: {resource_uri}"
 
@@ -679,7 +678,7 @@ class MCPTool(Tool):
             for server_name, server_info in self.connected_servers.items():
                 output += f"  {server_name}: {server_info['status']}\n"
                 output += f"    Tools: {len(self.server_tools.get(server_name, []))}\n"
-                output += f"    Resources: {len(self.server_resources.get(server_name, []))}\n"
+                output += f"    Resources: {len(self.server_resources.get(server_name, []))}\n"  # noqa: E501
         else:
             output += "No servers connected.\n"
             output += (

@@ -5,7 +5,7 @@ Network connectivity testing tool using ping.
 import asyncio
 import platform
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -238,7 +238,7 @@ class PingTool(Tool):
         # Parse packet statistics
         # Look for patterns like "4 packets transmitted, 4 received, 0% packet loss"
         packet_pattern = re.search(
-            r"(\d+)\s+packets?\s+transmitted.*?(\d+)\s+(?:packets?\s+)?received.*?(\d+(?:\.\d+)?)\s*%\s*packet\s+loss",
+            r"(\d+)\s+packets?\s+transmitted.*?(\d+)\s+(?:packets?\s+)?received.*?(\d+(?:\.\d+)?)\s*%\s*packet\s+loss",  # noqa: E501
             output,
             re.IGNORECASE | re.DOTALL,
         )
@@ -251,7 +251,7 @@ class PingTool(Tool):
         # Parse round-trip time statistics
         # Look for patterns like "min/avg/max/mdev = 0.123/0.456/0.789/0.012 ms"
         time_pattern = re.search(
-            r"min/avg/max(?:/[a-z]+)?\s*=\s*(\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)",
+            r"min/avg/max(?:/[a-z]+)?\s*=\s*(\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)",  # noqa: E501
             output,
             re.IGNORECASE,
         )

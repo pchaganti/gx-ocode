@@ -20,7 +20,7 @@ class TestMCPServerInfo:
             command="python",
             args=["-m", "test"],
             env={"TEST": "value"},
-            cwd="/tmp",
+            cwd="/tmp",  # nosec B108
             status="stopped",
         )
 
@@ -28,7 +28,7 @@ class TestMCPServerInfo:
         assert info.command == "python"
         assert info.args == ["-m", "test"]
         assert info.env == {"TEST": "value"}
-        assert info.cwd == "/tmp"
+        assert info.cwd == "/tmp"  # nosec B108
         assert info.status == "stopped"
         assert info.pid is None
         assert info.port is None
@@ -182,7 +182,7 @@ class TestMCPServerManager:
         mock_config_manager.get.return_value = servers_config
         manager._load_server_configs()
 
-        # The actual implementation doesn't raise an error, it just ensures the server is stopped
+        # The actual implementation doesn't raise an error, it just ensures the server is stopped  # noqa: E501
         info = await manager.stop_server("test-server")
         assert info.name == "test-server"
         assert info.status == "stopped"

@@ -310,7 +310,7 @@ class LanguageAnalyzer(ABC):
         """
         Resolve a single import statement to a file path.
 
-        This is a simplified implementation that can be overridden by language-specific analyzers.
+        This is a simplified implementation that can be overridden by language-specific analyzers.  # noqa: E501
         """
         module_parts = import_stmt.module.split(".")
 

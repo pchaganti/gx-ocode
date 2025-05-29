@@ -3,11 +3,10 @@ Base classes for OCode tools.
 """
 
 import logging
-import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Coroutine, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -185,14 +184,14 @@ class ErrorHandler:
         """Validate string parameter with length and pattern constraints."""
         if not isinstance(value, str):
             return ErrorHandler.create_error_result(
-                f"Parameter '{param_name}' must be a string, got {type(value).__name__}",
+                f"Parameter '{param_name}' must be a string, got {type(value).__name__}",  # noqa: E501
                 ErrorType.VALIDATION_ERROR,
                 {"param_name": param_name, "actual_type": type(value).__name__},
             )
 
         if len(value) < min_length:
             return ErrorHandler.create_error_result(
-                f"Parameter '{param_name}' must be at least {min_length} characters, got {len(value)}",
+                f"Parameter '{param_name}' must be at least {min_length} characters, got {len(value)}",  # noqa: E501
                 ErrorType.VALIDATION_ERROR,
                 {
                     "param_name": param_name,
@@ -203,7 +202,7 @@ class ErrorHandler:
 
         if len(value) > max_length:
             return ErrorHandler.create_error_result(
-                f"Parameter '{param_name}' must be at most {max_length} characters, got {len(value)}",
+                f"Parameter '{param_name}' must be at most {max_length} characters, got {len(value)}",  # noqa: E501
                 ErrorType.VALIDATION_ERROR,
                 {
                     "param_name": param_name,

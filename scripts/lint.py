@@ -5,11 +5,9 @@ Checks common Python issues without external dependencies.
 """
 
 import ast
-import os
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 
 class SimpleLinter:
@@ -84,7 +82,9 @@ class SimpleLinter:
                     continue  # Skip complex unused import detection for now
 
         except Exception:
-            pass  # Skip import checking on errors
+            # Intentionally skip import checking on errors to allow
+            # linting to continue even if some imports can't be analyzed
+            pass  # nosec B110
 
     def run(self, directory: Path) -> int:
         """Run linter on directory."""

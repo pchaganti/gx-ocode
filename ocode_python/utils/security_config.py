@@ -6,7 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 
 @dataclass
@@ -120,7 +120,11 @@ class SecurityConfigManager:
 
     @property
     def patterns(self) -> SecurityPatterns:
-        """Get security patterns (cached)."""
+        """Return cached security patterns, loading if necessary.
+
+        Returns:
+            SecurityPatterns: The loaded security patterns
+        """
         if self._patterns is None:
             self._patterns = self._load_config()
         return self._patterns

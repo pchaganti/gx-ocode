@@ -129,7 +129,7 @@ class AuthenticationManager:
         self,
         token: str,
         expires_at: Optional[float] = None,
-        token_type: str = "Bearer",
+        token_type: str = "Bearer",  # nosec B107 - Standard OAuth token type, not a password  # noqa: E501
         scope: Optional[str] = None,
     ) -> bool:
         """
@@ -227,7 +227,7 @@ class AuthenticationManager:
                 data["client_secret"] = credentials["client_secret"]
 
             # Make the request
-            response = requests.post(token_endpoint, data=data)
+            response = requests.post(token_endpoint, data=data, timeout=30)
             response.raise_for_status()
 
             # Parse response
@@ -353,8 +353,6 @@ class OIDCAuthenticator:
             True if authentication successful
         """
         try:
-            import json
-
             import aiohttp
 
             # Discover OIDC endpoints

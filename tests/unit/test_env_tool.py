@@ -254,7 +254,7 @@ class TestEnvironmentTool:
                     content = f.read()
                     assert 'VAR_WITH_SPACES="value with spaces"' in content
                     assert 'VAR_WITH_QUOTES="value with \\"quotes\\""' in content
-                    # The tool might not quote values with equals signs based on implementation
+                    # The tool might not quote values with equals signs based on implementation  # noqa: E501
                     assert (
                         "VAR_WITH_EQUALS=key=value" in content
                         or 'VAR_WITH_EQUALS="key=value"' in content

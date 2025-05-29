@@ -76,7 +76,7 @@ This is a test project with Hello World examples.
         # Mock the subprocess call
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = f"{temp_files}/test.py:2:def hello_world():\n{temp_files}/test.js:1:function helloWorld() {{"
+        mock_result.stdout = f"{temp_files}/test.py:2:def hello_world():\n{temp_files}/test.js:1:function helloWorld() {{"  # noqa: E501
         mock_result.stderr = ""
 
         with patch("subprocess.run", return_value=mock_result):

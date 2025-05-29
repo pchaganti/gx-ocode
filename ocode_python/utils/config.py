@@ -5,7 +5,7 @@ Configuration management for OCode.
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 # Default configuration
 DEFAULT_CONFIG = {

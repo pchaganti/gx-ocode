@@ -340,13 +340,13 @@ class TestPermissionRule:
         """Test rule creation."""
         rule = PermissionRule(
             operation=OperationType.FILE_WRITE,
-            pattern="/tmp/*",
+            pattern="/tmp/*",  # nosec B108
             permission=PermissionLevel.RESTRICTED,
-            description="Allow restricted writes to /tmp",
+            description="Allow restricted writes to /tmp",  # nosec B108
         )
 
         assert rule.operation == OperationType.FILE_WRITE
-        assert rule.pattern == "/tmp/*"
+        assert rule.pattern == "/tmp/*"  # nosec B108
         assert rule.permission == PermissionLevel.RESTRICTED
 
     def test_rule_matches(self):

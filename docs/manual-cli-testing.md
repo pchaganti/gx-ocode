@@ -28,7 +28,7 @@ python3 -m ocode_python.core.cli -p "How many files do we have?" --out text
 
 ## Expected Behaviors:
 - ✅ File counting returns exact integer (like 9816)
-- ✅ Output wrapped in markdown code fences  
+- ✅ Output wrapped in markdown code fences
 - ✅ No mock data or "12,345" fabricated numbers
 - ✅ Confirmation prompts for sensitive commands
 - ✅ Absolute blocking of dangerous commands

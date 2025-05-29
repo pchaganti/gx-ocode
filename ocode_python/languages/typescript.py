@@ -2,11 +2,9 @@
 TypeScript/JavaScript language analyzer.
 """
 
-import json
 import re
-import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import List
 
 from .base import (
     AnalysisResult,
@@ -69,7 +67,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
         functions = []
 
         # Regular function declarations
-        func_pattern = r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\([^)]*\)(?:\s*:\s*[^{]+)?\s*\{"
+        func_pattern = r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\([^)]*\)(?:\s*:\s*[^{]+)?\s*\{"  # noqa: E501
         for match in re.finditer(func_pattern, content, re.MULTILINE):
             line_num = content[: match.start()].count("\n") + 1
             functions.append(
@@ -83,7 +81,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
             )
 
         # Arrow functions assigned to variables
-        arrow_pattern = r"(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*(?::\s*[^=]+)?\s*=>"
+        arrow_pattern = r"(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*(?::\s*[^=]+)?\s*=>"  # noqa: E501
         for match in re.finditer(arrow_pattern, content, re.MULTILINE):
             line_num = content[: match.start()].count("\n") + 1
             functions.append(
@@ -97,7 +95,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
             )
 
         # Method definitions in classes
-        method_pattern = r"(?:(?:public|private|protected)\s+)?(?:static\s+)?(?:async\s+)?(\w+)\s*\([^)]*\)(?:\s*:\s*[^{]+)?\s*\{"
+        method_pattern = r"(?:(?:public|private|protected)\s+)?(?:static\s+)?(?:async\s+)?(\w+)\s*\([^)]*\)(?:\s*:\s*[^{]+)?\s*\{"  # noqa: E501
         for match in re.finditer(method_pattern, content, re.MULTILINE):
             line_num = content[: match.start()].count("\n") + 1
             visibility = "private"
@@ -124,7 +122,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
         """Extract class definitions."""
         classes = []
 
-        class_pattern = r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+\w+)?(?:\s+implements\s+[\w,\s]+)?\s*\{"
+        class_pattern = r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+\w+)?(?:\s+implements\s+[\w,\s]+)?\s*\{"  # noqa: E501
         for match in re.finditer(class_pattern, content, re.MULTILINE):
             line_num = content[: match.start()].count("\n") + 1
             classes.append(
@@ -247,7 +245,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
                 )
 
         # CommonJS requires
-        require_pattern = r"(?:const|let|var)\s+(?:{[^}]+}|\w+)\s*=\s*require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"
+        require_pattern = r"(?:const|let|var)\s+(?:{[^}]+}|\w+)\s*=\s*require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"  # noqa: E501
         for match in re.finditer(require_pattern, content, re.MULTILINE):
             module_name = match.group(1)
             line_num = content[: match.start()].count("\n") + 1
@@ -332,7 +330,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
         return complexity
 
     def parse_file(self, file_path: Path, content: str) -> AnalysisResult:
-        """Parse a TypeScript/JavaScript file and extract symbols, imports, and metrics."""
+        """Parse a TypeScript/JavaScript file and extract symbols, imports, and metrics."""  # noqa: E501
         symbols = self.extract_symbols(content)
         imports = self.extract_imports(content)
         metrics = self.calculate_metrics(content, symbols)

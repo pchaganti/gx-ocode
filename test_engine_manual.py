@@ -1,3 +1,5 @@
+"""Manual test script for engine functionality."""
+
 import asyncio
 
 from ocode_python.core.engine import OCodeEngine

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Setup script for OCode package."""
 
 import os
 
@@ -11,7 +12,7 @@ setup(
     name="ocode",
     version="0.1.0",
     description="Terminal-native AI coding assistant powered by Ollama models",
-    long_description="OCode delivers terminal-native workflow with deep codebase intelligence and autonomous task execution.",
+    long_description="OCode delivers terminal-native workflow with deep codebase intelligence and autonomous task execution.",  # noqa: E501
     long_description_content_type="text/markdown",
     author="OCode Team",
     author_email="team@ocode.dev",

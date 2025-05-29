@@ -278,7 +278,7 @@ pip install -e .
 
 # This will install new dependencies for data processing:
 # - pyyaml>=6.0 (YAML parsing)
-# - jsonpath-ng>=1.5.3 (JSONPath queries)  
+# - jsonpath-ng>=1.5.3 (JSONPath queries)
 # - python-dotenv>=1.0.0 (Environment file handling)
 ```
 
@@ -349,7 +349,7 @@ OCode includes advanced conversation parsing with multi-action detection:
 ```bash
 # These queries now correctly identify multiple required actions:
 python -m ocode_python.core.cli -p "Run tests and commit if they pass"           # test_runner + git_commit
-python -m ocode_python.core.cli -p "Find all TODO comments and replace them"     # grep + file_edit  
+python -m ocode_python.core.cli -p "Find all TODO comments and replace them"     # grep + file_edit
 python -m ocode_python.core.cli -p "Analyze architecture and write documentation" # architect + file_write
 python -m ocode_python.core.cli -p "Create a component and write tests for it"   # file_write + test_runner
 python -m ocode_python.core.cli -p "Parse config.json and update environment"    # json_yaml + env
@@ -589,7 +589,7 @@ export OCODE_MODEL="codellama:latest"
   "max_tokens": 8192,
   "context_window": 16384,
   "ignore_patterns": [
-    ".git", "node_modules", "*.log", 
+    ".git", "node_modules", "*.log",
     "dist/", "build/", "*.pyc"
   ]
 }

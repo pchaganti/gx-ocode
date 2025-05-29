@@ -8,7 +8,6 @@ from typing import List, Set
 
 from .base import (
     AnalysisResult,
-    CodeMetrics,
     Import,
     LanguageAnalyzer,
     Symbol,

@@ -163,7 +163,9 @@ class PathValidator:
                 if ".." in normalized and ".." not in part:
                     return True
             except Exception:
-                pass
+                # Intentionally ignore exceptions when checking symlinks
+                # as they may not exist or be accessible
+                pass  # nosec B110
 
         return False
 

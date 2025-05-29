@@ -6,7 +6,7 @@ import os
 import stat
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -18,7 +18,7 @@ class LsTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="ls",
-            description="List directory contents with detailed information and filtering",
+            description="List directory contents with detailed information and filtering",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="path",
@@ -37,7 +37,7 @@ class LsTool(Tool):
                 ToolParameter(
                     name="long_format",
                     type="boolean",
-                    description="Use long format showing permissions, size, dates, etc.",
+                    description="Use long format showing permissions, size, dates, etc.",  # noqa: E501
                     required=False,
                     default=True,
                 ),
@@ -51,7 +51,7 @@ class LsTool(Tool):
                 ToolParameter(
                     name="sort_by",
                     type="string",
-                    description="Sort by: 'name', 'size', 'modified', 'created', 'extension'",
+                    description="Sort by: 'name', 'size', 'modified', 'created', 'extension'",  # noqa: E501
                     required=False,
                     default="name",
                 ),
@@ -65,7 +65,7 @@ class LsTool(Tool):
                 ToolParameter(
                     name="file_types",
                     type="array",
-                    description="Filter by file types: ['file', 'dir', 'link', 'executable']",
+                    description="Filter by file types: ['file', 'dir', 'link', 'executable']",  # noqa: E501
                     required=False,
                     default=[],
                 ),
@@ -405,7 +405,7 @@ class LsTool(Tool):
 
             # Header
             lines.append(
-                f"{'Permissions':<11} {'Size':>{max_size_width}} {'Modified':<19} {'Name'}"
+                f"{'Permissions':<11} {'Size':>{max_size_width}} {'Modified':<19} {'Name'}"  # noqa: E501
             )
             lines.append("-" * (11 + max_size_width + 19 + 20))
 
@@ -445,7 +445,7 @@ class LsTool(Tool):
 
         lines.append("")
         lines.append(
-            f"Total: {file_count} files, {dir_count} directories, {self._format_size(total_size)}"
+            f"Total: {file_count} files, {dir_count} directories, {self._format_size(total_size)}"  # noqa: E501
         )
 
         return "\\n".join(lines)

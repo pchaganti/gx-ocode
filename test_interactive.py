@@ -1,3 +1,5 @@
+"""Interactive test script for bash tool functionality."""
+
 import asyncio
 
 from ocode_python.tools.bash_tool import BashTool

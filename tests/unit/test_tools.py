@@ -2,15 +2,12 @@
 Unit tests for tools.
 """
 
-import subprocess
-import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from ocode_python.tools.base import (
-    Tool,
     ToolDefinition,
     ToolParameter,
     ToolRegistry,
@@ -116,7 +113,7 @@ class TestToolRegistry:
             tool_name = tool.definition.name
             print(f"Testing tool: {tool_name}")
 
-            # Skip tools that require specific setup or are not suitable for basic testing
+            # Skip tools that require specific setup or are not suitable for basic testing  # noqa: E501
             if tool_name in [
                 "git_status",
                 "git_commit",
@@ -224,7 +221,7 @@ class TestToolRegistry:
             mapped_name = engine._map_tool_name(input_name)
             assert (
                 mapped_name == expected_name
-            ), f"Tool name mapping failed: {input_name} -> {mapped_name} (expected {expected_name})"
+            ), f"Tool name mapping failed: {input_name} -> {mapped_name} (expected {expected_name})"  # noqa: E501
 
             # Verify the mapped name exists in the registry
             tool = registry.get_tool(mapped_name)

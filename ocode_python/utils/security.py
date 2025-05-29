@@ -4,7 +4,7 @@ Security and permission management for OCode.
 
 import os
 import re
-import subprocess
+import subprocess  # nosec B404 - Required for security manager command validation
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -553,7 +553,7 @@ class SecureShellExecutor:
             # Execute with restrictions
             process = subprocess.Popen(
                 safe_command,
-                shell=True,
+                shell=True,  # nosec B602 - command is sanitized above
                 cwd=working_dir,
                 env=env,
                 stdout=subprocess.PIPE,
@@ -580,7 +580,7 @@ def main():
 
     # Test file operations
     test_files = [
-        "/tmp/test.txt",
+        "/tmp/test.txt",  # nosec B108
         "/etc/passwd",
         "~/documents/myfile.py",
         "project/src/main.py",

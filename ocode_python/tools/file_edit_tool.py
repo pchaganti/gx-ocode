@@ -4,9 +4,8 @@ File editing tool for in-place modifications, replacements, and transformations.
 
 import re
 import shutil
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -18,7 +17,7 @@ class FileEditTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="file_edit",
-            description="Edit files in-place with find/replace, line operations, and transformations",
+            description="Edit files in-place with find/replace, line operations, and transformations",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="path",
@@ -29,13 +28,13 @@ class FileEditTool(Tool):
                 ToolParameter(
                     name="operation",
                     type="string",
-                    description="Edit operation: 'replace', 'insert', 'delete', 'append', 'prepend'",
+                    description="Edit operation: 'replace', 'insert', 'delete', 'append', 'prepend'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
                     name="content",
                     type="string",
-                    description="Content to insert/append/prepend (for insert/append/prepend operations)",
+                    description="Content to insert/append/prepend (for insert/append/prepend operations)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -53,13 +52,13 @@ class FileEditTool(Tool):
                 ToolParameter(
                     name="line_number",
                     type="number",
-                    description="Specific line number to operate on (1-based, for insert/delete)",
+                    description="Specific line number to operate on (1-based, for insert/delete)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
                     name="line_range",
                     type="object",
-                    description='Line range {"start": 1, "end": 10} (for delete operation)',
+                    description='Line range {"start": 1, "end": 10} (for delete operation)',  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -311,7 +310,7 @@ class FileEditTool(Tool):
                 )
 
             changes = [
-                f"Replaced {len(matches)} occurrence(s) of '{search_pattern}' with '{replacement}'"
+                f"Replaced {len(matches)} occurrence(s) of '{search_pattern}' with '{replacement}'"  # noqa: E501
             ]
 
             return {"success": True, "content": new_content, "changes": changes}
@@ -404,7 +403,7 @@ class FileEditTool(Tool):
                         new_lines.append(line)
 
                 changes = [
-                    f"Deleted {deleted_count} line(s) matching pattern '{search_pattern}'"
+                    f"Deleted {deleted_count} line(s) matching pattern '{search_pattern}'"  # noqa: E501
                 ]
 
             except re.error as e:
@@ -412,7 +411,7 @@ class FileEditTool(Tool):
         else:
             return {
                 "success": False,
-                "error": "line_number, line_range, or search_pattern is required for delete operation",
+                "error": "line_number, line_range, or search_pattern is required for delete operation",  # noqa: E501
             }
 
         return {"success": True, "content": "".join(new_lines), "changes": changes}

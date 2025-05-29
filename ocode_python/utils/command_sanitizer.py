@@ -4,7 +4,7 @@ Command sanitization utilities for shell execution safety.
 
 import re
 import shlex
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 
 class CommandSanitizer:
@@ -241,7 +241,7 @@ class CommandSanitizer:
 
         # Don't allow setuid/setgid on arbitrary files
         for part in parts[1:]:
-            # Check for 4-digit octal permissions with setuid/setgid bits (e.g., 4755, 2755, 6755)
+            # Check for 4-digit octal permissions with setuid/setgid bits (e.g., 4755, 2755, 6755)  # noqa: E501
             if re.match(
                 r"^[4267]\d{3}$", part
             ):  # First digit 4,2,6 means setuid/setgid

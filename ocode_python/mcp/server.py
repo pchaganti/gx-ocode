@@ -5,7 +5,7 @@ MCP Server implementation for OCode.
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from ..core.context_manager import ContextManager
 from ..tools.base import ToolRegistry
@@ -485,7 +485,7 @@ class OCodeMCPServer(MCPServer):
             file_path = arguments.get("file_path", "")
             focus = arguments.get("focus", "general code quality")
 
-            prompt_text = f"""Please review the code in {file_path} with focus on {focus}.
+            prompt_text = f"""Please review the code in {file_path} with focus on {focus}.  # noqa: E501
 
 Consider the following aspects:
 - Code quality and readability
@@ -517,7 +517,7 @@ Provide the refactored code with explanations of changes made."""
             file_path = arguments.get("file_path", "")
             framework = arguments.get("test_framework", "auto-detect")
 
-            prompt_text = f"""Please generate comprehensive unit tests for the code in {file_path}.
+            prompt_text = f"""Please generate comprehensive unit tests for the code in {file_path}.  # noqa: E501
 
 Requirements:
 - Use {framework} testing framework (or auto-detect appropriate framework)
@@ -534,7 +534,7 @@ Provide complete, runnable test code."""
             file_path = arguments.get("file_path", "")
             detail_level = arguments.get("detail_level", "detailed")
 
-            prompt_text = f"""Please explain how the code in {file_path} works at a {detail_level} level.
+            prompt_text = f"""Please explain how the code in {file_path} works at a {detail_level} level.  # noqa: E501
 
 Include:
 - Overall purpose and functionality
@@ -553,7 +553,7 @@ Tailor the explanation to the specified detail level."""
 
             prompt_text = f"""Please help debug this issue: {error_message}
 
-Context files to examine: {', '.join(context_files) if context_files else 'auto-detect relevant files'}
+Context files to examine: {', '.join(context_files) if context_files else 'auto-detect relevant files'}  # noqa: E501
 
 Please:
 - Analyze the error message and potential causes

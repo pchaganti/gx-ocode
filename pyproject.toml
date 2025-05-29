@@ -139,7 +139,7 @@ addopts = [
 ]
 markers = [
     "unit: Unit tests",
-    "integration: Integration tests", 
+    "integration: Integration tests",
     "slow: Slow tests",
     "network: Tests requiring network access",
     "security: Security-related tests",

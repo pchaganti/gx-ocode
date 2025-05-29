@@ -8,7 +8,7 @@
 - **Timeout Support**: ✅ Yes
 - **Default**: 30 seconds
 - **Implementation**: Uses `asyncio.wait_for()` with process.communicate()
-- **Strengths**: 
+- **Strengths**:
   - Configurable timeout parameter
   - Proper cleanup with process termination escalation (SIGTERM → SIGKILL)
   - Process group management for better cleanup
@@ -24,7 +24,7 @@
 #### PingTool (`ping_tool.py`)
 - **Timeout Support**: ✅ Yes
 - **Default**: 5 seconds per ping
-- **Implementation**: 
+- **Implementation**:
   - Individual ping timeout configured
   - Overall command timeout: `count * (timeout + interval) + 5`
 - **Strengths**: Well-designed timeout calculation
@@ -34,7 +34,7 @@
 - **Timeout Support**: ⚠️ Partial
 - **Default**: 30 seconds parameter exists
 - **Implementation**: Has timeout parameter but doesn't use it in simulated operations
-- **Improvements Needed**: 
+- **Improvements Needed**:
   - Implement actual timeout handling when connecting to MCP servers
   - Add timeout to tool calls and resource fetching
 

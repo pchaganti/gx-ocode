@@ -14,7 +14,7 @@
         "sudo rm",
         "sudo dd",
         "curl.*\\|.*bash",
-        "wget.*\\|.*bash", 
+        "wget.*\\|.*bash",
         "\\$\\(",
         "`",
         "&&.*(?:rm|dd|mkfs)",
