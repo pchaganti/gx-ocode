@@ -273,7 +273,7 @@ class TestCLIEndToEnd:
         with patch("ocode_python.core.cli.OCodeEngine") as mock_engine_class:
             mock_engine = AsyncMock()
 
-            async def mock_process(prompt):
+            async def mock_process(prompt, continue_previous=False):
                 yield f"Processing: {prompt}"
                 yield "Analysis complete."
 
