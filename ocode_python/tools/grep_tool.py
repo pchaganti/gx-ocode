@@ -437,7 +437,7 @@ class GrepTool(Tool):
                     return [], False
 
         # Create tasks for all files
-        tasks = [search_with_limit(f) for f in files]
+        tasks = [asyncio.create_task(search_with_limit(f)) for f in files]
 
         # Process results as they complete
         for coro in asyncio.as_completed(tasks):

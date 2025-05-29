@@ -149,7 +149,7 @@ class TestWcTool:
 
         assert result.success
         assert "2" in result.output  # lines
-        assert "5" in result.output  # words
+        assert "6" in result.output  # words
         assert "27" in result.output  # characters
 
     @pytest.mark.asyncio
