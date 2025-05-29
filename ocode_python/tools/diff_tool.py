@@ -4,7 +4,7 @@ Diff tool for comparing files.
 
 import difflib
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -47,16 +47,18 @@ class DiffTool(Tool):
             ],
         )
 
-    async def execute(
-        self,
-        file1: str,
-        file2: str,
-        unified: bool = True,
-        context_lines: int = 3,
-        **kwargs,
-    ) -> ToolResult:
+    async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute diff command."""
         try:
+            file1 = kwargs.get("file1", "")
+            file2 = kwargs.get("file2", "")
+            unified = kwargs.get("unified", True)
+            context_lines = kwargs.get("context_lines", 3)
+
+            if not file1 or not file2:
+                return ToolResult(
+                    success=False, error="Both file1 and file2 paths are required"
+                )
             path1 = Path(file1)
             path2 = Path(file2)
 

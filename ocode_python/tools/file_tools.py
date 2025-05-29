@@ -483,7 +483,7 @@ class FileListTool(Tool):
             is_valid, error_msg, validated_path = path_validator.validate_path(
                 path, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or validated_path is None:
                 return ErrorHandler.create_error_result(
                     f"Path validation failed: {error_msg}",
                     ErrorType.SECURITY_ERROR,
@@ -654,6 +654,11 @@ class FileSearchTool(Tool):
         """Search for pattern in files with context support."""
         try:
             pattern = kwargs.get("pattern")
+            if not pattern:
+                return ErrorHandler.create_error_result(
+                    "Pattern is required for searching",
+                    ErrorType.VALIDATION_ERROR,
+                )
             path = kwargs.get("path", ".")
             extensions = kwargs.get("extensions")
             case_sensitive = kwargs.get("case_sensitive", False)
@@ -664,7 +669,7 @@ class FileSearchTool(Tool):
             is_valid, error_msg, validated_path = path_validator.validate_path(
                 path, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or validated_path is None:
                 return ErrorHandler.create_error_result(
                     f"Path validation failed: {error_msg}",
                     ErrorType.SECURITY_ERROR,

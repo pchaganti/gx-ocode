@@ -5,7 +5,7 @@ File pattern matching and discovery tool using glob patterns.
 import fnmatch
 import glob
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -22,20 +22,20 @@ class GlobTool(Tool):
                 ToolParameter(
                     name="pattern",
                     type="string",
-                    description="Glob pattern to match files (e.g., '*.py', '**/*.ts', 'src/**/*.{js,ts}')",
+                    description="Glob pattern to match files (e.g., '*.py', '**/*.ts', 'src/**/*.{js,ts}')",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
                     name="path",
                     type="string",
-                    description="Base path to search from (default: current directory)",
+                    description="Base path to search from (default: current directory)",  # noqa: E501
                     required=False,
                     default=".",
                 ),
                 ToolParameter(
                     name="recursive",
                     type="boolean",
-                    description="Enable recursive search (use ** in pattern for recursive)",
+                    description="Enable recursive search (use ** in pattern for recursive)",  # noqa: E501
                     required=False,
                     default=True,
                 ),
@@ -67,6 +67,11 @@ class GlobTool(Tool):
         """Execute glob pattern matching."""
         try:
             pattern = kwargs.get("pattern")
+            if not pattern:
+                return ToolResult(
+                    success=False, output="", error="Pattern is required"
+                )  # noqa: E501
+
             path = kwargs.get("path", ".")
             recursive = kwargs.get("recursive", True)
             include_dirs = kwargs.get("include_dirs", False)
@@ -146,7 +151,7 @@ class GlobTool(Tool):
 
                 if len(matches) > max_results:
                     output_lines.append(
-                        f"  ... and {len(matches) - max_results} more (use max_results to see more)"
+                        f"  ... and {len(matches) - max_results} more (use max_results to see more)"  # noqa: E501
                     )
 
                 output = "\n".join(output_lines)
@@ -191,14 +196,14 @@ class AdvancedGlobTool(GlobTool):
                 ToolParameter(
                     name="exclude_patterns",
                     type="array",
-                    description="Patterns to exclude from results (e.g., ['*.pyc', '__pycache__/*'])",
+                    description="Patterns to exclude from results (e.g., ['*.pyc', '__pycache__/*'])",  # noqa: E501
                     required=False,
                     default=[],
                 ),
                 ToolParameter(
                     name="file_extensions",
                     type="array",
-                    description="Filter by file extensions (e.g., ['.py', '.js', '.ts'])",
+                    description="Filter by file extensions (e.g., ['.py', '.js', '.ts'])",  # noqa: E501
                     required=False,
                     default=[],
                 ),
@@ -211,7 +216,7 @@ class AdvancedGlobTool(GlobTool):
                 ToolParameter(
                     name="size_range",
                     type="object",
-                    description="File size range filter (e.g., {'min': '1KB', 'max': '10MB'})",
+                    description="File size range filter (e.g., {'min': '1KB', 'max': '10MB'})",  # noqa: E501
                     required=False,
                 ),
             ]

@@ -541,7 +541,7 @@ Respond with ONLY a JSON object following this exact format:
             json_match = re.search(r"\{.*\}", response_content, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
-                result = json.loads(json_str)
+                result: Dict[str, Any] = json.loads(json_str)
                 return result
             else:
                 raise ValueError("No JSON found in response")
@@ -612,10 +612,10 @@ Examples:
             json_match = re.search(r"\{.*\}", response_content, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
-                result = json.loads(json_str)
+                result: Dict[str, Any] = json.loads(json_str)
 
                 if result.get("action") == "exact_key":
-                    return result.get("key")
+                    return str(result.get("key", ""))
                 elif result.get("action") == "show_all":
                     return "SHOW_ALL"
 
@@ -648,7 +648,7 @@ Examples:
         self, query: str, llm_analysis: Dict[str, Any]
     ) -> bool:
         """Determine if query should use simple context based on LLM analysis."""
-        return llm_analysis.get("context_complexity", "full") == "simple"
+        return bool(llm_analysis.get("context_complexity", "full") == "simple")
 
     def _build_context_message(
         self, context: ProjectContext, query: str, use_simple: bool = False
@@ -783,7 +783,10 @@ Examples:
         return "\n".join(lines)
 
     def _prepare_messages(
-        self, query: str, context: ProjectContext, llm_analysis: Dict[str, Any] = None
+        self,
+        query: str,
+        context: ProjectContext,
+        llm_analysis: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, str]]:
         """Prepare message history for API call."""
         messages = []
@@ -865,7 +868,7 @@ When a user asks you to perform an action, call the appropriate function."""
         return function_name.lower()
 
     async def _execute_tool_call(
-        self, tool_name: str, arguments: Dict[str, Any]
+        self, tool_name: str, arguments: Dict[str, Any], query: Optional[str] = None
     ) -> ToolResult:
         """Execute a tool call and return the result."""
         if self.verbose:
@@ -918,7 +921,7 @@ When a user asks you to perform an action, call the appropriate function."""
                 )
                 if available_keys:  # Only if we have keys to work with
                     corrected_key = await self._llm_infer_memory_key(
-                        query=self._current_query,
+                        query=query or "",
                         requested_key=arguments["key"],
                         available_keys=available_keys,
                     )
@@ -987,7 +990,7 @@ When a user asks you to perform an action, call the appropriate function."""
         """Request user confirmation for potentially dangerous commands."""
         if self.confirmation_callback:
             try:
-                return await self.confirmation_callback(command, reason)
+                return bool(await self.confirmation_callback(command, reason))
             except Exception as e:
                 if self.verbose:
                     print(f"Confirmation callback failed: {e}")
@@ -1139,7 +1142,7 @@ When a user asks you to perform an action, call the appropriate function."""
                             if self.tool_registry.get_tool(tool_name):
                                 try:
                                     result = await self._execute_tool_call(
-                                        tool_name, chunk.tool_call.arguments
+                                        tool_name, chunk.tool_call.arguments, query
                                     )
                                     yield f"\n🔧 Tool: {tool_name}\n{result.output}\n"
                                     metrics.tools_executed += 1

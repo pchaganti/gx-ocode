@@ -502,7 +502,7 @@ async def interactive_mode(options: dict):
     history_file = Path.home() / ".ocode" / "history"
     history_file.parent.mkdir(exist_ok=True)
 
-    session = PromptSession(
+    session: PromptSession[str] = PromptSession(
         history=FileHistory(str(history_file)),
         auto_suggest=AutoSuggestFromHistory(),
     )

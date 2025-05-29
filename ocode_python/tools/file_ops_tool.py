@@ -2,10 +2,9 @@
 File operations tools for copy, move, and remove operations.
 """
 
-import os
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -48,16 +47,19 @@ class CopyTool(Tool):
             ],
         )
 
-    async def execute(
-        self,
-        source: str,
-        destination: str,
-        recursive: bool = False,
-        preserve: bool = True,
-        **kwargs,
-    ) -> ToolResult:
+    async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute copy command."""
         try:
+            source = kwargs.get("source", "")
+            destination = kwargs.get("destination", "")
+            recursive = kwargs.get("recursive", False)
+            preserve = kwargs.get("preserve", True)
+
+            if not source or not destination:
+                return ToolResult(
+                    success=False, error="Source and destination paths are required"
+                )
+
             src_path = Path(source)
             dst_path = Path(destination)
 
@@ -156,9 +158,16 @@ class MoveTool(Tool):
             ],
         )
 
-    async def execute(self, source: str, destination: str, **kwargs) -> ToolResult:
+    async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute move command."""
         try:
+            source = kwargs.get("source", "")
+            destination = kwargs.get("destination", "")
+
+            if not source or not destination:
+                return ToolResult(
+                    success=False, error="Source and destination paths are required"
+                )
             src_path = Path(source)
             dst_path = Path(destination)
 
@@ -184,7 +193,9 @@ class MoveTool(Tool):
             )
 
         except Exception as e:
-            return ToolResult(success=False, output="", error=f"Error moving: {str(e)}")
+            return ToolResult(
+                success=False, output="", error=f"Error moving: {str(e)}"
+            )  # noqa: E501
 
 
 class RemoveTool(Tool):
@@ -219,11 +230,16 @@ class RemoveTool(Tool):
             ],
         )
 
-    async def execute(
-        self, path: str, recursive: bool = False, force: bool = False, **kwargs
-    ) -> ToolResult:
+    async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute remove command with safety checks."""
         try:
+            path = kwargs.get("path", "")
+            recursive = kwargs.get("recursive", False)
+            force = kwargs.get("force", False)
+
+            if not path:
+                return ToolResult(success=False, error="Path is required")
+
             target_path = Path(path)
 
             if not target_path.exists():
@@ -248,11 +264,13 @@ class RemoveTool(Tool):
             for critical in critical_paths:
                 try:
                     critical_abs = critical.resolve()
-                    if abs_target == critical_abs or critical_abs in abs_target.parents:
+                    if (
+                        abs_target == critical_abs or critical_abs in abs_target.parents
+                    ):  # noqa: E501
                         return ToolResult(
                             success=False,
                             output="",
-                            error=f"Safety check: Refusing to remove critical path: {path}",
+                            error=f"Safety check: Refusing to remove critical path: {path}",  # noqa: E501
                         )
                 except (OSError, RuntimeError):
                     # Ignore errors resolving critical paths
@@ -279,7 +297,7 @@ class RemoveTool(Tool):
                     return ToolResult(
                         success=False,
                         output="",
-                        error=f"Cannot remove directory without recursive flag: {path}",
+                        error=f"Cannot remove directory without recursive flag: {path}",  # noqa: E501
                     )
 
                 # Additional safety check for directories
@@ -290,7 +308,7 @@ class RemoveTool(Tool):
                         return ToolResult(
                             success=False,
                             output="",
-                            error=f"Safety check: Directory contains {file_count} files. Use force=true to override.",
+                            error=f"Safety check: Directory contains {file_count} files. Use force=true to override.",  # noqa: E501
                         )
 
                 shutil.rmtree(target_path)

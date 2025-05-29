@@ -307,7 +307,7 @@ class JsonYamlTool(Tool):
 
         def analyze_structure(obj: Any, path: str = "$") -> Dict[str, Any]:
             """Recursively analyze data structure."""
-            result = {"path": path, "type": type(obj).__name__}
+            result: Dict[str, Any] = {"path": path, "type": type(obj).__name__}
 
             if isinstance(obj, dict):
                 result["keys"] = list(obj.keys())

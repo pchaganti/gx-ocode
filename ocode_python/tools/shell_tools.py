@@ -5,8 +5,7 @@ Shell command execution tools with interactive safety layer.
 import asyncio
 import os
 import re
-import shlex
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ..utils.security_config import SecurityConfigManager
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
@@ -175,7 +174,7 @@ class ShellCommandTool(Tool):
                         return ToolResult(
                             success=False,
                             output=output,
-                            error=f"Command failed with code {process.returncode}: {error}",
+                            error=f"Command failed with code {process.returncode}: {error}",  # noqa: E501
                             metadata={
                                 "return_code": process.returncode,
                                 "command": command,
@@ -248,7 +247,7 @@ class ProcessListTool(Tool):
             ],
         )
 
-    async def execute(self, **kwargs: Any) -> ToolResult:  # type: ignore[override]
+    async def execute(self, **kwargs: Any) -> ToolResult:
         """List running processes."""
         try:
             import psutil
@@ -289,7 +288,7 @@ class ProcessListTool(Tool):
 
                 for proc in processes:
                     lines.append(
-                        f"{proc['pid']:<8} {proc['name']:<15} {proc['cpu']:<8.1f} {proc['memory']:<8.1f}"
+                        f"{proc['pid']:<8} {proc['name']:<15} {proc['cpu']:<8.1f} {proc['memory']:<8.1f}"  # noqa: E501
                     )
 
                 output = "\n".join(lines)

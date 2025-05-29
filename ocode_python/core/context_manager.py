@@ -239,11 +239,14 @@ class ContextManager:
     def _get_content_hash(self, content: str) -> str:
         """Generate hash for file content."""
         # usedforsecurity parameter is only available in Python 3.9+
-        try:
-            return hashlib.md5(
+        # mypy doesn't recognize this parameter in its stubs
+        import sys
+
+        if sys.version_info >= (3, 9):
+            return hashlib.md5(  # type: ignore[call-arg]
                 content.encode("utf-8"), usedforsecurity=False
             ).hexdigest()
-        except TypeError:
+        else:
             # Fallback for Python 3.8
             return hashlib.md5(content.encode("utf-8")).hexdigest()  # nosec B324
 

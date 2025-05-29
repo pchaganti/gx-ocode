@@ -380,10 +380,11 @@ class LintTool(Tool):
         """Run linting tool."""
 
         tools_to_run = []
-        if kwargs.get("tool") == "auto":
+        tool = kwargs.get("tool", "auto")
+        if tool == "auto":
             tools_to_run = self._detect_lint_tool(kwargs.get("path", "."))
         else:
-            tools_to_run = [kwargs.get("tool")]
+            tools_to_run = [tool]
 
         results = []
 

@@ -5,7 +5,7 @@ Curl tool for downloading files and making HTTP requests.
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import aiohttp
 
@@ -55,7 +55,7 @@ class CurlTool(Tool):
                 ToolParameter(
                     name="json_data",
                     type="object",
-                    description="JSON data to send (will set Content-Type: application/json)",
+                    description="JSON data to send (will set Content-Type: application/json)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -82,21 +82,21 @@ class CurlTool(Tool):
             ],
         )
 
-    async def execute(
-        self,
-        url: str,
-        method: str = "GET",
-        output_file: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
-        data: Optional[str] = None,
-        json_data: Optional[Dict[str, Any]] = None,
-        follow_redirects: bool = True,
-        timeout: int = 30,
-        include_headers: bool = False,
-        **kwargs,
-    ) -> ToolResult:
+    async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute curl command."""
         try:
+            url = kwargs.get("url", "")
+            method = kwargs.get("method", "GET")
+            output_file = kwargs.get("output_file")
+            headers = kwargs.get("headers")
+            data = kwargs.get("data")
+            json_data = kwargs.get("json_data")
+            follow_redirects = kwargs.get("follow_redirects", True)
+            timeout = kwargs.get("timeout", 30)
+            include_headers = kwargs.get("include_headers", False)
+
+            if not url:
+                return ToolResult(success=False, error="URL is required")
             # Prepare headers
             request_headers = headers or {}
 
@@ -144,8 +144,13 @@ class CurlTool(Tool):
 
                         # Format output
                         if include_headers:
+                            version_str = (
+                                "HTTP/1.1"  # Default if version is not available
+                            )
+                            if response.version:
+                                version_str = f"{response.version.major}.{response.version.minor}"  # noqa: E501
                             header_lines = [
-                                f"{response.version.major}.{response.version.minor} {response.status} {response.reason}"
+                                f"{version_str} {response.status} {response.reason}"
                             ]
                             for name, value in response.headers.items():
                                 header_lines.append(f"{name}: {value}")

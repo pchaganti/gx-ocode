@@ -3,10 +3,9 @@ Memory and context management tools for OCode.
 """
 
 import json
-import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -18,24 +17,24 @@ class MemoryReadTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="memory_read",
-            description="Read session memory, context data, and persistent information from various sources",
+            description="Read session memory, context data, and persistent information from various sources",  # noqa: E501  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="memory_type",
                     type="string",
-                    description="Type of memory to read: 'session', 'context', 'persistent', 'all'",
+                    description="Type of memory to read: 'session', 'context', 'persistent', 'all'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
                     name="key",
                     type="string",
-                    description="Specific key to read (exact match, e.g. 'project_config', 'address'). Leave empty to read all entries.",
+                    description="Specific key to read (exact match, e.g. 'project_config', 'address'). Leave empty to read all entries.",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
                     name="category",
                     type="string",
-                    description="Category to filter by (e.g., 'variables', 'files', 'tasks', 'notes')",
+                    description="Category to filter by (e.g., 'variables', 'files', 'tasks', 'notes')",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -176,7 +175,7 @@ class MemoryReadTool(Tool):
     ) -> Dict[str, Any]:
         """Read session-specific memory data."""
         session_dir = memory_dir / "sessions"
-        result = {"entries": [], "sessions": []}
+        result: Dict[str, Any] = {"entries": [], "sessions": []}
 
         if not session_dir.exists():
             return result
@@ -207,7 +206,7 @@ class MemoryReadTool(Tool):
                     )
                     result["entries"].extend(entries)
                 except Exception:
-                    continue  # Skip corrupted files
+                    continue  # Skip corrupted files  # nosec B112
 
         return result
 
@@ -219,7 +218,7 @@ class MemoryReadTool(Tool):
     ) -> Dict[str, Any]:
         """Read context memory (current working context)."""
         context_file = memory_dir / "context.json"
-        result = {"entries": [], "context": {}}
+        result: Dict[str, Any] = {"entries": [], "context": {}}
 
         if context_file.exists():
             with open(context_file, "r") as f:
@@ -237,7 +236,7 @@ class MemoryReadTool(Tool):
     ) -> Dict[str, Any]:
         """Read persistent memory (long-term storage)."""
         persistent_file = memory_dir / "persistent.json"
-        result = {"entries": [], "persistent": {}}
+        result: Dict[str, Any] = {"entries": [], "persistent": {}}
 
         if persistent_file.exists():
             with open(persistent_file, "r") as f:
@@ -296,7 +295,7 @@ class MemoryReadTool(Tool):
             output += f"Sessions: {len(sessions)} found\n"
             if sessions:
                 latest = sessions[0]
-                output += f"Latest: {latest.get('session_id', 'unknown')} ({latest.get('timestamp', 'unknown')})\n"
+                output += f"Latest: {latest.get('session_id', 'unknown')} ({latest.get('timestamp', 'unknown')})\n"  # noqa: E501
 
         if "context" in result:
             context_entries = len(result["context"]["entries"])
@@ -353,18 +352,18 @@ class MemoryWriteTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="memory_write",
-            description="Write and manage session memory, context data, and persistent information",
+            description="Write and manage session memory, context data, and persistent information",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="memory_type",
                     type="string",
-                    description="Type of memory to write: 'session', 'context', 'persistent'",
+                    description="Type of memory to write: 'session', 'context', 'persistent'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
                     name="operation",
                     type="string",
-                    description="Operation: 'set', 'update', 'delete', 'clear', 'append', 'lobotomize'",
+                    description="Operation: 'set', 'update', 'delete', 'clear', 'append', 'lobotomize'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
@@ -382,13 +381,13 @@ class MemoryWriteTool(Tool):
                 ToolParameter(
                     name="category",
                     type="string",
-                    description="Category for organization (e.g., 'variables', 'files', 'tasks', 'notes')",
+                    description="Category for organization (e.g., 'variables', 'files', 'tasks', 'notes')",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
                     name="session_id",
                     type="string",
-                    description="Session ID (auto-generated if not provided for session memory)",
+                    description="Session ID (auto-generated if not provided for session memory)",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
@@ -595,7 +594,10 @@ class MemoryWriteTool(Tool):
                 raise ValueError(f"Cannot store empty/null value for key '{key}'")
 
             # Structure the value with metadata
-            structured_value = {"value": value, "timestamp": datetime.now().isoformat()}
+            structured_value = {
+                "value": value,
+                "timestamp": datetime.now().isoformat(),
+            }  # noqa: E501
 
             if category:
                 structured_value["category"] = category
@@ -637,7 +639,7 @@ class MemoryWriteTool(Tool):
                 if metadata:
                     data[key]["metadata"] = metadata
 
-            return f"Updated key '{key}' with value '{value if value is not None else data[key]['value']}'"
+            return f"Updated key '{key}' with value '{value if value is not None else data[key]['value']}'"  # noqa: E501
 
         elif operation == "delete":
             if key is None:
@@ -677,7 +679,7 @@ class MemoryWriteTool(Tool):
             # Reset timestamps
             data["updated"] = datetime.now().isoformat()
 
-            return f"🧠💥 Memory lobotomized! Cleared {deleted_count} entries. Starting fresh..."
+            return f"🧠💥 Memory lobotomized! Cleared {deleted_count} entries. Starting fresh..."  # noqa: E501
 
         elif operation == "append":
             if key is None:
@@ -691,7 +693,9 @@ class MemoryWriteTool(Tool):
 
             # Ensure the value is a list for appending
             current_value = (
-                data[key].get("value", []) if isinstance(data[key], dict) else data[key]
+                data[key].get("value", [])
+                if isinstance(data[key], dict)
+                else data[key]  # noqa: E501
             )
             if not isinstance(current_value, list):
                 current_value = [current_value]
