@@ -12,7 +12,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from ..tools.base import Tool, ToolRegistry, ToolResult
 from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
-from .api_client import CompletionRequest, Message, OllamaAPIClient, StreamChunk
+from .api_client import CompletionRequest, Message, OllamaAPIClient
 from .context_manager import ContextManager, ProjectContext
 from .session import SessionManager
 
@@ -114,7 +114,7 @@ class OCodeEngine:
         tool_descriptions = self._get_tool_descriptions_by_category()
 
         return f"""<role>
-You are an expert AI coding assistant with deep knowledge of software engineering, programming languages, and development workflows. You specialize in intelligent task analysis, strategic tool usage, and providing comprehensive coding assistance.
+You are an expert AI coding assistant with deep knowledge of software engineering, programming languages, and development workflows. You specialize in intelligent task analysis, strategic tool usage, and providing comprehensive coding assistance. # noqa: E501
 </role>
 
 <core_capabilities>
@@ -383,9 +383,9 @@ Before responding, consider:
   Current Project: {context.project_root}
   Languages Detected: {', '.join(sorted(languages)) if languages else 'Unknown'}
   Key Files: {len(context.files)} analyzed
-  Git Branch: {context.git_info.get('branch', 'unknown') if context.git_info else 'not a git repo'}
+  Git Branch: {context.git_info.get('branch', 'unknown') if context.git_info else 'not a git repo'} # noqa: E501
 
-  Adapt your responses to this project context and prefer tools that work well with the detected languages and project structure.
+  Adapt your responses to this project context and prefer tools that work well with the detected languages and project structure. # noqa: E501
 </project_context>"""
 
         return base_prompt + context_guidance
@@ -403,7 +403,7 @@ Before responding, consider:
             print(f"📁 Analyzed {len(context.files)} files")
             if context.git_info:
                 print(
-                    f"🌿 Git: {context.git_info.get('branch', 'unknown')} ({context.git_info.get('commit', 'unknown')})"
+                    f"🌿 Git: {context.git_info.get('branch', 'unknown')} ({context.git_info.get('commit', 'unknown')})"  # noqa: E501
                 )
 
         self.current_context = context
@@ -415,9 +415,9 @@ Before responding, consider:
             tool.definition.name for tool in self.tool_registry.get_all_tools()
         ]
 
-        analysis_prompt = f"""<role>You are an expert AI assistant specialized in distinguishing between general knowledge questions and actionable tasks that require tools.</role>
+        analysis_prompt = f"""<role>You are an expert AI assistant specialized in distinguishing between general knowledge questions and actionable tasks that require tools.</role> # noqa: E501
 
-<task>Analyze the user query and determine if it requires tools or can be answered directly with knowledge.</task>
+<task>Analyze the user query and determine if it requires tools or can be answered directly with knowledge.</task> # noqa: E501
 
 <query>"{query}"</query>
 
@@ -457,50 +457,50 @@ Notebooks: notebook_read, notebook_edit
 
 <examples>
 Query: "List files in the current directory"
-Response: {{"should_use_tools": true, "suggested_tools": ["ls"], "reasoning": "Direct file system interaction required", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["ls"], "reasoning": "Direct file system interaction required", "context_complexity": "simple"}} # noqa: E501
 
 Query: "Show me the first 5 lines of README.md"
-Response: {{"should_use_tools": true, "suggested_tools": ["head"], "reasoning": "Reading specific file content", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["head"], "reasoning": "Reading specific file content", "context_complexity": "simple"}} # noqa: E501
 
 Query: "Find all Python files in the project"
-Response: {{"should_use_tools": true, "suggested_tools": ["find"], "reasoning": "Filesystem search operation", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["find"], "reasoning": "Filesystem search operation", "context_complexity": "simple"}} # noqa: E501
 
 Query: "Remember my email is john@example.com"
-Response: {{"should_use_tools": true, "suggested_tools": ["memory_write"], "reasoning": "Store personal information", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["memory_write"], "reasoning": "Store personal information", "context_complexity": "simple"}} # noqa: E501
 
 Query: "Download data from https://api.example.com"
-Response: {{"should_use_tools": true, "suggested_tools": ["curl"], "reasoning": "External HTTP request needed", "context_complexity": "simple"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["curl"], "reasoning": "External HTTP request needed", "context_complexity": "simple"}} # noqa: E501
 
 Query: "Analyze the architecture of THIS codebase"
-Response: {{"should_use_tools": true, "suggested_tools": ["architect", "find"], "reasoning": "Project-specific code analysis", "context_complexity": "full"}}
+Response: {{"should_use_tools": true, "suggested_tools": ["architect", "find"], "reasoning": "Project-specific code analysis", "context_complexity": "full"}} # noqa: E501
 
 Query: "What is Python and how does it work?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming language explanation", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming language explanation", "context_complexity": "simple"}} # noqa: E501
 
 Query: "Explain object-oriented programming"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming concept explanation", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming concept explanation", "context_complexity": "simple"}} # noqa: E501
 
 Query: "What are the differences between REST and GraphQL?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General technology comparison", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General technology comparison", "context_complexity": "simple"}} # noqa: E501
 
 Query: "How do I implement a binary search algorithm?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General algorithm explanation", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General algorithm explanation", "context_complexity": "simple"}} # noqa: E501
 
 Query: "What are Python best practices for error handling?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General best practices question", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General best practices question", "context_complexity": "simple"}} # noqa: E501
 
 Query: "When should I use async/await in Python?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General usage guidance question", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General usage guidance question", "context_complexity": "simple"}} # noqa: E501
 
 Query: "Explain how machine learning works"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General ML concept explanation", "context_complexity": "simple"}}
+Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General ML concept explanation", "context_complexity": "simple"}} # noqa: E501
 </examples>
 
 <thinking>
 Key questions to ask:
 1. Is this asking for general knowledge/concepts OR specific file/system actions?
 2. Does it mention specific files, directories, URLs, or system operations?
-3. Is it theoretical ("what is", "how does", "explain") or actionable ("show me", "find", "download")?
+3. Is it theoretical ("what is", "how does", "explain") or actionable ("show me", "find", "download")? # noqa: E501
 4. Would answering this require accessing the user's actual files or system?
 </thinking>
 
@@ -560,13 +560,13 @@ Respond with ONLY a JSON object following this exact format:
     async def _llm_infer_memory_key(
         self, query: str, requested_key: str, available_keys: List[str]
     ) -> Optional[str]:
-        """Use LLM to infer the correct memory key based on user query and available keys."""
+        """Use LLM to infer the correct memory key based on user query and available keys."""  # noqa: E501
 
         analysis_prompt = f"""Given this user query: "{query}"
 The LLM tried to access memory key: "{requested_key}"
 Available memory keys: {available_keys}
 
-Analyze which existing key contains the information the user wants, or if all entries should be shown.
+Analyze which existing key contains the information the user wants, or if all entries should be shown. # noqa: E501
 
 Important: You must choose from the AVAILABLE KEYS ONLY, not create new ones.
 
@@ -584,12 +584,12 @@ Respond with ONLY a JSON object:
 }}
 
 Examples:
-- Query: "what city do I live in?" with requested_key "city" and available keys ["name", "address", "cats"]
-  -> {{"action": "exact_key", "key": "address", "reasoning": "City info would be stored in address key"}}
-- Query: "what is my project's configuration?" with available keys ["name", "project_config", "address"]
-  -> {{"action": "exact_key", "key": "project_config", "reasoning": "Question specifically asks for project configuration"}}
+- Query: "what city do I live in?" with requested_key "city" and available keys ["name", "address", "cats"] # noqa: E501
+  -> {{"action": "exact_key", "key": "address", "reasoning": "City info would be stored in address key"}} # noqa: E501
+- Query: "what is my project's configuration?" with available keys ["name", "project_config", "address"] # noqa: E501
+  -> {{"action": "exact_key", "key": "project_config", "reasoning": "Question specifically asks for project configuration"}} # noqa: E501
 - Query: "what do I have stored?" with any keys
-  -> {{"action": "show_all", "key": null, "reasoning": "General query should show all entries"}}"""
+  -> {{"action": "show_all", "key": null, "reasoning": "General query should show all entries"}}"""  # noqa: E501
 
         from .api_client import CompletionRequest
 
@@ -689,11 +689,11 @@ Examples:
         if query_analysis.get("multi_action", False):
             lines.extend(
                 [
-                    "GUIDANCE: This is a multi-action query requiring sequential operations:",
-                    f"- Description: {query_analysis.get('description', 'Multiple sequential actions')}",
-                    f"- Primary tools: {', '.join(query_analysis.get('primary_tools', []))}",
-                    f"- Secondary tools: {', '.join(query_analysis.get('secondary_tools', []))}",
-                    f"- Workflow: {query_analysis.get('workflow', 'sequential_actions')}",
+                    "GUIDANCE: This is a multi-action query requiring sequential operations:",  # noqa: E501
+                    f"- Description: {query_analysis.get('description', 'Multiple sequential actions')}",  # noqa: E501
+                    f"- Primary tools: {', '.join(query_analysis.get('primary_tools', []))}",  # noqa: E501
+                    f"- Secondary tools: {', '.join(query_analysis.get('secondary_tools', []))}",  # noqa: E501
+                    f"- Workflow: {query_analysis.get('workflow', 'sequential_actions')}",  # noqa: E501
                     "",
                     "RECOMMENDATION: Consider delegating this to specialized agents:",
                     "1. Create agents for each major task using the 'agent' tool",
@@ -705,8 +705,8 @@ Examples:
         elif query_category == "agent_management":
             lines.extend(
                 [
-                    "GUIDANCE: This is an agent management query. Use the 'agent' tool with appropriate actions:",
-                    "- To create agents: action='create', agent_type='reviewer'|'coder'|'tester'|etc",
+                    "GUIDANCE: This is an agent management query. Use the 'agent' tool with appropriate actions:",  # noqa: E501
+                    "- To create agents: action='create', agent_type='reviewer'|'coder'|'tester'|etc",  # noqa: E501
                     "- To list agents: action='list'",
                     "- To check status: action='status'",
                     "- To delegate tasks: action='delegate', task_description='...'",
@@ -717,14 +717,14 @@ Examples:
         elif query_category == "tool_listing":
             lines.extend(
                 [
-                    "GUIDANCE: User is asking about available tools. Provide a comprehensive list of all tools with descriptions.",
+                    "GUIDANCE: User is asking about available tools. Provide a comprehensive list of all tools with descriptions.",  # noqa: E501
                     "",
                 ]
             )
         elif query_category.startswith("workflow_"):
             lines.extend(
                 [
-                    "GUIDANCE: This is a complex workflow. Consider using multiple tools in sequence:",
+                    "GUIDANCE: This is a complex workflow. Consider using multiple tools in sequence:",  # noqa: E501
                     f"- Suggested workflow tools: {', '.join(suggested_tools)}",
                     "- Start with analysis tools, then proceed with implementation",
                     "",
@@ -733,7 +733,7 @@ Examples:
         elif suggested_tools:
             lines.extend(
                 [
-                    f"GUIDANCE: For this {query_category} task, consider using: {', '.join(suggested_tools)}",
+                    f"GUIDANCE: For this {query_category} task, consider using: {', '.join(suggested_tools)}",  # noqa: E501
                     "",
                 ]
             )
@@ -802,9 +802,9 @@ Examples:
 
         if not should_use_tools:
             # Direct knowledge response system prompt
-            system_content = """You are an expert AI coding assistant with deep knowledge of programming languages, software engineering concepts, algorithms, and best practices.
+            system_content = """You are an expert AI coding assistant with deep knowledge of programming languages, software engineering concepts, algorithms, and best practices. # noqa: E501
 
-Provide clear, comprehensive explanations using your knowledge. Since this is a general knowledge question, you should answer directly without using any tools.
+Provide clear, comprehensive explanations using your knowledge. Since this is a general knowledge question, you should answer directly without using any tools. # noqa: E501
 
 Focus on:
 - Clear explanations with examples
@@ -816,7 +816,7 @@ Focus on:
 Be educational and thorough in your response."""
         elif use_simple_context:
             # Simple system prompt for direct tool calls with examples
-            system_content = """You are an AI assistant with access to function calling tools. Use them when appropriate.
+            system_content = """You are an AI assistant with access to function calling tools. Use them when appropriate. # noqa: E501
 
 Examples:
 - User: "Remember my name is John" -> Call memory_write function
@@ -928,9 +928,9 @@ When a user asks you to perform an action, call the appropriate function."""
                         arguments.pop("category", None)  # Also remove category filter
                     elif corrected_key and corrected_key in available_keys:
                         arguments["key"] = corrected_key
-                        # Remove category filter when using corrected key to avoid mismatches
+                        # Remove category filter when using corrected key to avoid mismatches # noqa: E501
                         arguments.pop("category", None)
-                        # For profile queries, prefer persistent over 'all' for cleaner output
+                        # For profile queries, prefer persistent over 'all' for cleaner output # noqa: E501
                         if arguments.get("memory_type") == "all":
                             arguments["memory_type"] = "persistent"
 
@@ -998,11 +998,11 @@ When a user asks you to perform an action, call the appropriate function."""
             # For now, deny for safety but allow override via confirmed parameter
             if self.verbose:
                 print(
-                    f"⚠️  Command requires confirmation but no callback available: {command}"
+                    f"⚠️  Command requires confirmation but no callback available: {command}"  # noqa: E501
                 )
                 print(f"Reason: {reason}")
                 print(
-                    "API contexts should re-call with confirmed=True after user approval"
+                    "API contexts should re-call with confirmed=True after user approval"  # noqa: E501
                 )
             return False
 
@@ -1014,7 +1014,7 @@ When a user asks you to perform an action, call the appropriate function."""
         max_tokens: int = 4096,
     ) -> bool:
         """
-        Determine if we should continue the response based on API signals and content analysis.
+        Determine if we should continue the response based on API signals and content analysis. # noqa: E501
 
         Args:
             chunk_done: Whether the API indicated the stream is done
@@ -1081,7 +1081,7 @@ When a user asks you to perform an action, call the appropriate function."""
                 print(f"🤖 LLM Analysis: {llm_analysis.get('reasoning', '')}")
                 if llm_analysis.get("suggested_tools"):
                     print(
-                        f"🔧 Suggested tools: {', '.join(llm_analysis['suggested_tools'])}"
+                        f"🔧 Suggested tools: {', '.join(llm_analysis['suggested_tools'])}"  # noqa: E501
                     )
 
             # Prepare messages for API
@@ -1094,7 +1094,7 @@ When a user asks you to perform an action, call the appropriate function."""
                     query, llm_analysis
                 )
                 if use_simple_context and llm_analysis.get("suggested_tools"):
-                    # For simple context, only include suggested tools to avoid confusion
+                    # For simple context, only include suggested tools to avoid confusion # noqa: E501
                     suggested_tool_names = llm_analysis.get("suggested_tools", [])
                     tools = []
                     for tool_name in suggested_tool_names:
@@ -1186,7 +1186,7 @@ When a user asks you to perform an action, call the appropriate function."""
                                 ):  # Minimal growth threshold
                                     if self.verbose:
                                         print(
-                                            "\n⚠️ Stopping continuation: minimal response growth detected"
+                                            "\n⚠️ Stopping continuation: minimal response growth detected"  # noqa: E501
                                         )
                                     self.response_complete = True
                                     break
@@ -1196,7 +1196,7 @@ When a user asks you to perform an action, call the appropriate function."""
 
                                 if self.verbose:
                                     print(
-                                        f"\n🔄 Auto-continuing response (attempt {continuation_count}/{max_continuations})"
+                                        f"\n🔄 Auto-continuing response (attempt {continuation_count}/{max_continuations})"  # noqa: E501
                                     )
                                     response_len = len(self.current_response.strip())
                                     last_chars = (
@@ -1205,21 +1205,21 @@ When a user asks you to perform an action, call the appropriate function."""
                                         else self.current_response.strip()
                                     )
                                     print(
-                                        f"🔄 Response length: {response_len} chars, ending with: ...{last_chars}"
+                                        f"🔄 Response length: {response_len} chars, ending with: ...{last_chars}"  # noqa: E501
                                     )
                                     if response_len < 200:
                                         print(
-                                            f"🔄 Reason: Response too short ({response_len} chars)"
+                                            f"🔄 Reason: Response too short ({response_len} chars)"  # noqa: E501
                                         )
                                     elif total_tokens >= 4096 * 0.9:
                                         print(
-                                            f"🔄 Reason: Token limit reached ({total_tokens} tokens)"
+                                            f"🔄 Reason: Token limit reached ({total_tokens} tokens)"  # noqa: E501
                                         )
                                     else:
                                         print("🔄 Reason: Response appears truncated")
 
                                 # Prepare continuation request
-                                continuation_query = f"Continue from where you left off. Previous content ended with: {self.current_response[-200:]}"
+                                continuation_query = f"Continue from where you left off. Previous content ended with: {self.current_response[-200:]}"  # noqa: E501
                                 messages = self._prepare_messages(
                                     continuation_query, context, llm_analysis
                                 )
@@ -1236,7 +1236,7 @@ When a user asks you to perform an action, call the appropriate function."""
                                         "presence_penalty": 0.0,
                                     },
                                 )
-                                # Break out of the inner chunk loop to restart with new request
+                                # Break out of the inner chunk loop to restart with new request # noqa: E501
                                 break
                             else:
                                 # No continuation needed, mark as complete
@@ -1261,7 +1261,7 @@ When a user asks you to perform an action, call the appropriate function."""
             metrics.end_time = time.time()
             if self.verbose:
                 print(
-                    f"\n📊 Metrics: {metrics.duration:.1f}s, {metrics.tokens_processed} tokens, {metrics.files_analyzed} files, {metrics.tools_executed} tools\n"
+                    f"\n📊 Metrics: {metrics.duration:.1f}s, {metrics.tokens_processed} tokens, {metrics.files_analyzed} files, {metrics.tools_executed} tools\n"  # noqa: E501
                 )
 
     def is_response_complete(self) -> bool:

@@ -7,11 +7,10 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 import click
 from rich.console import Console
-from rich.text import Text
 
 from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
@@ -334,7 +333,7 @@ def auth(
                 if auth_manager.save_token(
                     token=mock_token,
                     expires_at=time.time() + 3600,  # 1 hour
-                    token_type="Bearer",
+                    token_type="Bearer",  # nosec B106
                     scope="read write",
                 ):
                     console.print("[green]✓ Login successful[/green]")
@@ -413,7 +412,7 @@ def auth(
         if auth_manager.save_token(
             token=token,
             expires_at=time.time() + 3600,  # Default 1 hour expiry
-            token_type="Bearer",
+            token_type="Bearer",  # nosec B106
         ):
             console.print("[green]✓ Token saved successfully[/green]")
         else:
