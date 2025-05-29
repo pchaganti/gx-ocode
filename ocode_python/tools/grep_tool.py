@@ -22,12 +22,12 @@ class GrepTool(Tool):
         super().__init__()
         self.max_file_size = 100 * 1024 * 1024  # 100MB limit for memory-safe operation
         self.max_matches_per_file = 1000  # Limit matches to prevent memory explosion
-        self.has_ripgrep = shutil.which('rg') is not None
-        
+        self.has_ripgrep = shutil.which("rg") is not None
+
         # Use config if provided
         if config:
-            self.use_ripgrep = self.has_ripgrep and config.get('use_ripgrep', True)
-            self.parallel_workers = config.get('parallel_grep_workers', 4)
+            self.use_ripgrep = self.has_ripgrep and config.get("use_ripgrep", True)
+            self.parallel_workers = config.get("parallel_grep_workers", 4)
         else:
             self.use_ripgrep = self.has_ripgrep  # Default to using if available
             self.parallel_workers = 4
@@ -159,7 +159,7 @@ class GrepTool(Tool):
                     context_lines=context_lines,
                     max_matches=max_matches,
                 )
-                
+
                 if success:
                     all_matches = rg_matches
                     files_searched = rg_files
@@ -169,7 +169,9 @@ class GrepTool(Tool):
                     if search_path.is_file():
                         files_to_search = [search_path]
                     else:
-                        files_to_search = self._find_files(search_path, file_pattern, recursive)
+                        files_to_search = self._find_files(
+                            search_path, file_pattern, recursive
+                        )
 
                     # Use parallel processing for multiple files
                     if len(files_to_search) > 1:
@@ -179,7 +181,7 @@ class GrepTool(Tool):
                             invert_match,
                             context_lines,
                             include_line_numbers,
-                            max_matches
+                            max_matches,
                         )
                     else:
                         # Single file, process normally
@@ -208,7 +210,9 @@ class GrepTool(Tool):
                 if search_path.is_file():
                     files_to_search = [search_path]
                 else:
-                    files_to_search = self._find_files(search_path, file_pattern, recursive)
+                    files_to_search = self._find_files(
+                        search_path, file_pattern, recursive
+                    )
 
                 # Use parallel processing for multiple files
                 if len(files_to_search) > 1:
@@ -218,7 +222,7 @@ class GrepTool(Tool):
                         invert_match,
                         context_lines,
                         include_line_numbers,
-                        max_matches
+                        max_matches,
                     )
                 else:
                     # Single file, process normally
@@ -312,7 +316,7 @@ class GrepTool(Tool):
     ) -> Tuple[bool, List[Dict[str, Any]], int]:
         """Use ripgrep for fast searching when available."""
         rg_cmd = ["rg", "--json", "--no-heading", "--with-filename", "--line-number"]
-        
+
         # Add flags
         if not case_sensitive:
             rg_cmd.append("-i")
@@ -324,36 +328,34 @@ class GrepTool(Tool):
             rg_cmd.extend(["-C", str(context_lines)])
         if max_matches:
             rg_cmd.extend(["-m", str(max_matches)])
-        
+
         # Add file pattern
         if file_pattern and file_pattern != "*":
             # Handle brace expansion patterns
             patterns = self._parse_file_pattern(file_pattern)
             for p in patterns:
                 rg_cmd.extend(["-g", p])
-        
+
         # Add pattern and path
         rg_cmd.extend([pattern, str(search_path)])
-        
+
         # If not recursive, add --max-depth 1
         if not recursive:
             rg_cmd.extend(["--max-depth", "1"])
-        
+
         try:
             proc = await asyncio.create_subprocess_exec(
-                *rg_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                *rg_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            
+
             if proc.returncode not in (0, 1):  # 0 = found, 1 = not found
                 return False, [], 0
-            
+
             # Parse ripgrep JSON output
             matches = []
             files_seen = set()
-            
+
             for line in stdout.decode().splitlines():
                 try:
                     data = json.loads(line)
@@ -361,30 +363,32 @@ class GrepTool(Tool):
                         match_data = data["data"]
                         file_path = match_data["path"]["text"]
                         files_seen.add(file_path)
-                        
+
                         match_info = {
                             "file": file_path,
                             "line_num": match_data["line_number"],
                             "text": match_data["lines"]["text"].rstrip(),
-                            "context": []
+                            "context": [],
                         }
-                        
+
                         # Handle context lines if present
                         if "context" in data:
                             for ctx in data["context"]:
-                                match_info["context"].append({
-                                    "line_num": ctx["line_number"],
-                                    "text": ctx["lines"]["text"].rstrip(),
-                                    "type": ctx["type"]  # "before" or "after"
-                                })
-                        
+                                match_info["context"].append(
+                                    {
+                                        "line_num": ctx["line_number"],
+                                        "text": ctx["lines"]["text"].rstrip(),
+                                        "type": ctx["type"],  # "before" or "after"
+                                    }
+                                )
+
                         matches.append(match_info)
-                        
+
                 except json.JSONDecodeError:
                     continue
-            
+
             return True, matches, len(files_seen)
-            
+
         except Exception:
             # Fall back to Python implementation
             return False, [], 0
@@ -392,10 +396,10 @@ class GrepTool(Tool):
     def _is_binary_file(self, file_path: Path, sample_size: int = 8192) -> bool:
         """Check if file is binary to skip it."""
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 chunk = f.read(sample_size)
                 # Check for null bytes
-                if b'\x00' in chunk:
+                if b"\x00" in chunk:
                     return True
                 # Check if mostly non-text characters
                 text_chars = set(range(32, 127)) | {9, 10, 13}
@@ -411,13 +415,13 @@ class GrepTool(Tool):
         invert_match: bool,
         context_lines: int,
         include_line_numbers: bool,
-        max_matches: int
+        max_matches: int,
     ) -> Tuple[List[Dict[str, Any]], int]:
         """Search multiple files in parallel for better performance."""
         semaphore = asyncio.Semaphore(self.parallel_workers)
         all_matches = []
         files_searched = 0
-        
+
         async def search_with_limit(file_path: Path):
             async with semaphore:
                 try:
@@ -431,10 +435,10 @@ class GrepTool(Tool):
                     return matches, True
                 except Exception:
                     return [], False
-        
+
         # Create tasks for all files
         tasks = [search_with_limit(f) for f in files]
-        
+
         # Process results as they complete
         for coro in asyncio.as_completed(tasks):
             matches, success = await coro
@@ -450,13 +454,14 @@ class GrepTool(Tool):
                             task.cancel()
                     all_matches = all_matches[:max_matches]
                     break
-        
+
         return all_matches, files_searched
 
     def _parse_file_pattern(self, pattern: str) -> List[str]:
         """Parse file patterns supporting {ext1,ext2} syntax."""
         if "{" in pattern and "}" in pattern:
             import re
+
             match = re.match(r"(.*)\{([^}]+)\}(.*)", pattern)
             if match:
                 prefix, extensions, suffix = match.groups()
@@ -544,7 +549,7 @@ class GrepTool(Tool):
                 # Use sliding window for context
                 context_buffer = collections.deque(maxlen=context_lines)
                 pending_context = []
-                
+
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     for line_num, line in enumerate(f, 1):
                         if len(matches) >= self.max_matches_per_file:
@@ -560,31 +565,35 @@ class GrepTool(Tool):
                                 "text": line_stripped,
                                 "context": [],
                             }
-                            
+
                             # Add before context
                             for ctx_line_num, ctx_text in context_buffer:
-                                match_info["context"].append({
-                                    "line_num": ctx_line_num,
-                                    "text": ctx_text,
-                                    "type": "before"
-                                })
-                            
+                                match_info["context"].append(
+                                    {
+                                        "line_num": ctx_line_num,
+                                        "text": ctx_text,
+                                        "type": "before",
+                                    }
+                                )
+
                             matches.append(match_info)
                             pending_context = [match_info]  # Track for after context
-                            
+
                         else:
                             # Add to pending after context if within range
                             if pending_context:
                                 for match in pending_context[:]:
                                     if line_num - match["line_num"] <= context_lines:
-                                        match["context"].append({
-                                            "line_num": line_num,
-                                            "text": line_stripped,
-                                            "type": "after"
-                                        })
+                                        match["context"].append(
+                                            {
+                                                "line_num": line_num,
+                                                "text": line_stripped,
+                                                "type": "after",
+                                            }
+                                        )
                                     else:
                                         pending_context.remove(match)
-                            
+
                             # Update context buffer
                             context_buffer.append((line_num, line_stripped))
             else:

@@ -325,9 +325,7 @@ class TestSecureShellExecutor:
         executor = SecureShellExecutor(manager)
 
         # Use sleep command which should be allowed
-        success, stdout, stderr = await executor.execute(
-            "sleep 10", timeout=1
-        )
+        success, stdout, stderr = await executor.execute("sleep 10", timeout=1)
 
         assert not success
         assert "timed out" in stderr.lower()

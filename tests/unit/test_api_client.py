@@ -126,7 +126,7 @@ class TestOllamaAPIClient:
         mock_session.post = Mock(return_value=mock_context_manager)
 
         # Patch the ClientSession to return our mock
-        with patch('aiohttp.ClientSession') as mock_client_session:
+        with patch("aiohttp.ClientSession") as mock_client_session:
             mock_client_session.return_value = mock_session
 
             request = CompletionRequest(
@@ -184,7 +184,7 @@ class TestOllamaAPIClient:
         mock_context_manager.__aexit__ = AsyncMock(return_value=None)
         mock_session.get = Mock(return_value=mock_context_manager)
 
-        with patch('aiohttp.ClientSession') as mock_client_session:
+        with patch("aiohttp.ClientSession") as mock_client_session:
             mock_client_session.return_value = mock_session
 
             models = await client.list_models()
@@ -220,7 +220,7 @@ class TestOllamaAPIClient:
         mock_session.closed = False
         mock_session.get = AsyncMock(side_effect=Exception("Connection failed"))
 
-        with patch('aiohttp.ClientSession') as mock_client_session:
+        with patch("aiohttp.ClientSession") as mock_client_session:
             mock_client_session.return_value = mock_session
 
             is_healthy = await client.check_health()
@@ -253,7 +253,7 @@ class TestOllamaAPIClient:
         mock_context_manager.__aexit__ = AsyncMock(return_value=None)
         mock_session.post = Mock(return_value=mock_context_manager)
 
-        with patch('aiohttp.ClientSession') as mock_client_session:
+        with patch("aiohttp.ClientSession") as mock_client_session:
             mock_client_session.return_value = mock_session
 
             progress_updates = []
@@ -283,7 +283,7 @@ class TestOllamaAPIClient:
         mock_context_manager.__aexit__ = AsyncMock(return_value=None)
         mock_session.post = Mock(return_value=mock_context_manager)
 
-        with patch('aiohttp.ClientSession') as mock_client_session:
+        with patch("aiohttp.ClientSession") as mock_client_session:
             mock_client_session.return_value = mock_session
 
             embedding = await client.generate_embeddings("test-model", "Hello world")
