@@ -5,7 +5,7 @@ Tools for JSON and YAML data processing.
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 import yaml
 from jsonpath_ng import parse as jsonpath_parse
@@ -147,7 +147,7 @@ class JsonYamlTool(Tool):
                 success=False, output="", error=f"Error processing data: {str(e)}"
             )
 
-    async def _load_data(self, source: str, format_type: str) -> tuple[Any, str]:
+    async def _load_data(self, source: str, format_type: str) -> Tuple[Any, str]:
         """Load data from file or string."""
         # Check if source is a file path
         source_path = Path(source)

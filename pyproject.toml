@@ -104,6 +104,13 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+exclude = [
+    "venv/",
+    ".venv/",
+    "dev-env/",
+    "build/",
+    "dist/",
+]
 
 [[tool.mypy.overrides]]
 module = [
