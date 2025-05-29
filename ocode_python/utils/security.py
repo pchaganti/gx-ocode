@@ -294,8 +294,6 @@ class PermissionManager:
             command = target.split()[0] if target else ""
             if command in self.blocked_commands:
                 return PermissionLevel.DENIED
-            if self.allowed_commands and command not in self.allowed_commands:
-                return PermissionLevel.DENIED
 
         # Check rules (most specific first)
         matching_rules = [

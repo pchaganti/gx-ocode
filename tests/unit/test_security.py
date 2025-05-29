@@ -28,7 +28,7 @@ class TestPermissionManager:
         manager = PermissionManager()
 
         assert len(manager.rules) > 0
-        assert len(manager.blocked_paths) == 0  # Initially empty, rules handle blocks
+        assert len(manager.blocked_paths) > 0  # Default blocked paths are loaded
 
     def test_load_default_rules(self):
         """Test loading of default security rules."""

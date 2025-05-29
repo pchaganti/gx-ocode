@@ -201,15 +201,20 @@ class TestOllamaAPIClient:
         mock_response = AsyncMock()
         mock_response.status = 200
 
+        # Create a proper async context manager mock
+        mock_context_manager = AsyncMock()
+        mock_context_manager.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+        
         mock_session = AsyncMock()
-        mock_session.get = AsyncMock()
-        mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+        mock_session.closed = False
+        mock_session.get = Mock(return_value=mock_context_manager)
 
-        client.session = mock_session
+        with patch("aiohttp.ClientSession") as mock_client_session:
+            mock_client_session.return_value = mock_session
 
-        is_healthy = await client.check_health()
-        assert is_healthy
+            is_healthy = await client.check_health()
+            assert is_healthy
 
     @pytest.mark.asyncio
     async def test_check_health_failure(self):
