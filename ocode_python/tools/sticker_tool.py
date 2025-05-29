@@ -7,7 +7,7 @@ import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -54,18 +54,18 @@ class StickerRequestTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="sticker",
-            description="Create, manage, and organize code annotations, notes, TODOs, and markers",
+            description="Create, manage, and organize code annotations, notes, TODOs, and markers",  # noqa: E501
             parameters=[
                 ToolParameter(
                     name="action",
                     type="string",
-                    description="Action to perform: 'add', 'list', 'search', 'update', 'resolve', 'delete', 'export', 'import', 'stats'",
+                    description="Action to perform: 'add', 'list', 'search', 'update', 'resolve', 'delete', 'export', 'import', 'stats'",  # noqa: E501
                     required=True,
                 ),
                 ToolParameter(
                     name="sticker_type",
                     type="string",
-                    description="Type of sticker: 'note', 'todo', 'fixme', 'warning', 'info', 'bookmark', 'question'",
+                    description="Type of sticker: 'note', 'todo', 'fixme', 'warning', 'info', 'bookmark', 'question'",  # noqa: E501
                     required=False,
                     default="note",
                 ),
@@ -122,7 +122,7 @@ class StickerRequestTool(Tool):
                 ToolParameter(
                     name="filter_by",
                     type="object",
-                    description="Filters for listing stickers (type, priority, tags, resolved, file)",
+                    description="Filters for listing stickers (type, priority, tags, resolved, file)",  # noqa: E501
                     required=False,
                     default={},
                 ),
@@ -240,7 +240,7 @@ class StickerRequestTool(Tool):
             return ToolResult(
                 success=False,
                 output="",
-                error=f"Invalid priority. Valid priorities: {', '.join(valid_priorities)}",
+                error=f"Invalid priority. Valid priorities: {', '.join(valid_priorities)}",  # noqa: E501
             )
 
         # Generate unique ID
@@ -286,7 +286,7 @@ class StickerRequestTool(Tool):
         self, file_path: str, line_number: Optional[int]
     ) -> Dict[str, Any]:
         """Extract context around a sticker location."""
-        context = {"file_exists": False}
+        context: Dict[str, Any] = {"file_exists": False}
 
         try:
             file_path_obj = Path(file_path)
@@ -319,7 +319,7 @@ class StickerRequestTool(Tool):
 
                     context["target_line"] = lines[line_number - 1].rstrip()
 
-        except Exception:
+        except Exception:  # nosec
             pass
 
         return context
@@ -334,7 +334,7 @@ class StickerRequestTool(Tool):
             filter_desc = self._describe_filters(filter_by)
             return ToolResult(
                 success=True,
-                output=f"No stickers found{' matching ' + filter_desc if filter_desc else ''}.",
+                output=f"No stickers found{' matching ' + filter_desc if filter_desc else ''}.",  # noqa: E501
                 metadata={"stickers": [], "count": 0},
             )
 
@@ -404,7 +404,9 @@ class StickerRequestTool(Tool):
                 else [filter_by["tags"]]
             )
             filtered = [
-                s for s in filtered if any(tag in s.tags for tag in required_tags)
+                s
+                for s in filtered
+                if s.tags and any(tag in s.tags for tag in required_tags)
             ]
 
         if "author" in filter_by:
@@ -458,7 +460,10 @@ class StickerRequestTool(Tool):
             if (
                 query_lower in sticker.content.lower()
                 or query_lower in sticker.file_path.lower()
-                or any(query_lower in tag.lower() for tag in sticker.tags)
+                or (
+                    sticker.tags
+                    and any(query_lower in tag.lower() for tag in sticker.tags)
+                )
             ):
                 matching_stickers.append(sticker)
 
@@ -476,9 +481,10 @@ class StickerRequestTool(Tool):
                 score += 10
             if query_lower in sticker.file_path.lower():
                 score += 5
-            for tag in sticker.tags:
-                if query_lower in tag.lower():
-                    score += 3
+            if sticker.tags:
+                for tag in sticker.tags:
+                    if query_lower in tag.lower():
+                        score += 3
             return score
 
         matching_stickers.sort(key=relevance_score, reverse=True)
@@ -489,7 +495,7 @@ class StickerRequestTool(Tool):
         output += "=" * 60 + "\n"
 
         for sticker in matching_stickers:
-            output += f"ID: {sticker.id} [{sticker.type.upper()}] - {sticker.priority.upper()}\n"
+            output += f"ID: {sticker.id} [{sticker.type.upper()}] - {sticker.priority.upper()}\n"  # noqa: E501
             output += f"File: {sticker.file_path}"
             if sticker.line_number:
                 output += f":{sticker.line_number}"
@@ -657,7 +663,7 @@ class StickerRequestTool(Tool):
             )
 
         # Save to file
-        export_filename = f"stickers_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{export_format}"
+        export_filename = f"stickers_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{export_format}"  # noqa: E501
         export_path = Path.cwd() / ".ocode" / "exports"
         export_path.mkdir(parents=True, exist_ok=True)
 
@@ -685,7 +691,7 @@ class StickerRequestTool(Tool):
         md += f"Total stickers: {len(stickers)}\n\n"
 
         # Group by type
-        by_type = {}
+        by_type: Dict[str, List[CodeSticker]] = {}
         for sticker in stickers:
             if sticker.type not in by_type:
                 by_type[sticker.type] = []
@@ -753,7 +759,7 @@ class StickerRequestTool(Tool):
                     sticker.column_number or "",
                     sticker.content,
                     sticker.priority,
-                    ";".join(sticker.tags),
+                    ";".join(sticker.tags) if sticker.tags else "",
                     sticker.author,
                     sticker.created_at,
                     sticker.updated_at,
@@ -772,7 +778,7 @@ class StickerRequestTool(Tool):
     <title>Code Stickers Export</title>
     <style>
         body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        .sticker {{ border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }}
+        .sticker {{ border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }}  # noqa: E501
         .sticker-header {{ font-weight: bold; color: #333; }}
         .priority-high {{ border-left: 5px solid #ff4444; }}
         .priority-urgent {{ border-left: 5px solid #ff0000; }}
@@ -805,12 +811,12 @@ class StickerRequestTool(Tool):
         <p><strong>Content:</strong> {sticker.content}</p>"""
 
             if sticker.tags:
-                html += f'<p class="tags"><strong>Tags:</strong> {", ".join(sticker.tags)}</p>'
+                html += f'<p class="tags"><strong>Tags:</strong> {", ".join(sticker.tags)}</p>'  # noqa: E501
 
             html += f"""<p><strong>Created:</strong> {sticker.created_at}</p>"""
 
             if sticker.resolved:
-                html += f"<p><strong>Status:</strong> ✅ RESOLVED ({sticker.resolved_at})</p>"
+                html += f"<p><strong>Status:</strong> ✅ RESOLVED ({sticker.resolved_at})</p>"  # noqa: E501
 
             html += "    </div>"
 
@@ -890,32 +896,39 @@ class StickerRequestTool(Tool):
 
         for sticker in filtered_stickers:
             # By type
-            stats["by_type"][sticker.type] = stats["by_type"].get(sticker.type, 0) + 1
+            by_type = stats["by_type"]
+            if isinstance(by_type, dict):
+                by_type[sticker.type] = by_type.get(sticker.type, 0) + 1
 
             # By priority
-            stats["by_priority"][sticker.priority] = (
-                stats["by_priority"].get(sticker.priority, 0) + 1
-            )
+            by_priority = stats["by_priority"]
+            if isinstance(by_priority, dict):
+                by_priority[sticker.priority] = by_priority.get(sticker.priority, 0) + 1
 
             # By status
-            if sticker.resolved:
-                stats["by_status"]["resolved"] += 1
-            else:
-                stats["by_status"]["open"] += 1
+            by_status = stats["by_status"]
+            if isinstance(by_status, dict):
+                if sticker.resolved:
+                    by_status["resolved"] += 1
+                else:
+                    by_status["open"] += 1
 
             # By file
-            stats["by_file"][sticker.file_path] = (
-                stats["by_file"].get(sticker.file_path, 0) + 1
-            )
+            by_file = stats["by_file"]
+            if isinstance(by_file, dict):
+                by_file[sticker.file_path] = by_file.get(sticker.file_path, 0) + 1
 
             # By author
-            stats["by_author"][sticker.author] = (
-                stats["by_author"].get(sticker.author, 0) + 1
-            )
+            by_author = stats["by_author"]
+            if isinstance(by_author, dict):
+                by_author[sticker.author] = by_author.get(sticker.author, 0) + 1
 
             # Tags
-            for tag in sticker.tags:
-                stats["tags"][tag] = stats["tags"].get(tag, 0) + 1
+            if sticker.tags:
+                tags_stats = stats["tags"]
+                if isinstance(tags_stats, dict):
+                    for tag in sticker.tags:
+                        tags_stats[tag] = tags_stats.get(tag, 0) + 1
 
         # Generate output
         output = "Sticker Statistics:\n"
@@ -923,24 +936,28 @@ class StickerRequestTool(Tool):
         output += f"Total stickers: {stats['total']}\n\n"
 
         output += "By Type:\n"
-        for stype, count in sorted(stats["by_type"].items()):
-            output += f"  {stype}: {count}\n"
+        by_type_stats = stats["by_type"]
+        if isinstance(by_type_stats, dict):
+            for stype, count in sorted(by_type_stats.items()):
+                output += f"  {stype}: {count}\n"
 
         output += "\nBy Priority:\n"
         priority_order = ["urgent", "high", "medium", "low"]
         for priority in priority_order:
-            if priority in stats["by_priority"]:
-                output += f"  {priority}: {stats['by_priority'][priority]}\n"
+            by_priority_stats = stats["by_priority"]
+            if isinstance(by_priority_stats, dict) and priority in by_priority_stats:
+                output += f"  {priority}: {by_priority_stats[priority]}\n"
 
         output += "\nStatus:\n"
-        output += f"  Open: {stats['by_status']['open']}\n"
-        output += f"  Resolved: {stats['by_status']['resolved']}\n"
+        by_status_stats = stats["by_status"]
+        if isinstance(by_status_stats, dict):
+            output += f"  Open: {by_status_stats.get('open', 0)}\n"
+            output += f"  Resolved: {by_status_stats.get('resolved', 0)}\n"
 
-        if stats["tags"]:
+        tags_stats = stats["tags"]
+        if isinstance(tags_stats, dict) and tags_stats:
             output += "\nTop Tags:\n"
-            top_tags = sorted(stats["tags"].items(), key=lambda x: x[1], reverse=True)[
-                :5
-            ]
+            top_tags = sorted(tags_stats.items(), key=lambda x: x[1], reverse=True)[:5]
             for tag, count in top_tags:
                 output += f"  {tag}: {count}\n"
 
@@ -979,6 +996,6 @@ class StickerRequestTool(Tool):
             with open(stickers_file, "w", encoding="utf-8") as f:
                 json.dump(sticker_data, f, indent=2)
 
-        except Exception:
+        except Exception:  # nosec
             # Silently fail if save doesn't work
             pass

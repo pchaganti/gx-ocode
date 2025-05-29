@@ -4,10 +4,8 @@ Find tool for searching files and directories.
 
 import fnmatch
 import os
-import stat
-import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional, Tuple
 
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
@@ -61,7 +59,7 @@ class FindTool(Tool):
             ],
         )
 
-    def _parse_size(self, size_str: str) -> tuple:
+    def _parse_size(self, size_str: str) -> Tuple[Optional[str], int]:
         """Parse size string like '+1M', '-100k' into (operator, bytes)."""
         if not size_str:
             return None, 0
@@ -108,11 +106,11 @@ class FindTool(Tool):
             return True
 
         if operator == "+":
-            return file_size > target_size
+            return bool(file_size > target_size)
         elif operator == "-":
-            return file_size < target_size
+            return bool(file_size < target_size)
         else:  # '='
-            return file_size == target_size
+            return bool(file_size == target_size)
 
     async def execute(
         self,
