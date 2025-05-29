@@ -3,9 +3,8 @@ Tools for JSON and YAML data processing.
 """
 
 import json
-import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import yaml
 from jsonpath_ng import parse as jsonpath_parse
@@ -39,14 +38,14 @@ class JsonYamlTool(Tool):
                 ToolParameter(
                     name="format",
                     type="string",
-                    description="Data format: json or yaml (auto-detect if not specified)",
+                    description="Data format: json or yaml (auto-detect if not specified)",  # noqa: E501
                     required=False,
                     default="auto",
                 ),
                 ToolParameter(
                     name="query",
                     type="string",
-                    description="JSONPath query for 'query' action (e.g., '$.users[0].name')",
+                    description="JSONPath query for 'query' action (e.g., '$.users[0].name')",  # noqa: E501
                     required=False,
                 ),
                 ToolParameter(
