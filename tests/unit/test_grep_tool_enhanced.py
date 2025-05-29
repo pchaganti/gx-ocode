@@ -282,7 +282,9 @@ impl TestStruct {
     @pytest.mark.asyncio
     async def test_grep_no_matches(self, grep_tool, temp_dir):
         """Test grep with no matches."""
-        result = await grep_tool.execute(pattern="nonexistentpattern", path=str(temp_dir))
+        result = await grep_tool.execute(
+            pattern="nonexistentpattern", path=str(temp_dir)
+        )
 
         assert result.success
         assert "No matches found" in result.output or result.output == ""
@@ -293,7 +295,16 @@ impl TestStruct {
         result = await grep_tool.execute(pattern="[invalid(regex", path=str(temp_dir))
 
         assert not result.success
-        assert "error" in result.output.lower() or "invalid" in result.output.lower() or (result.error and ("error" in result.error.lower() or "invalid" in result.error.lower()))
+        assert (
+            "error" in result.output.lower()
+            or "invalid" in result.output.lower()
+            or (
+                result.error
+                and (
+                    "error" in result.error.lower() or "invalid" in result.error.lower()
+                )
+            )
+        )
 
     @pytest.mark.asyncio
     async def test_grep_nonexistent_path(self, grep_tool):
@@ -301,7 +312,18 @@ impl TestStruct {
         result = await grep_tool.execute(pattern="test", path="/nonexistent/path")
 
         assert not result.success
-        assert "error" in result.output.lower() or "not found" in result.output.lower() or (result.error and ("error" in result.error.lower() or "not found" in result.error.lower() or "does not exist" in result.error.lower()))
+        assert (
+            "error" in result.output.lower()
+            or "not found" in result.output.lower()
+            or (
+                result.error
+                and (
+                    "error" in result.error.lower()
+                    or "not found" in result.error.lower()
+                    or "does not exist" in result.error.lower()
+                )
+            )
+        )
 
     @pytest.mark.asyncio
     async def test_enhanced_search_mixed_languages(self, grep_tool, temp_dir):
@@ -325,7 +347,7 @@ impl TestStruct {
         assert definition.name == "grep"
         assert definition.description is not None
         assert len(definition.parameters) > 0
-        
+
         # Check parameter names
         param_names = [p.name for p in definition.parameters]
         assert "pattern" in param_names
@@ -358,7 +380,10 @@ class PerfTest:
         # Time enhanced search
         start = time.time()
         result2 = await grep_tool.execute(
-            pattern="class", path=str(temp_dir), file_pattern="perf_test_*.py", enhanced=True
+            pattern="class",
+            path=str(temp_dir),
+            file_pattern="perf_test_*.py",
+            enhanced=True,
         )
         enhanced_time = time.time() - start
 

@@ -1,6 +1,4 @@
-"""
-Unit tests for Ollama API client.
-"""
+"""Unit tests for Ollama API client."""
 
 import json
 from unittest.mock import AsyncMock, Mock, patch
@@ -205,7 +203,7 @@ class TestOllamaAPIClient:
         mock_context_manager = AsyncMock()
         mock_context_manager.__aenter__ = AsyncMock(return_value=mock_response)
         mock_context_manager.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_session = AsyncMock()
         mock_session.closed = False
         mock_session.get = Mock(return_value=mock_context_manager)

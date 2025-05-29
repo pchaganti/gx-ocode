@@ -1,6 +1,4 @@
-"""
-Unit tests for OCode engine.
-"""
+"""Unit tests for OCode engine."""
 
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
@@ -35,9 +33,7 @@ class TestOCodeEngine:
     @pytest.mark.asyncio
     async def test_engine_context_management(self, mock_project_dir: Path):
         """Test engine initialization."""
-        engine = OCodeEngine(
-            model="test-model", root_path=mock_project_dir
-        )
+        engine = OCodeEngine(model="test-model", root_path=mock_project_dir)
         assert engine.api_client is not None
         assert engine.context_manager is not None
         assert engine.tool_registry is not None
@@ -60,7 +56,9 @@ class TestOCodeEngine:
         mock_client_class.return_value = mock_client
 
         # Create engine with small chunk size for testing
-        engine = OCodeEngine(model="test-model", root_path=mock_project_dir, chunk_size=5)
+        engine = OCodeEngine(
+            model="test-model", root_path=mock_project_dir, chunk_size=5
+        )
 
         responses = []
         async for response in engine.process("Hello, world!"):
@@ -87,7 +85,9 @@ class TestOCodeEngine:
         mock_client_class.return_value = mock_client
 
         # Create engine with small chunk size for testing
-        engine = OCodeEngine(model="test-model", root_path=mock_project_dir, chunk_size=10)
+        engine = OCodeEngine(
+            model="test-model", root_path=mock_project_dir, chunk_size=10
+        )
 
         responses = []
         async for response in engine.process("Analyze the main.py file"):
@@ -163,7 +163,7 @@ class TestOCodeEngine:
 
         # Add some conversation history
         from ocode_python.core.api_client import Message
-        
+
         engine.conversation_history.extend(
             [
                 Message(role="user", content="Hello"),
