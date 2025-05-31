@@ -2,9 +2,16 @@
 Head and tail tools for viewing file contents.
 """
 
-from pathlib import Path
-
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from ..utils import path_validator
+from ..utils.timeout_handler import async_timeout
+from .base import (
+    ErrorHandler,
+    ErrorType,
+    Tool,
+    ToolDefinition,
+    ToolParameter,
+    ToolResult,
+)
 
 
 class HeadTool(Tool):
@@ -40,43 +47,66 @@ class HeadTool(Tool):
 
     async def execute(self, **kwargs) -> ToolResult:
         """Execute head command."""
-        file_path = kwargs.get("file_path")
-        lines = kwargs.get("lines", 10)
-
-        if not file_path:
-            return ToolResult(success=False, output="", error="file_path is required")
         try:
-            path = Path(file_path)
+            # Validate required parameters
+            validation_error = ErrorHandler.validate_required_params(
+                kwargs, ["file_path"]
+            )
+            if validation_error:
+                return validation_error
 
-            if not path.exists():
-                return ToolResult(
-                    success=False, output="", error=f"File not found: {file_path}"
+            file_path = kwargs.get("file_path")
+            lines = kwargs.get("lines", 10)
+
+            # Validate path
+            is_valid, error_msg, normalized_path = path_validator.validate_path(
+                file_path, check_exists=True
+            )
+            if not is_valid:
+                return ErrorHandler.create_error_result(
+                    f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
+
+            path = normalized_path
 
             if not path.is_file():
-                return ToolResult(
-                    success=False, output="", error=f"Not a file: {file_path}"
+                return ErrorHandler.create_error_result(
+                    f"Not a file: {file_path}", ErrorType.VALIDATION_ERROR
                 )
 
-            # Read first N lines
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
-                file_lines = []
-                for i, line in enumerate(f):
-                    if i >= lines:
-                        break
-                    file_lines.append(line.rstrip("\n\r"))
+            # Check file size (limit to 100MB for safety)
+            file_size = path.stat().st_size
+            if file_size > 100 * 1024 * 1024:
+                return ErrorHandler.create_error_result(
+                    f"File too large: {file_size / (1024*1024):.1f}MB (max 100MB)",
+                    ErrorType.RESOURCE_ERROR,
+                )
+
+            # Read first N lines with timeout and proper resource management
+            try:
+                async with async_timeout(30):  # 30 second timeout
+                    with open(path, "r", encoding="utf-8", errors="replace") as f:
+                        file_lines = []
+                        for i, line in enumerate(f):
+                            if i >= lines:
+                                break
+                            file_lines.append(line.rstrip("\n\r"))
+            except UnicodeDecodeError as e:
+                return ErrorHandler.create_error_result(
+                    f"Encoding error reading file: {str(e)}", ErrorType.VALIDATION_ERROR
+                )
+            except OSError as e:
+                return ErrorHandler.create_error_result(
+                    f"I/O error reading file: {str(e)}", ErrorType.RESOURCE_ERROR
+                )
 
             output = "\n".join(file_lines)
-            return ToolResult(
-                success=True,
-                output=output,
-                metadata={"file": str(path), "lines_shown": len(file_lines)},
+            return ErrorHandler.create_success_result(
+                output, metadata={"file": str(path), "lines_shown": len(file_lines)}
             )
 
         except Exception as e:
-            return ToolResult(
-                success=False, output="", error=f"Error reading file: {str(e)}"
-            )
+            return ErrorHandler.handle_exception(e, "head_tool")
 
 
 class TailTool(Tool):
@@ -112,27 +142,54 @@ class TailTool(Tool):
 
     async def execute(self, **kwargs) -> ToolResult:
         """Execute tail command."""
-        file_path = kwargs.get("file_path")
-        lines = kwargs.get("lines", 10)
-
-        if not file_path:
-            return ToolResult(success=False, output="", error="file_path is required")
         try:
-            path = Path(file_path)
+            # Validate required parameters
+            validation_error = ErrorHandler.validate_required_params(
+                kwargs, ["file_path"]
+            )
+            if validation_error:
+                return validation_error
 
-            if not path.exists():
-                return ToolResult(
-                    success=False, output="", error=f"File not found: {file_path}"
+            file_path = kwargs.get("file_path")
+            lines = kwargs.get("lines", 10)
+
+            # Validate path
+            is_valid, error_msg, normalized_path = path_validator.validate_path(
+                file_path, check_exists=True
+            )
+            if not is_valid:
+                return ErrorHandler.create_error_result(
+                    f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
+
+            path = normalized_path
 
             if not path.is_file():
-                return ToolResult(
-                    success=False, output="", error=f"Not a file: {file_path}"
+                return ErrorHandler.create_error_result(
+                    f"Not a file: {file_path}", ErrorType.VALIDATION_ERROR
                 )
 
-            # Read all lines and get last N
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
-                all_lines = f.readlines()
+            # Check file size (limit to 100MB for safety)
+            file_size = path.stat().st_size
+            if file_size > 100 * 1024 * 1024:
+                return ErrorHandler.create_error_result(
+                    f"File too large: {file_size / (1024*1024):.1f}MB (max 100MB)",
+                    ErrorType.RESOURCE_ERROR,
+                )
+
+            # Read all lines and get last N with timeout and proper resource management
+            try:
+                async with async_timeout(30):  # 30 second timeout
+                    with open(path, "r", encoding="utf-8", errors="replace") as f:
+                        all_lines = f.readlines()
+            except UnicodeDecodeError as e:
+                return ErrorHandler.create_error_result(
+                    f"Encoding error reading file: {str(e)}", ErrorType.VALIDATION_ERROR
+                )
+            except OSError as e:
+                return ErrorHandler.create_error_result(
+                    f"I/O error reading file: {str(e)}", ErrorType.RESOURCE_ERROR
+                )
 
             # Get last N lines
             last_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
@@ -141,9 +198,8 @@ class TailTool(Tool):
             output_lines = [line.rstrip("\n\r") for line in last_lines]
             output = "\n".join(output_lines)
 
-            return ToolResult(
-                success=True,
-                output=output,
+            return ErrorHandler.create_success_result(
+                output,
                 metadata={
                     "file": str(path),
                     "lines_shown": len(output_lines),
@@ -152,6 +208,4 @@ class TailTool(Tool):
             )
 
         except Exception as e:
-            return ToolResult(
-                success=False, output="", error=f"Error reading file: {str(e)}"
-            )
+            return ErrorHandler.handle_exception(e, "tail_tool")

@@ -2,6 +2,7 @@
 Tools for JSON and YAML data processing.
 """
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -10,7 +11,16 @@ import yaml
 from jsonpath_ng import parse as jsonpath_parse
 from jsonpath_ng.exceptions import JsonPathParserError
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from ..utils import path_validator
+from ..utils.timeout_handler import async_timeout
+from .base import (
+    ErrorHandler,
+    ErrorType,
+    Tool,
+    ToolDefinition,
+    ToolParameter,
+    ToolResult,
+)
 
 
 class JsonYamlTool(Tool):
@@ -84,35 +94,31 @@ class JsonYamlTool(Tool):
 
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute JSON/YAML operations."""
-        action = kwargs.get("action", "").lower()
-        source = kwargs.get("source", "")
-        format_type = kwargs.get("format", "auto").lower()
-        query = kwargs.get("query")
-        path = kwargs.get("path")
-        value = kwargs.get("value")
-        output_path = kwargs.get("output_path")
-        pretty = kwargs.get("pretty", True)
-
-        if not action:
-            return ToolResult(
-                success=False, output="", error="Action parameter is required"
-            )
-
-        if not source:
-            return ToolResult(
-                success=False, output="", error="Source parameter is required"
-            )
-
-        valid_actions = ["parse", "query", "set", "validate"]
-        if action not in valid_actions:
-            return ToolResult(
-                success=False,
-                output="",
-                error=f"Invalid action. Must be one of: {', '.join(valid_actions)}",
-            )
-
         try:
-            # Load the data
+            # Validate required parameters
+            validation_error = ErrorHandler.validate_required_params(
+                kwargs, ["action", "source"]
+            )
+            if validation_error:
+                return validation_error
+
+            action = kwargs.get("action", "").lower()
+            source = kwargs.get("source", "")
+            format_type = kwargs.get("format", "auto").lower()
+            query = kwargs.get("query")
+            path = kwargs.get("path")
+            value = kwargs.get("value")
+            output_path = kwargs.get("output_path")
+            pretty = kwargs.get("pretty", True)
+
+            valid_actions = ["parse", "query", "set", "validate"]
+            if action not in valid_actions:
+                return ErrorHandler.create_error_result(
+                    f"Invalid action. Must be one of: {', '.join(valid_actions)}",
+                    ErrorType.VALIDATION_ERROR,
+                )
+
+            # Load the data with timeout protection
             data, detected_format = await self._load_data(source, format_type)
 
             # Perform the action
@@ -120,24 +126,21 @@ class JsonYamlTool(Tool):
                 result = await self._action_parse(data, detected_format, pretty)
             elif action == "query":
                 if not query:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="Query parameter is required for 'query' action",
+                    return ErrorHandler.create_error_result(
+                        "Query parameter is required for 'query' action",
+                        ErrorType.VALIDATION_ERROR,
                     )
                 result = await self._action_query(data, query)
             elif action == "set":
                 if not path:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="Path parameter is required for 'set' action",
+                    return ErrorHandler.create_error_result(
+                        "Path parameter is required for 'set' action",
+                        ErrorType.VALIDATION_ERROR,
                     )
                 if value is None:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="Value parameter is required for 'set' action",
+                    return ErrorHandler.create_error_result(
+                        "Value parameter is required for 'set' action",
+                        ErrorType.VALIDATION_ERROR,
                     )
                 result = await self._action_set(
                     data, path, value, detected_format, output_path, pretty
@@ -148,69 +151,103 @@ class JsonYamlTool(Tool):
             return result
 
         except Exception as e:
-            return ToolResult(
-                success=False, output="", error=f"Error processing data: {str(e)}"
-            )
+            return ErrorHandler.handle_exception(e, "json_yaml_tool")
 
     async def _load_data(self, source: str, format_type: str) -> Tuple[Any, str]:
-        """Load data from file or string."""
+        """Load data from file or string with timeout protection."""
         # Check if source is a file path
         source_path = Path(source)
         if source_path.exists() and source_path.is_file():
-            with open(source_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            # Validate path for security
+            is_valid, error_msg, normalized_path = path_validator.validate_path(
+                source, check_exists=True
+            )
+            if not is_valid:
+                raise ValueError(f"Invalid path: {error_msg}")
+
+            # Check file size (limit to 50MB for safety)
+            file_size = normalized_path.stat().st_size
+            if file_size > 50 * 1024 * 1024:
+                raise ValueError(
+                    f"File too large: {file_size / (1024*1024):.1f}MB (max 50MB)"
+                )
+
+            # Read file with timeout protection
+            try:
+                async with async_timeout(30):  # 30 second timeout for large files
+                    with open(normalized_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+            except UnicodeDecodeError as e:
+                raise ValueError(f"Encoding error reading file: {str(e)}")
 
             # Auto-detect format from file extension if needed
             if format_type == "auto":
-                if source_path.suffix.lower() in [".json"]:
+                if normalized_path.suffix.lower() in [".json"]:
                     format_type = "json"
-                elif source_path.suffix.lower() in [".yaml", ".yml"]:
+                elif normalized_path.suffix.lower() in [".yaml", ".yml"]:
                     format_type = "yaml"
         else:
             content = source
+            # Limit inline content size for safety
+            if len(content) > 10 * 1024 * 1024:  # 10MB limit for inline content
+                raise ValueError(
+                    f"Inline content too large: "
+                    f"{len(content) / (1024*1024):.1f}MB (max 10MB)"
+                )
 
-        # Try to parse the content
-        if format_type == "json" or format_type == "auto":
-            try:
-                data = json.loads(content)
-                return data, "json"
-            except json.JSONDecodeError:
-                if format_type == "json":
-                    raise ValueError("Invalid JSON format")
+        # Try to parse the content with timeout protection
+        try:
+            async with async_timeout(30):  # 30 second timeout for parsing
+                if format_type == "json" or format_type == "auto":
+                    try:
+                        data = json.loads(content)
+                        return data, "json"
+                    except json.JSONDecodeError:
+                        if format_type == "json":
+                            raise ValueError("Invalid JSON format")
 
-        if format_type == "yaml" or format_type == "auto":
-            try:
-                data = yaml.safe_load(content)
-                return data, "yaml"
-            except yaml.YAMLError as e:
-                if format_type == "yaml":
-                    raise ValueError(f"Invalid YAML format: {e}")
-                else:
-                    raise ValueError("Could not parse as JSON or YAML")
+                if format_type == "yaml" or format_type == "auto":
+                    try:
+                        data = yaml.safe_load(content)
+                        return data, "yaml"
+                    except yaml.YAMLError as e:
+                        if format_type == "yaml":
+                            raise ValueError(f"Invalid YAML format: {e}")
+                        else:
+                            raise ValueError("Could not parse as JSON or YAML")
 
-        raise ValueError(f"Unknown format: {format_type}")
+                raise ValueError(f"Unknown format: {format_type}")
+        except asyncio.TimeoutError:
+            raise ValueError(
+                "Parsing operation timed out - content too complex or large"
+            )
 
     async def _action_parse(
         self, data: Any, format_type: str, pretty: bool
     ) -> ToolResult:
         """Parse and return the data structure."""
-        if format_type == "json":
-            if pretty:
-                output = json.dumps(data, indent=2, sort_keys=True)
-            else:
-                output = json.dumps(data)
-        else:  # yaml
-            output = yaml.dump(data, default_flow_style=not pretty, sort_keys=True)
+        try:
+            async with async_timeout(30):  # Timeout for formatting
+                if format_type == "json":
+                    if pretty:
+                        output = json.dumps(data, indent=2, sort_keys=True)
+                    else:
+                        output = json.dumps(data)
+                else:  # yaml
+                    output = yaml.dump(
+                        data, default_flow_style=not pretty, sort_keys=True
+                    )
 
-        return ToolResult(
-            success=True,
-            output=output,
-            metadata={
-                "format": format_type,
-                "type": type(data).__name__,
-                "size": len(str(data)),
-            },
-        )
+                return ErrorHandler.create_success_result(
+                    output,
+                    metadata={
+                        "format": format_type,
+                        "type": type(data).__name__,
+                        "size": len(str(data)),
+                    },
+                )
+        except Exception as e:
+            return ErrorHandler.handle_exception(e, "action_parse")
 
     async def _action_query(self, data: Any, query: str) -> ToolResult:
         """Query data using JSONPath."""

@@ -4,10 +4,18 @@ Jupyter notebook tools for OCode.
 
 import json
 import os  # noqa: F401
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union  # noqa: F401
+from typing import Any, Dict, List
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from ..utils import path_validator
+from ..utils.timeout_handler import async_timeout
+from .base import (
+    ErrorHandler,
+    ErrorType,
+    Tool,
+    ToolDefinition,
+    ToolParameter,
+    ToolResult,
+)
 
 
 class NotebookReadTool(Tool):
@@ -65,6 +73,11 @@ class NotebookReadTool(Tool):
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Read and analyze a Jupyter notebook file."""
         try:
+            # Validate required parameters
+            validation_error = ErrorHandler.validate_required_params(kwargs, ["path"])
+            if validation_error:
+                return validation_error
+
             # Extract parameters
             path = kwargs.get("path")
             include_outputs = kwargs.get("include_outputs", True)
@@ -72,31 +85,44 @@ class NotebookReadTool(Tool):
             cell_types = kwargs.get("cell_types")
             cell_range = kwargs.get("cell_range")
 
-            if not path:
-                return ToolResult(
-                    success=False, output="", error="path parameter is required"
+            # Validate path
+            is_valid, error_msg, normalized_path = path_validator.validate_path(
+                path, check_exists=True
+            )
+            if not is_valid:
+                return ErrorHandler.create_error_result(
+                    f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
-            # Convert to Path object
-            notebook_path = Path(path)
-
-            # Check if file exists
-            if not notebook_path.exists():
-                return ToolResult(
-                    success=False, output="", error=f"Notebook file not found: {path}"
-                )
+            # Use validated path
+            notebook_path = normalized_path
 
             # Check if it's a notebook file
             if notebook_path.suffix.lower() != ".ipynb":
-                return ToolResult(
-                    success=False,
-                    output="",
-                    error=f"File is not a Jupyter notebook (.ipynb): {path}",
+                return ErrorHandler.create_error_result(
+                    f"File is not a Jupyter notebook (.ipynb): {path}",
+                    ErrorType.VALIDATION_ERROR,
                 )
 
-            # Read and parse notebook
-            with open(notebook_path, "r", encoding="utf-8") as f:
-                notebook_data = json.load(f)
+            # Check file size (limit to 50MB for safety)
+            file_size = notebook_path.stat().st_size
+            if file_size > 50 * 1024 * 1024:
+                return ErrorHandler.create_error_result(
+                    f"Notebook file too large: "
+                    f"{file_size / (1024*1024):.1f}MB (max 50MB)",
+                    ErrorType.RESOURCE_ERROR,
+                )
+
+            # Read and parse notebook with timeout and proper resource management
+            try:
+                async with async_timeout(30):  # 30 second timeout for large notebooks
+                    with open(notebook_path, "r", encoding="utf-8") as f:
+                        notebook_data = json.load(f)
+            except UnicodeDecodeError as e:
+                return ErrorHandler.create_error_result(
+                    f"Encoding error reading notebook: {str(e)}",
+                    ErrorType.VALIDATION_ERROR,
+                )
 
             # Extract basic info
             result = {
@@ -174,18 +200,14 @@ class NotebookReadTool(Tool):
                         summary += f"  {output}\n"
                 summary += "\n" + "-" * 50 + "\n"
 
-            return ToolResult(success=True, output=summary, metadata=result)
+            return ErrorHandler.create_success_result(summary, metadata=result)
 
         except json.JSONDecodeError as e:
-            return ToolResult(
-                success=False,
-                output="",
-                error=f"Invalid JSON in notebook file: {str(e)}",
+            return ErrorHandler.create_error_result(
+                f"Invalid JSON in notebook file: {str(e)}", ErrorType.VALIDATION_ERROR
             )
         except Exception as e:
-            return ToolResult(
-                success=False, output="", error=f"Error reading notebook: {str(e)}"
-            )
+            return ErrorHandler.handle_exception(e, "notebook_read")
 
     def _parse_cell_range(self, cell_range: str, total_cells: int) -> List[int]:
         """Parse cell range string into list of indices."""
@@ -311,6 +333,13 @@ class NotebookEditTool(Tool):
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Edit a Jupyter notebook file."""
         try:
+            # Validate required parameters
+            validation_error = ErrorHandler.validate_required_params(
+                kwargs, ["path", "operation"]
+            )
+            if validation_error:
+                return validation_error
+
             # Extract parameters
             path = kwargs.get("path")
             operation = kwargs.get("operation")
@@ -320,30 +349,36 @@ class NotebookEditTool(Tool):
             metadata = kwargs.get("metadata")
             backup = kwargs.get("backup", True)
 
-            if not path:
-                return ToolResult(
-                    success=False, output="", error="path parameter is required"
+            # Validate path
+            is_valid, error_msg, normalized_path = path_validator.validate_path(
+                path, check_exists=True
+            )
+            if not is_valid:
+                return ErrorHandler.create_error_result(
+                    f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
-            # Convert to Path object
-            notebook_path = Path(path)
-
-            # Check if file exists
-            if not notebook_path.exists():
-                return ToolResult(
-                    success=False, output="", error=f"Notebook file not found: {path}"
-                )
+            # Use validated path
+            notebook_path = normalized_path
 
             # Create backup if requested
+            backup_path = None
             if backup:
                 backup_path = notebook_path.with_suffix(f"{notebook_path.suffix}.bak")
                 import shutil
 
                 shutil.copy2(notebook_path, backup_path)
 
-            # Read current notebook
-            with open(notebook_path, "r", encoding="utf-8") as f:
-                notebook_data = json.load(f)
+            # Read current notebook with timeout
+            try:
+                async with async_timeout(30):  # 30 second timeout
+                    with open(notebook_path, "r", encoding="utf-8") as f:
+                        notebook_data = json.load(f)
+            except UnicodeDecodeError as e:
+                return ErrorHandler.create_error_result(
+                    f"Encoding error reading notebook: {str(e)}",
+                    ErrorType.VALIDATION_ERROR,
+                )
 
             cells = notebook_data.get("cells", [])
             result_message = ""
@@ -351,17 +386,16 @@ class NotebookEditTool(Tool):
             # Perform the requested operation
             if operation == "update_cell":
                 if cell_index is None or source is None:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="update_cell requires cell_index and source parameters",
+                    return ErrorHandler.create_error_result(
+                        "update_cell requires cell_index and source parameters",
+                        ErrorType.VALIDATION_ERROR,
                     )
 
                 if not (0 <= cell_index < len(cells)):
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",  # noqa: E501
+                    return ErrorHandler.create_error_result(
+                        f"Invalid cell index: {cell_index}. "
+                        f"Notebook has {len(cells)} cells.",
+                        ErrorType.VALIDATION_ERROR,
                     )
 
                 cells[cell_index]["source"] = source.split("\n")
@@ -370,10 +404,8 @@ class NotebookEditTool(Tool):
 
             elif operation == "add_cell":
                 if source is None:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="add_cell requires source parameter",
+                    return ErrorHandler.create_error_result(
+                        "add_cell requires source parameter", ErrorType.VALIDATION_ERROR
                     )
 
                 new_cell = {
@@ -393,27 +425,26 @@ class NotebookEditTool(Tool):
                 else:
                     # Insert at specific position
                     if not (0 <= cell_index <= len(cells)):
-                        return ToolResult(
-                            success=False,
-                            output="",
-                            error=f"Invalid cell index: {cell_index}. Valid range: 0-{len(cells)}",  # noqa: E501
+                        return ErrorHandler.create_error_result(
+                            f"Invalid cell index: {cell_index}. "
+                            f"Valid range: 0-{len(cells)}",
+                            ErrorType.VALIDATION_ERROR,
                         )
                     cells.insert(cell_index, new_cell)
                     result_message = f"Added new {cell_type} cell at index {cell_index}"
 
             elif operation == "remove_cell":
                 if cell_index is None:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="remove_cell requires cell_index parameter",
+                    return ErrorHandler.create_error_result(
+                        "remove_cell requires cell_index parameter",
+                        ErrorType.VALIDATION_ERROR,
                     )
 
                 if not (0 <= cell_index < len(cells)):
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",  # noqa: E501
+                    return ErrorHandler.create_error_result(
+                        f"Invalid cell index: {cell_index}. "
+                        f"Notebook has {len(cells)} cells.",
+                        ErrorType.VALIDATION_ERROR,
                     )
 
                 removed_cell = cells.pop(cell_index)
@@ -430,19 +461,18 @@ class NotebookEditTool(Tool):
 
             elif operation == "set_metadata":
                 if metadata is None:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="set_metadata requires metadata parameter",
+                    return ErrorHandler.create_error_result(
+                        "set_metadata requires metadata parameter",
+                        ErrorType.VALIDATION_ERROR,
                     )
 
                 if cell_index is not None:
                     # Set metadata for specific cell
                     if not (0 <= cell_index < len(cells)):
-                        return ToolResult(
-                            success=False,
-                            output="",
-                            error=f"Invalid cell index: {cell_index}. Notebook has {len(cells)} cells.",  # noqa: E501
+                        return ErrorHandler.create_error_result(
+                            f"Invalid cell index: {cell_index}. "
+                            f"Notebook has {len(cells)} cells.",
+                            ErrorType.VALIDATION_ERROR,
                         )
                     cells[cell_index]["metadata"].update(metadata)
                     result_message = f"Updated metadata for cell {cell_index}"
@@ -452,20 +482,24 @@ class NotebookEditTool(Tool):
                     result_message = "Updated notebook metadata"
 
             else:
-                return ToolResult(
-                    success=False, output="", error=f"Unknown operation: {operation}"
+                return ErrorHandler.create_error_result(
+                    f"Unknown operation: {operation}", ErrorType.VALIDATION_ERROR
                 )
 
             # Update cells in notebook data
             notebook_data["cells"] = cells
 
-            # Write back to file
-            with open(notebook_path, "w", encoding="utf-8") as f:
-                json.dump(notebook_data, f, indent=2, ensure_ascii=False)
+            # Write back to file with proper error handling
+            try:
+                with open(notebook_path, "w", encoding="utf-8") as f:
+                    json.dump(notebook_data, f, indent=2, ensure_ascii=False)
+            except OSError as e:
+                return ErrorHandler.create_error_result(
+                    f"Failed to write notebook file: {str(e)}", ErrorType.RESOURCE_ERROR
+                )
 
-            return ToolResult(
-                success=True,
-                output=f"Successfully edited notebook: {result_message}",
+            return ErrorHandler.create_success_result(
+                f"Successfully edited notebook: {result_message}",
                 metadata={
                     "operation": operation,
                     "cell_count": len(cells),
@@ -475,12 +509,8 @@ class NotebookEditTool(Tool):
             )
 
         except json.JSONDecodeError as e:
-            return ToolResult(
-                success=False,
-                output="",
-                error=f"Invalid JSON in notebook file: {str(e)}",
+            return ErrorHandler.create_error_result(
+                f"Invalid JSON in notebook file: {str(e)}", ErrorType.VALIDATION_ERROR
             )
         except Exception as e:
-            return ToolResult(
-                success=False, output="", error=f"Error editing notebook: {str(e)}"
-            )
+            return ErrorHandler.handle_exception(e, "notebook_edit")
