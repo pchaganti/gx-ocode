@@ -73,6 +73,8 @@ class HeadTool(Tool):
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
+            # At this point normalized_path is guaranteed to be non-None
+            assert normalized_path is not None  # Type safety for MyPy
             path = normalized_path
 
             if not path.is_file():
@@ -174,6 +176,8 @@ class TailTool(Tool):
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
+            # At this point normalized_path is guaranteed to be non-None
+            assert normalized_path is not None  # Type safety for MyPy
             path = normalized_path
 
             if not path.is_file():

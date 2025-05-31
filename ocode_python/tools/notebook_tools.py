@@ -98,6 +98,8 @@ class NotebookReadTool(Tool):
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
+            # At this point normalized_path is guaranteed to be non-None
+            assert normalized_path is not None  # Type safety for MyPy
             # Use validated path
             notebook_path = normalized_path
 
@@ -366,6 +368,8 @@ class NotebookEditTool(Tool):
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
+            # At this point normalized_path is guaranteed to be non-None
+            assert normalized_path is not None  # Type safety for MyPy
             # Use validated path
             notebook_path = normalized_path
 

@@ -132,7 +132,7 @@ class FindTool(Tool):
         self,
         path: str = ".",
         name: Optional[str] = None,
-        type: Optional[str] = None,
+        file_type: Optional[str] = None,
         maxdepth: Optional[int] = None,
         size: Optional[str] = None,
         extension: Optional[str] = None,
@@ -140,6 +140,10 @@ class FindTool(Tool):
     ) -> ToolResult:
         """Execute find command."""
         try:
+            # Map old 'type' parameter name to new 'file_type' for backwards compat
+            if "type" in kwargs:
+                file_type = kwargs.get("type")
+            # Use file_type parameter
             # Validate path
             is_valid, error_msg, normalized_path = path_validator.validate_path(
                 path, check_exists=True
@@ -149,6 +153,8 @@ class FindTool(Tool):
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
+            # At this point normalized_path is guaranteed to be non-None
+            assert normalized_path is not None  # Type safety for MyPy
             search_path = normalized_path
 
             # Limit search depth to prevent excessive resource usage
@@ -181,14 +187,14 @@ class FindTool(Tool):
                             continue
 
                         # Process directories
-                        if type != "f":  # Not files-only
+                        if file_type != "f":  # Not files-only
                             for dir_name in dirs:
                                 if len(results) >= max_results:
                                     break
                                 dir_path = Path(root) / dir_name
 
                                 # Apply filters
-                                if type == "d" or type is None:
+                                if file_type == "d" or file_type is None:
                                     if name and not fnmatch.fnmatch(dir_name, name):
                                         continue
                                     if extension and not dir_name.endswith(extension):
@@ -197,14 +203,14 @@ class FindTool(Tool):
                                     results.append(str(dir_path))
 
                         # Process files
-                        if type != "d":  # Not directories-only
+                        if file_type != "d":  # Not directories-only
                             for file_name in files:
                                 if len(results) >= max_results:
                                     break
                                 file_path = Path(root) / file_name
 
                                 # Apply filters
-                                if type == "f" or type is None:
+                                if file_type == "f" or file_type is None:
                                     if name and not fnmatch.fnmatch(file_name, name):
                                         continue
                                     if extension and not file_name.endswith(extension):
@@ -252,7 +258,7 @@ class FindTool(Tool):
                     "truncated": len(results) >= max_results,
                     "filters": {
                         "name": name,
-                        "type": type,
+                        "type": file_type,
                         "maxdepth": maxdepth,
                         "size": size,
                         "extension": extension,

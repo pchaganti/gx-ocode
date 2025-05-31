@@ -165,6 +165,8 @@ class JsonYamlTool(Tool):
             if not is_valid or normalized_path is None:
                 raise ValueError(f"Invalid path: {error_msg}")
 
+            # At this point normalized_path is guaranteed to be non-None
+            assert normalized_path is not None  # Type safety for MyPy
             # Check file size (limit to 50MB for safety)
             file_size = normalized_path.stat().st_size
             if file_size > 50 * 1024 * 1024:
@@ -202,9 +204,9 @@ class JsonYamlTool(Tool):
                     try:
                         data = json.loads(content)
                         return data, "json"
-                    except json.JSONDecodeError:
+                    except json.JSONDecodeError as e:
                         if format_type == "json":
-                            raise ValueError("Invalid JSON format")
+                            raise ValueError("Invalid JSON format") from e
 
                 if format_type == "yaml" or format_type == "auto":
                     try:
@@ -212,15 +214,15 @@ class JsonYamlTool(Tool):
                         return data, "yaml"
                     except yaml.YAMLError as e:
                         if format_type == "yaml":
-                            raise ValueError(f"Invalid YAML format: {e}")
+                            raise ValueError(f"Invalid YAML format: {e}") from e
                         else:
-                            raise ValueError("Could not parse as JSON or YAML")
+                            raise ValueError("Could not parse as JSON or YAML") from e
 
                 raise ValueError(f"Unknown format: {format_type}")
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
             raise ValueError(
                 "Parsing operation timed out - content too complex or large"
-            )
+            ) from e
 
     async def _action_parse(
         self, data: Any, format_type: str, pretty: bool
