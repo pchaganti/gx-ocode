@@ -86,7 +86,7 @@ class TestHeadTailTools:
         result = await tool.execute(file_path="/nonexistent/file.txt")
 
         assert not result.success
-        assert "not found" in result.error.lower()
+        assert "path does not exist" in result.error.lower()
 
 
 class TestDiffTool:

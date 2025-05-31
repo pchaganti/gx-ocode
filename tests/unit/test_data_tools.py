@@ -186,12 +186,12 @@ class TestJsonYamlTool:
         # Missing action
         result = await tool.execute(source="{}")
         assert not result.success
-        assert "Action parameter is required" in result.error
+        assert "Missing required parameters" in result.error
 
         # Missing source
         result = await tool.execute(action="parse")
         assert not result.success
-        assert "Source parameter is required" in result.error
+        assert "Missing required parameters" in result.error
 
     @pytest.mark.asyncio
     async def test_invalid_json(self, tool):
