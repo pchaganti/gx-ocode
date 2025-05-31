@@ -4,6 +4,7 @@ Jupyter notebook tools for OCode.
 
 import json
 import os  # noqa: F401
+import shutil
 from typing import Any, Dict, List
 
 from ..utils import path_validator
@@ -380,7 +381,6 @@ class NotebookEditTool(Tool):
             backup_path = None
             if backup:
                 backup_path = notebook_path.with_suffix(f"{notebook_path.suffix}.bak")
-                import shutil
 
                 shutil.copy2(notebook_path, backup_path)
 

@@ -180,7 +180,7 @@ class JsonYamlTool(Tool):
                     with open(normalized_path, "r", encoding="utf-8") as f:
                         content = f.read()
             except UnicodeDecodeError as e:
-                raise ValueError(f"Encoding error reading file: {str(e)}")
+                raise ValueError(f"Encoding error reading file: {str(e)}") from e
 
             # Auto-detect format from file extension if needed
             if format_type == "auto":
@@ -215,8 +215,7 @@ class JsonYamlTool(Tool):
                     except yaml.YAMLError as e:
                         if format_type == "yaml":
                             raise ValueError(f"Invalid YAML format: {e}") from e
-                        else:
-                            raise ValueError("Could not parse as JSON or YAML") from e
+                        raise ValueError("Could not parse as JSON or YAML") from e
 
                 raise ValueError(f"Unknown format: {format_type}")
         except asyncio.TimeoutError as e:
