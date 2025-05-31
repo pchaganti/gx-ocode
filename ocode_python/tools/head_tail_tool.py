@@ -2,6 +2,9 @@
 Head and tail tools for viewing file contents.
 """
 
+import collections
+from typing import Deque
+
 from ..utils import path_validator
 from ..utils.timeout_handler import async_timeout
 from .base import (
@@ -12,6 +15,9 @@ from .base import (
     ToolParameter,
     ToolResult,
 )
+
+# File size limit for safety (100MB)
+MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
 
 
 class HeadTool(Tool):
@@ -84,7 +90,7 @@ class HeadTool(Tool):
 
             # Check file size (limit to 100MB for safety)
             file_size = path.stat().st_size
-            if file_size > 100 * 1024 * 1024:
+            if file_size > MAX_FILE_SIZE_BYTES:
                 return ErrorHandler.create_error_result(
                     f"File too large: {file_size / (1024*1024):.1f}MB (max 100MB)",
                     ErrorType.RESOURCE_ERROR,
@@ -187,17 +193,20 @@ class TailTool(Tool):
 
             # Check file size (limit to 100MB for safety)
             file_size = path.stat().st_size
-            if file_size > 100 * 1024 * 1024:
+            if file_size > MAX_FILE_SIZE_BYTES:
                 return ErrorHandler.create_error_result(
                     f"File too large: {file_size / (1024*1024):.1f}MB (max 100MB)",
                     ErrorType.RESOURCE_ERROR,
                 )
 
-            # Read all lines and get last N with timeout and proper resource management
+            # Read last N lines efficiently with timeout and proper resource management
             try:
                 async with async_timeout(30):  # 30 second timeout
+                    # Use deque for memory-efficient tail operation
+                    buffer: Deque[str] = collections.deque(maxlen=lines)
                     with open(path, "r", encoding="utf-8", errors="replace") as f:
-                        all_lines = f.readlines()
+                        for line in f:
+                            buffer.append(line.rstrip("\n\r"))
             except UnicodeDecodeError as e:
                 return ErrorHandler.create_error_result(
                     f"Encoding error reading file: {str(e)}", ErrorType.VALIDATION_ERROR
@@ -207,11 +216,8 @@ class TailTool(Tool):
                     f"I/O error reading file: {str(e)}", ErrorType.RESOURCE_ERROR
                 )
 
-            # Get last N lines
-            last_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
-
-            # Remove trailing newlines for consistent output
-            output_lines = [line.rstrip("\n\r") for line in last_lines]
+            # Convert deque to list for output
+            output_lines = list(buffer)
             output = "\n".join(output_lines)
 
             return ErrorHandler.create_success_result(
@@ -219,7 +225,7 @@ class TailTool(Tool):
                 metadata={
                     "file": str(path),
                     "lines_shown": len(output_lines),
-                    "total_lines": len(all_lines),
+                    "memory_efficient": True,
                 },
             )
 

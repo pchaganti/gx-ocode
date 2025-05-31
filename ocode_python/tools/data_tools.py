@@ -200,7 +200,7 @@ class JsonYamlTool(Tool):
         # Try to parse the content with timeout protection
         try:
             async with async_timeout(30):  # 30 second timeout for parsing
-                if format_type == "json" or format_type == "auto":
+                if format_type in ("json", "auto"):
                     try:
                         data = json.loads(content)
                         return data, "json"
@@ -208,7 +208,7 @@ class JsonYamlTool(Tool):
                         if format_type == "json":
                             raise ValueError("Invalid JSON format") from e
 
-                if format_type == "yaml" or format_type == "auto":
+                if format_type in ("yaml", "auto"):
                     try:
                         data = yaml.safe_load(content)
                         return data, "yaml"

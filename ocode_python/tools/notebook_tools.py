@@ -17,6 +17,9 @@ from .base import (
     ToolResult,
 )
 
+# File size limit for notebook files (50MB)
+MAX_NOTEBOOK_SIZE_BYTES = 50 * 1024 * 1024
+
 
 class NotebookReadTool(Tool):
     """Tool for reading and analyzing Jupyter notebook files."""
@@ -112,7 +115,7 @@ class NotebookReadTool(Tool):
 
             # Check file size (limit to 50MB for safety)
             file_size = notebook_path.stat().st_size
-            if file_size > 50 * 1024 * 1024:
+            if file_size > MAX_NOTEBOOK_SIZE_BYTES:
                 return ErrorHandler.create_error_result(
                     f"Notebook file too large: "
                     f"{file_size / (1024*1024):.1f}MB (max 50MB)",
