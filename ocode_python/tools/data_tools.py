@@ -162,7 +162,7 @@ class JsonYamlTool(Tool):
             is_valid, error_msg, normalized_path = path_validator.validate_path(
                 source, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or normalized_path is None:
                 raise ValueError(f"Invalid path: {error_msg}")
 
             # Check file size (limit to 50MB for safety)

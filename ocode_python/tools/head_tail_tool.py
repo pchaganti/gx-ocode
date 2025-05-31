@@ -58,11 +58,17 @@ class HeadTool(Tool):
             file_path = kwargs.get("file_path")
             lines = kwargs.get("lines", 10)
 
+            # Validate file_path type
+            if not isinstance(file_path, str):
+                return ErrorHandler.create_error_result(
+                    "File path parameter must be a string", ErrorType.VALIDATION_ERROR
+                )
+
             # Validate path
             is_valid, error_msg, normalized_path = path_validator.validate_path(
                 file_path, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or normalized_path is None:
                 return ErrorHandler.create_error_result(
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
@@ -153,11 +159,17 @@ class TailTool(Tool):
             file_path = kwargs.get("file_path")
             lines = kwargs.get("lines", 10)
 
+            # Validate file_path type
+            if not isinstance(file_path, str):
+                return ErrorHandler.create_error_result(
+                    "File path parameter must be a string", ErrorType.VALIDATION_ERROR
+                )
+
             # Validate path
             is_valid, error_msg, normalized_path = path_validator.validate_path(
                 file_path, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or normalized_path is None:
                 return ErrorHandler.create_error_result(
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )

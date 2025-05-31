@@ -6,7 +6,7 @@ import asyncio
 import fnmatch
 import os
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from ..utils import path_validator
 from ..utils.timeout_handler import async_timeout
@@ -144,7 +144,7 @@ class FindTool(Tool):
             is_valid, error_msg, normalized_path = path_validator.validate_path(
                 path, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or normalized_path is None:
                 return ErrorHandler.create_error_result(
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
@@ -155,7 +155,7 @@ class FindTool(Tool):
             if maxdepth is None or maxdepth > 20:
                 maxdepth = 20  # Reasonable default to prevent runaway searches
 
-            results = []
+            results: List[str] = []
             processed_count = 0
             max_results = 10000  # Limit results to prevent memory issues
 
@@ -164,7 +164,7 @@ class FindTool(Tool):
                 async with async_timeout(
                     60
                 ):  # 60 second timeout for directory traversal
-                    for root, dirs, files in os.walk(search_path):
+                    for root, dirs, files in os.walk(str(search_path)):
                         # Prevent excessive processing
                         processed_count += len(dirs) + len(files)
                         if processed_count > 100000:  # Limit total items processed

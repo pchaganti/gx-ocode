@@ -86,10 +86,14 @@ class NotebookReadTool(Tool):
             cell_range = kwargs.get("cell_range")
 
             # Validate path
+            if not isinstance(path, str):
+                return ErrorHandler.create_error_result(
+                    "Path parameter must be a string", ErrorType.VALIDATION_ERROR
+                )
             is_valid, error_msg, normalized_path = path_validator.validate_path(
                 path, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or normalized_path is None:
                 return ErrorHandler.create_error_result(
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
@@ -350,10 +354,14 @@ class NotebookEditTool(Tool):
             backup = kwargs.get("backup", True)
 
             # Validate path
+            if not isinstance(path, str):
+                return ErrorHandler.create_error_result(
+                    "Path parameter must be a string", ErrorType.VALIDATION_ERROR
+                )
             is_valid, error_msg, normalized_path = path_validator.validate_path(
                 path, check_exists=True
             )
-            if not is_valid:
+            if not is_valid or normalized_path is None:
                 return ErrorHandler.create_error_result(
                     f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
