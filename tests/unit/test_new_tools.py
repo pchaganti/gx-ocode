@@ -223,7 +223,7 @@ class TestNotebookTools:
         # Test with non-existent file
         result = await tool.execute(path="/nonexistent/notebook.ipynb")
         assert not result.success
-        assert "not found" in result.error
+        assert "path does not exist" in result.error.lower()
 
     @pytest.mark.asyncio
     async def test_notebook_read_tool_not_notebook(self):
@@ -252,7 +252,7 @@ class TestNotebookTools:
             source="print('test')",
         )
         assert not result.success
-        assert "not found" in result.error
+        assert "path does not exist" in result.error.lower()
 
 
 class TestMemoryTools:

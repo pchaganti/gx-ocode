@@ -2,12 +2,22 @@
 Find tool for searching files and directories.
 """
 
+import asyncio
 import fnmatch
 import os
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from ..utils import path_validator
+from ..utils.timeout_handler import async_timeout
+from .base import (
+    ErrorHandler,
+    ErrorType,
+    Tool,
+    ToolDefinition,
+    ToolParameter,
+    ToolResult,
+)
 
 
 class FindTool(Tool):
@@ -122,7 +132,7 @@ class FindTool(Tool):
         self,
         path: str = ".",
         name: Optional[str] = None,
-        type: Optional[str] = None,
+        file_type: Optional[str] = None,
         maxdepth: Optional[int] = None,
         size: Optional[str] = None,
         extension: Optional[str] = None,
@@ -130,82 +140,125 @@ class FindTool(Tool):
     ) -> ToolResult:
         """Execute find command."""
         try:
-            search_path = Path(path)
-
-            if not search_path.exists():
-                return ToolResult(
-                    success=False, output="", error=f"Path not found: {path}"
+            # Map old 'type' parameter name to new 'file_type' for backwards compat
+            if "type" in kwargs:
+                file_type = kwargs.get("type")
+            # Use file_type parameter
+            # Validate path
+            is_valid, error_msg, normalized_path = path_validator.validate_path(
+                path, check_exists=True
+            )
+            if not is_valid or normalized_path is None:
+                return ErrorHandler.create_error_result(
+                    f"Invalid path: {error_msg}", ErrorType.VALIDATION_ERROR
                 )
 
-            results = []
+            # At this point normalized_path is guaranteed to be non-None
+            assert normalized_path is not None  # Type safety for MyPy
+            search_path = normalized_path
 
-            # Walk through directory tree
-            for root, dirs, files in os.walk(search_path):
-                current_depth = len(Path(root).relative_to(search_path).parts)
+            # Limit search depth to prevent excessive resource usage
+            if maxdepth is None or maxdepth > 20:
+                maxdepth = 20  # Reasonable default to prevent runaway searches
 
-                # Check maxdepth
-                if maxdepth is not None and current_depth > maxdepth:
-                    dirs[:] = []  # Don't recurse deeper
-                    continue
+            results: List[str] = []
+            processed_count = 0
+            max_results = 10000  # Limit results to prevent memory issues
 
-                # Process directories
-                if type != "f":  # Not files-only
-                    for dir_name in dirs:
-                        dir_path = Path(root) / dir_name
+            # Walk through directory tree with timeout protection
+            try:
+                async with async_timeout(
+                    60
+                ):  # 60 second timeout for directory traversal
+                    for root, dirs, files in os.walk(str(search_path)):
+                        # Prevent excessive processing
+                        processed_count += len(dirs) + len(files)
+                        if processed_count > 100000:  # Limit total items processed
+                            return ErrorHandler.create_error_result(
+                                "Search stopped: too many items to process (> 100k)",
+                                ErrorType.RESOURCE_ERROR,
+                            )
 
-                        # Apply filters
-                        if type == "d" or type is None:
-                            if name and not fnmatch.fnmatch(dir_name, name):
-                                continue
-                            if extension and not dir_name.endswith(extension):
-                                continue
+                        current_depth = len(Path(root).relative_to(search_path).parts)
 
-                            results.append(str(dir_path))
+                        # Check maxdepth
+                        if maxdepth is not None and current_depth > maxdepth:
+                            dirs[:] = []  # Don't recurse deeper
+                            continue
 
-                # Process files
-                if type != "d":  # Not directories-only
-                    for file_name in files:
-                        file_path = Path(root) / file_name
+                        # Process directories
+                        if file_type != "f":  # Not files-only
+                            for dir_name in dirs:
+                                if len(results) >= max_results:
+                                    break
+                                dir_path = Path(root) / dir_name
 
-                        # Apply filters
-                        if type == "f" or type is None:
-                            if name and not fnmatch.fnmatch(file_name, name):
-                                continue
-                            if extension and not file_name.endswith(extension):
-                                continue
-
-                            # Size filter
-                            if size:
-                                try:
-                                    file_size = file_path.stat().st_size
-                                    if not self._matches_size(file_size, size):
+                                # Apply filters
+                                if file_type == "d" or file_type is None:
+                                    if name and not fnmatch.fnmatch(dir_name, name):
                                         continue
-                                except OSError:
-                                    continue
+                                    if extension and not dir_name.endswith(extension):
+                                        continue
 
-                            results.append(str(file_path))
+                                    results.append(str(dir_path))
+
+                        # Process files
+                        if file_type != "d":  # Not directories-only
+                            for file_name in files:
+                                if len(results) >= max_results:
+                                    break
+                                file_path = Path(root) / file_name
+
+                                # Apply filters
+                                if file_type == "f" or file_type is None:
+                                    if name and not fnmatch.fnmatch(file_name, name):
+                                        continue
+                                    if extension and not file_name.endswith(extension):
+                                        continue
+
+                                    # Size filter
+                                    if size:
+                                        try:
+                                            file_size = file_path.stat().st_size
+                                            if not self._matches_size(file_size, size):
+                                                continue
+                                        except OSError:
+                                            continue
+
+                                    results.append(str(file_path))
+
+                        if len(results) >= max_results:
+                            break
+            except asyncio.TimeoutError:
+                return ErrorHandler.create_error_result(
+                    "Search timed out - directory tree too large or complex",
+                    ErrorType.TIMEOUT_ERROR,
+                )
 
             # Sort results for consistent output
             results.sort()
 
             if not results:
-                return ToolResult(
-                    success=True,
-                    output="No files found matching criteria",
+                return ErrorHandler.create_success_result(
+                    "No files found matching criteria",
                     metadata={"matches": 0, "search_path": str(search_path)},
                 )
 
             output = "\n".join(results)
 
-            return ToolResult(
-                success=True,
-                output=output,
+            # Add warning if results were truncated
+            if len(results) >= max_results:
+                output += f"\n\n[WARNING: Results truncated at {max_results} items]"
+
+            return ErrorHandler.create_success_result(
+                output,
                 metadata={
                     "matches": len(results),
                     "search_path": str(search_path),
+                    "truncated": len(results) >= max_results,
                     "filters": {
                         "name": name,
-                        "type": type,
+                        "type": file_type,
                         "maxdepth": maxdepth,
                         "size": size,
                         "extension": extension,
@@ -214,6 +267,4 @@ class FindTool(Tool):
             )
 
         except Exception as e:
-            return ToolResult(
-                success=False, output="", error=f"Error searching files: {str(e)}"
-            )
+            return ErrorHandler.handle_exception(e, "find_tool")
