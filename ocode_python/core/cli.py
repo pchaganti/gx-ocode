@@ -95,7 +95,6 @@ async def cli_confirmation_callback(command: str, reason: str) -> bool:
 @click.option(
     "-v", "--verbose", is_flag=True, help="Enable verbose logging and debug output."
 )
-@click.option("-h", "--help", is_flag=True, help="Show this help message and exit.")
 @click.option(
     "--continue-response",
     is_flag=True,
@@ -110,7 +109,6 @@ def cli(
     out: str,
     config_file: Optional[str],
     verbose: bool,
-    help: bool,
     continue_response: bool,
 ):
     """
@@ -140,11 +138,6 @@ def cli(
     The assistant can perform file operations, analyze code, execute commands,
     and maintain context across conversations. Use 'ocode --help' for more options.
     """
-
-    # Handle help flag explicitly to show formatted help
-    if help:
-        click.echo(ctx.get_help())
-        return
 
     # Store CLI options in Click context for access by subcommands
     # This pattern allows subcommands to inherit parent command options

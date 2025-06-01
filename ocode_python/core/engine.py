@@ -73,22 +73,23 @@ class OCodeEngine:
         Args:
             model: Ollama model identifier for AI interactions. Should support function calling  # noqa: E501
                   for optimal tool usage. Default is a code-specialized model.
-            api_key: Optional API key for authentication. If not provided, will attempt
+            api_key: Optional API key for authentication. If not provided, will attempt  # noqa: E501
                     to use stored credentials or fall back to unauthenticated access.
             output_format: Response format - 'text' for human-readable, 'json' for structured,  # noqa: E501
                           'stream-json' for real-time streaming with JSON markers.
-            verbose: Enable detailed logging and debug output. Useful for development
+            verbose: Enable detailed logging and debug output. Useful for development  # noqa: E501
                     and troubleshooting but may be noisy in production.
-            root_path: Project root directory. If None, uses current working directory.
+            root_path: Project root directory. If None, uses current working directory.  # noqa: E501
                       This defines the scope of file operations and context analysis.
-            confirmation_callback: Async function(command: str, reason: str) -> bool  # noqa: E501
+            confirmation_callback: Async function(command: str, reason: str) -> bool
                                   Called before executing potentially destructive operations.  # noqa: E501
-                                  Should present the command to user and return their decision.
+                                  Should present the command to user and return their decision.  # noqa: E501
             max_continuations: Maximum automatic response continuations. Prevents infinite  # noqa: E501
                               loops while allowing complex multi-part responses.
             chunk_size: Response streaming chunk size in bytes. Larger chunks improve
                        throughput but may impact responsiveness.
         """
+
         # Core configuration - store user-provided settings
         self.model = model
         self.output_format = output_format
@@ -142,7 +143,8 @@ class OCodeEngine:
         self.system_prompt = self._build_system_prompt()
 
     def _build_system_prompt(self) -> str:
-        """Build a comprehensive system prompt with deep guidance.
+        """
+        Build a comprehensive system prompt with deep guidance.
 
         Constructs a detailed system prompt that includes:
         - Core role and capabilities definition
@@ -965,18 +967,22 @@ When a user asks you to perform an action, call the appropriate function."""
     def _map_tool_name(self, function_name: str) -> str:
         """Map function definition names to registry names.
 
-        Ensures consistency between tool names in function calls
-        and the tool registry by converting to lowercase.
+        Converts camelCase function names to snake_case for registry lookup.
+        This ensures consistency between tool names in function calls
+        and the tool registry.
 
         Args:
-            function_name: Name from function call.
+            function_name: Name from function call (may be camelCase).
 
         Returns:
-            Normalized name for registry lookup.
+            snake_case name for registry lookup.
         """
-        # The registry uses lowercase names with underscores preserved
-        # This ensures consistency with tool definitions in the registry
-        return function_name.lower()
+        import re
+
+        # Convert camelCase to snake_case
+        # e.g., "memoryWrite" -> "memory_write", "gitStatus" -> "git_status"
+        snake_case = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", function_name)
+        return snake_case.lower()
 
     async def _execute_tool_call(
         self, tool_name: str, arguments: Dict[str, Any], query: Optional[str] = None
@@ -1002,7 +1008,7 @@ When a user asks you to perform an action, call the appropriate function."""
         registry_name = self._map_tool_name(tool_name)
 
         # Add smart defaults for memory operations
-        if registry_name == "memorywrite":
+        if registry_name == "memory_write":
             # Default to persistent memory for profile-style facts
             if "memory_type" not in arguments:
                 arguments["memory_type"] = "persistent"
@@ -1019,7 +1025,7 @@ When a user asks you to perform an action, call the appropriate function."""
                 arguments.pop("key", None)
                 arguments.pop("value", None)
                 arguments.pop("category", None)
-        elif registry_name == "memoryread":
+        elif registry_name == "memory_read":
             # Smart defaults based on query context
             if "memory_type" not in arguments:
                 arguments["memory_type"] = "persistent"
@@ -1220,34 +1226,23 @@ When a user asks you to perform an action, call the appropriate function."""
             Exception: Various exceptions may be raised for API failures,
                       tool execution errors, or context preparation issues.
         """
-        # Initialize performance tracking for this query
         metrics = ProcessingMetrics(start_time=time.time())
 
         try:
-            # PHASE 1: Query Preprocessing and Continuation Handling
-            # Handle continuation from previous response if requested
+            # Handle continuation if enabled
             if continue_previous and self.current_response:
-                # Append context from previous response to help maintain continuity
-                # Only use last 200 chars to avoid token bloat while preserving context
                 query = f"Continue from: {self.current_response[-200:]}\n\n{query}"
-
-                # Reset response tracking for the new continuation
                 self.current_response = ""
                 self.response_complete = False
 
-            # Add the user's query to conversation history for context
-            # This maintains conversation flow and enables context-aware responses
+            # Add user message to conversation history
             self.conversation_history.append(Message("user", query))
 
-            # PHASE 2: Project Context Analysis
-            # Analyze the project structure and relevant files for this query
-            # This intelligent context preparation is key to relevant responses
+            # Prepare context
             context = await self._prepare_context(query)
             metrics.files_analyzed = len(context.files)
 
-            # PHASE 3: AI-Driven Tool Usage Decision
-            # Use a separate LLM call to analyze whether tools should be used
-            # This prevents the main response from being biased toward tool usage
+            # Analyze if tools should be used
             llm_analysis = await self._llm_should_use_tools(query)
 
             if self.verbose:
@@ -1331,9 +1326,9 @@ When a user asks you to perform an action, call the appropriate function."""
 
                             # Yield when buffer is full
                             if len(chunk_buffer) >= chunk_size:
+                                metrics.tokens_processed += len(chunk_buffer.split())
                                 yield chunk_buffer
                                 chunk_buffer = ""
-                                metrics.tokens_processed += len(chunk_buffer.split())
                         elif chunk.done:
                             # Handle completion
                             if chunk_buffer:
