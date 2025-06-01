@@ -1093,7 +1093,7 @@ When a user asks you to perform an action, call the appropriate function."""
         else:
             # No confirmation callback available - this could be an API context
             # In API contexts, the calling application should handle confirmation
-            # For now, deny for safety but allow override via confirmed parameter
+            # Deny for safety unless confirmed parameter is explicitly set
             if self.verbose:
                 print(
                     f"⚠️  Command requires confirmation but no callback available: {command}"  # noqa: E501

@@ -330,34 +330,10 @@ def auth(
                 console.print("[yellow]Cancelled[/yellow]")
 
         elif choice == "2":
-            # Username/Password authentication
-            username = input("Username/Email: ").strip()
-            password = getpass.getpass("Password: ").strip()
-
-            if username and password:
-                console.print("[dim]Authenticating...[/dim]")
-
-                # For now, simulate OAuth password flow
-                # In production, this would make an actual OAuth request
-                import hashlib
-                import time
-
-                # Generate a mock token based on username
-                mock_token = hashlib.sha256(
-                    f"{username}:{password}:{time.time()}".encode()
-                ).hexdigest()
-
-                if auth_manager.save_token(
-                    token=mock_token,
-                    expires_at=time.time() + 3600,  # 1 hour
-                    token_type="Bearer",  # nosec B106
-                    scope="read write",
-                ):
-                    console.print("[green]✓ Login successful[/green]")
-                else:
-                    console.print("[red]✗ Login failed[/red]")
-            else:
-                console.print("[yellow]Cancelled[/yellow]")
+            # Username/Password authentication (not implemented)
+            console.print(
+                "[yellow]Username/Password authentication is not yet implemented[/yellow]"  # noqa: E501
+            )
 
         else:
             console.print("[yellow]Cancelled[/yellow]")
