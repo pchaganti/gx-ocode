@@ -57,22 +57,40 @@ class OCodeEngine:
         verbose: bool = False,
         root_path: Optional[Path] = None,
         confirmation_callback=None,
-        max_continuations: int = 10,  # Increased default
-        chunk_size: int = 8192,  # Increased default
+        max_continuations: int = 10,  # Increased default for complex workflows
+        chunk_size: int = 8192,  # Increased default for better performance
     ) -> None:
         """
-        Initialize OCode engine.
+        Initialize the OCode engine with all necessary components.
+
+        The engine serves as the central orchestrator that coordinates:
+        - AI model interactions through the Ollama API
+        - Project context analysis and file understanding
+        - Tool execution and workflow management
+        - Session management and conversation history
+        - Authentication and configuration management
 
         Args:
-            model: Ollama model to use
-            api_key: Optional API key for authentication
-            output_format: Output format ('text', 'json', 'stream-json')
-            verbose: Enable verbose logging
-            root_path: Project root path
-            confirmation_callback: Async function to request user confirmation
-            max_continuations: Maximum number of automatic continuations
-            chunk_size: Size of response chunks in bytes
+            model: Ollama model identifier for AI interactions. Should support function calling  # noqa: E501
+                  for optimal tool usage. Default is a code-specialized model.
+            api_key: Optional API key for authentication. If not provided, will attempt  # noqa: E501
+                    to use stored credentials or fall back to unauthenticated access.
+            output_format: Response format - 'text' for human-readable, 'json' for structured,  # noqa: E501
+                          'stream-json' for real-time streaming with JSON markers.
+            verbose: Enable detailed logging and debug output. Useful for development  # noqa: E501
+                    and troubleshooting but may be noisy in production.
+            root_path: Project root directory. If None, uses current working directory.  # noqa: E501
+                      This defines the scope of file operations and context analysis.
+            confirmation_callback: Async function(command: str, reason: str) -> bool
+                                  Called before executing potentially destructive operations.  # noqa: E501
+                                  Should present the command to user and return their decision.  # noqa: E501
+            max_continuations: Maximum automatic response continuations. Prevents infinite  # noqa: E501
+                              loops while allowing complex multi-part responses.
+            chunk_size: Response streaming chunk size in bytes. Larger chunks improve
+                       throughput but may impact responsiveness.
         """
+
+        # Core configuration - store user-provided settings
         self.model = model
         self.output_format = output_format
         self.verbose = verbose
@@ -80,30 +98,53 @@ class OCodeEngine:
         self.max_continuations = max_continuations
         self.chunk_size = chunk_size
 
-        # Initialize components
-        self.config = ConfigManager()
-        self.auth = AuthenticationManager()
-        self.api_client = OllamaAPIClient()
-        self.context_manager = ContextManager(root_path)
-        self.tool_registry = ToolRegistry()
-        self.session_manager = SessionManager()
+        # Initialize core management components
+        # These handle cross-cutting concerns like config, auth, and external API access
+        self.config = (
+            ConfigManager()
+        )  # Handles .ocode/settings.json and environment vars
+        self.auth = (
+            AuthenticationManager()
+        )  # Manages API keys and authentication tokens
+        self.api_client = OllamaAPIClient()  # Handles communication with Ollama server
 
-        # Register core tools
+        # Initialize AI workflow components
+        # These handle the core AI and automation functionality
+        self.context_manager = ContextManager(
+            root_path
+        )  # Analyzes project structure and files
+        self.tool_registry = (
+            ToolRegistry()
+        )  # Manages available tools and their execution
+        self.session_manager = SessionManager()  # Handles conversation persistence
+
+        # Register all available tools with the registry
+        # This makes them available for AI function calling
         self.tool_registry.register_core_tools()
 
-        # Processing state
-        self.current_context: Optional[ProjectContext] = None
-        self.conversation_history: List[Message] = []
-        self.current_response: str = ""  # Track current response for continuation
-        self.response_complete: bool = False  # Track if current response is complete
-        self.auto_continue: bool = True  # Enable automatic continuation
+        # Processing state management
+        # These track the current conversation and processing state
+        self.current_context: Optional[ProjectContext] = (
+            None  # Current project analysis
+        )
+        self.conversation_history: List[Message] = []  # Full conversation for context
+        self.current_response: str = ""  # Partial response for continuation support
+        self.response_complete: bool = False  # Flag indicating if response is finished
+        self.auto_continue: bool = (
+            True  # Whether to automatically continue incomplete responses
+        )
 
-        # System prompt and caching
+        # Performance optimization through caching
+        # Tool descriptions are expensive to generate and rarely change
         self._tool_descriptions_cache: Optional[str] = None
+
+        # Build the comprehensive system prompt that guides AI behavior
+        # This includes role definition, tool descriptions, and workflow guidance
         self.system_prompt = self._build_system_prompt()
 
     def _build_system_prompt(self) -> str:
-        """Build a comprehensive system prompt with deep guidance.
+        """
+        Build a comprehensive system prompt with deep guidance.
 
         Constructs a detailed system prompt that includes:
         - Core role and capabilities definition
@@ -926,18 +967,22 @@ When a user asks you to perform an action, call the appropriate function."""
     def _map_tool_name(self, function_name: str) -> str:
         """Map function definition names to registry names.
 
-        Ensures consistency between tool names in function calls
-        and the tool registry by converting to lowercase.
+        Converts camelCase function names to snake_case for registry lookup.
+        This ensures consistency between tool names in function calls
+        and the tool registry.
 
         Args:
-            function_name: Name from function call.
+            function_name: Name from function call (may be camelCase).
 
         Returns:
-            Normalized name for registry lookup.
+            snake_case name for registry lookup.
         """
-        # The registry uses lowercase names with underscores preserved
-        # This ensures consistency with tool definitions in the registry
-        return function_name.lower()
+        import re
+
+        # Convert camelCase to snake_case
+        # e.g., "memoryWrite" -> "memory_write", "gitStatus" -> "git_status"
+        snake_case = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", function_name)
+        return snake_case.lower()
 
     async def _execute_tool_call(
         self, tool_name: str, arguments: Dict[str, Any], query: Optional[str] = None
@@ -963,7 +1008,7 @@ When a user asks you to perform an action, call the appropriate function."""
         registry_name = self._map_tool_name(tool_name)
 
         # Add smart defaults for memory operations
-        if registry_name == "memorywrite":
+        if registry_name == "memory_write":
             # Default to persistent memory for profile-style facts
             if "memory_type" not in arguments:
                 arguments["memory_type"] = "persistent"
@@ -980,7 +1025,7 @@ When a user asks you to perform an action, call the appropriate function."""
                 arguments.pop("key", None)
                 arguments.pop("value", None)
                 arguments.pop("category", None)
-        elif registry_name == "memoryread":
+        elif registry_name == "memory_read":
             # Smart defaults based on query context
             if "memory_type" not in arguments:
                 arguments["memory_type"] = "persistent"
@@ -1150,14 +1195,36 @@ When a user asks you to perform an action, call the appropriate function."""
         self, query: str, continue_previous: bool = False
     ) -> AsyncGenerator[str, None]:
         """
-        Process a user query and yield response chunks.
+        Process a user query through the complete AI workflow pipeline.
+
+        This is the main entry point that orchestrates the entire processing flow:
+        1. Query preprocessing and continuation handling
+        2. Project context analysis and preparation
+        3. AI-driven tool usage decision making
+        4. Message preparation with appropriate context
+        5. Streaming response generation with tool execution
+        6. Automatic continuation for incomplete responses
+
+        The method uses an async generator pattern to stream responses in real-time,
+        providing immediate feedback while processing complex workflows.
 
         Args:
-            query: User query to process
-            continue_previous: Whether to continue from previous response
+            query: User's natural language query or command. Can be anything from
+                   simple questions to complex multi-step requests.
+            continue_previous: Whether to continue from a previous incomplete response.
+                              This allows handling of responses that were cut off due
+                              to token limits or connection issues.
 
         Yields:
-            Response chunks as they are generated
+            str: Response chunks as they are generated. Chunks may contain:
+                 - Natural language responses from the AI
+                 - Tool execution results and outputs
+                 - Progress indicators and status messages
+                 - Error messages and warnings
+
+        Raises:
+            Exception: Various exceptions may be raised for API failures,
+                      tool execution errors, or context preparation issues.
         """
         metrics = ProcessingMetrics(start_time=time.time())
 
@@ -1259,9 +1326,9 @@ When a user asks you to perform an action, call the appropriate function."""
 
                             # Yield when buffer is full
                             if len(chunk_buffer) >= chunk_size:
+                                metrics.tokens_processed += len(chunk_buffer.split())
                                 yield chunk_buffer
                                 chunk_buffer = ""
-                                metrics.tokens_processed += len(chunk_buffer.split())
                         elif chunk.done:
                             # Handle completion
                             if chunk_buffer:

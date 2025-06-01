@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 """
 OCode CLI - Terminal-native AI coding assistant powered by Ollama models.
+
+This module implements the command-line interface for OCode, providing:
+- Interactive and single-prompt modes for AI assistance
+- Authentication and configuration management commands
+- Session management and conversation persistence
+- MCP (Model Context Protocol) server integration
+- Rich terminal output with colors and formatting
+
+The CLI is built using Click for command structure and Rich for terminal output,
+providing a professional and user-friendly experience.
 """
 
 import asyncio
@@ -16,6 +26,8 @@ from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
 from .engine import OCodeEngine
 
+# Global console instance for rich terminal output
+# Used throughout the CLI for consistent formatting and colors
 console = Console()
 
 
@@ -52,34 +64,41 @@ async def cli_confirmation_callback(command: str, reason: str) -> bool:
     default=lambda: os.getenv(
         "OCODE_MODEL", "MFDoom/deepseek-coder-v2-tool-calling:latest"
     ),
-    help="Ollama model tag (e.g. llama3:70b)",
+    help="Ollama model tag (e.g. llama3:70b). Can be overridden with OCODE_MODEL env var.",  # noqa: E501
 )
 @click.option(
-    "-c", "--continue", "continue_session", is_flag=True, help="Resume last session"
+    "-c",
+    "--continue",
+    "continue_session",
+    is_flag=True,
+    help="Resume the last saved conversation session with full context.",
 )
 @click.option(
     "-p",
     "--print",
     "print_prompt",
     metavar="PROMPT",
-    help="Non-interactive single prompt",
+    help="Execute a single prompt non-interactively and exit. Useful for scripting.",
 )
 @click.option(
     "--out",
     type=click.Choice(["text", "json", "stream-json"]),
     default="text",
-    help="Output format",
+    help="Output format: 'text' for human-readable, 'json' for structured, 'stream-json' for real-time.",  # noqa: E501
 )
 @click.option(
     "--config",
     "config_file",
     type=click.Path(exists=True),
-    help="Configuration file path",
+    help="Path to custom configuration file. Overrides default .ocode/settings.json.",  # noqa: E501
 )
-@click.option("-v", "--verbose", is_flag=True, help="Verbose output")
-@click.option("-h", "--help", is_flag=True, help="Show help message")
 @click.option(
-    "--continue-response", is_flag=True, help="Continue from previous response"
+    "-v", "--verbose", is_flag=True, help="Enable verbose logging and debug output."
+)
+@click.option(
+    "--continue-response",
+    is_flag=True,
+    help="Continue from the previous incomplete response. Useful for long outputs.",
 )
 @click.pass_context
 def cli(
@@ -90,33 +109,58 @@ def cli(
     out: str,
     config_file: Optional[str],
     verbose: bool,
-    help: bool,
     continue_response: bool,
 ):
-    """OCode - Terminal-native AI coding assistant powered by Ollama models."""
+    """
+    OCode - Terminal-native AI coding assistant powered by Ollama models.
 
-    if help:
-        click.echo(ctx.get_help())
-        return
+    OCode provides intelligent coding assistance through a terminal interface,
+    combining the power of local LLMs with a comprehensive tool system for
+    file operations, code analysis, and project management.
 
-    # Store options in context for subcommands
+    USAGE MODES:
+
+    Interactive Mode (default):
+        ocode
+
+    Single Prompt Mode:
+        ocode -p "Explain how async/await works"
+
+    Session Continuation:
+        ocode -c
+
+    Custom Model:
+        ocode -m llama3:70b
+
+    Verbose Output:
+        ocode -v -p "Analyze this codebase"
+
+    The assistant can perform file operations, analyze code, execute commands,
+    and maintain context across conversations. Use 'ocode --help' for more options.
+    """
+
+    # Store CLI options in Click context for access by subcommands
+    # This pattern allows subcommands to inherit parent command options
     ctx.ensure_object(dict)
     ctx.obj.update(
         {
-            "model": model,
-            "continue_session": continue_session,
-            "output_format": out,
-            "config_file": config_file,
-            "verbose": verbose,
-            "continue_response": continue_response,
+            "model": model,  # AI model identifier
+            "continue_session": continue_session,  # Session continuation flag
+            "output_format": out,  # Response format preference
+            "config_file": config_file,  # Custom config file path
+            "verbose": verbose,  # Debug output enabled
+            "continue_response": continue_response,  # Response continuation flag
         }
     )
 
+    # Route to appropriate mode based on provided options
     if print_prompt:
-        # Non-interactive mode
+        # Single prompt mode: execute one query and exit
+        # Ideal for scripting and automation
         asyncio.run(handle_single_prompt(print_prompt, ctx.obj))
     elif ctx.invoked_subcommand is None:
-        # Interactive mode
+        # Interactive mode: start conversation loop
+        # Default behavior when no subcommand is specified
         asyncio.run(interactive_mode(ctx.obj))
 
 
