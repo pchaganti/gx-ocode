@@ -32,17 +32,11 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # Allow auto-merge for patch updates of trusted dependencies
-    allow:
-      - dependency-type: "direct"
-        update-type: "security"
-      - dependency-type: "indirect"
-        update-type: "security"
     # Ignore specific dependencies if needed
     ignore:
       # Example: ignore major updates for specific packages
-      # - dependency-name: "requests"
-      #   update-types: ["version-update:semver-major"]
+      - dependency-name: "setuptools"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
