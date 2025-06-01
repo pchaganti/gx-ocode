@@ -1,0 +1,139 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "feature-request"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please provide as much detail as possible to help us understand your request.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A brief summary of the feature you'd like to see
+      placeholder: Summarize the feature in 1-2 sentences
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What need does it address?
+      placeholder: |
+        Is your feature request related to a problem? Please describe.
+        Example: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see
+      placeholder: |
+        Describe what you want to happen. Be as detailed as possible about:
+        - How the feature should work
+        - What the user interface should look like
+        - What commands or APIs should be available
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Describe any alternative solutions or features you've considered
+      placeholder: What other approaches could solve this problem?
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What category does this feature fall into?
+      options:
+        - Core Engine / AI Integration
+        - Tool System
+        - CLI / User Interface
+        - Context Management
+        - Security / Permissions
+        - Performance
+        - Documentation
+        - Testing
+        - MCP Integration
+        - Configuration
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would be useful
+        - High - Important for my workflow
+        - Critical - Blocking my use of OCode
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific use cases where this feature would be valuable
+      placeholder: |
+        Provide concrete examples of how this feature would be used:
+        - As a Python developer, I want...
+        - When working on large codebases, I need...
+        - During code review, it would help if...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Provide examples of how this feature should work
+      placeholder: |
+        Show command examples, expected output, or workflows:
+        ```bash
+        ocode new-feature --example
+        ```
+      render: markdown
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: Do you have ideas about how this could be implemented?
+      placeholder: |
+        If you have technical ideas about implementation, share them here.
+        No worries if you don't - we can figure out the technical details!
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related Issues/Features
+      description: Are there any related issues or features?
+      placeholder: |
+        Link to related issues, PRs, or discussions:
+        - #123
+        - Similar to feature X in tool Y
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm you have completed these steps
+      options:
+        - label: I have searched existing issues to ensure this feature hasn't been requested before
+          required: true
+        - label: I have clearly described the problem this feature would solve
+          required: true
+        - label: I have provided specific use cases and examples
+          required: true

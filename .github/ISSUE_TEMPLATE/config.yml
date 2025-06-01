@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/haasonsaas/ocode/blob/main/README.md
+    about: Check the README and documentation first
+  - name: 💬 Discussions
+    url: https://github.com/haasonsaas/ocode/discussions
+    about: General discussions, ideas, and community support
+  - name: 🔒 Security Issues
+    url: https://github.com/haasonsaas/ocode/security/advisories/new
+    about: Report security vulnerabilities privately
