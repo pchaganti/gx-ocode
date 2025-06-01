@@ -1,0 +1,104 @@
+name: Question / Help
+description: Ask a question or get help with using OCode
+title: "[Question]: "
+labels: ["question", "help-wanted"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about OCode? Need help with setup or usage? We're here to help!
+
+        **Before asking:** Please check the [README](https://github.com/haasonsaas/ocode/blob/main/README.md) and [documentation](https://github.com/haasonsaas/ocode/blob/main/docs/) first.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: Ask your question here. Be as specific as possible.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question Category
+      description: What category does your question fall into?
+      options:
+        - Installation / Setup
+        - Configuration
+        - Usage / How-to
+        - Troubleshooting
+        - Integration (Ollama, MCP, etc.)
+        - Tool Usage
+        - Performance
+        - Security / Permissions
+        - Development / Contributing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and Background
+      description: Provide context about what you're trying to accomplish
+      placeholder: |
+        What are you trying to do? What's your use case?
+        - Project type (Python, JavaScript, etc.)
+        - Development environment
+        - Workflow or goals
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What Have You Tried?
+      description: What steps have you already taken to solve this?
+      placeholder: |
+        - Documentation you've read
+        - Commands you've tried
+        - Solutions you've attempted
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      placeholder: "e.g., macOS 14.0, Ubuntu 22.04, Windows 11"
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: What version of Python are you using?
+      placeholder: "e.g., 3.11.0"
+
+  - type: input
+    id: ocode-version
+    attributes:
+      label: OCode Version
+      description: What version of OCode are you using?
+      placeholder: "e.g., 0.1.0 or 'latest from main branch'"
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Any other information that might be helpful
+      placeholder: |
+        Configuration files, error messages, or other relevant details
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm you have completed these steps
+      options:
+        - label: I have searched existing issues for similar questions
+          required: true
+        - label: I have checked the README and documentation
+          required: true
+        - label: I have provided sufficient context about my question
+          required: true

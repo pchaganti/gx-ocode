@@ -16,7 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     author="OCode Team",
     author_email="team@ocode.dev",
-    url="https://github.com/ocode/ocode",
+    url="https://github.com/haasonsaas/ocode",
     packages=find_packages(),
     install_requires=[
         "aiohttp>=3.9",
@@ -39,9 +39,11 @@ setup(
         "dev": [
             "pytest>=7.0",
             "pytest-asyncio>=0.21",
+            "pytest-cov>=4.0",
             "black>=23.0",
-            "flake8>=6.0",
+            "isort>=5.12",
             "mypy>=1.0",
+            "flake8>=6.0",
             "types-pyyaml>=6.0",
             "types-requests>=2.31",
         ]
@@ -51,7 +53,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU Affero General Public License v3",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -63,8 +65,8 @@ setup(
     ],
     keywords="ai coding assistant terminal ollama llm development",
     project_urls={
-        "Bug Reports": "https://github.com/ocode/ocode/issues",
-        "Source": "https://github.com/ocode/ocode",
-        "Documentation": "https://ocode.dev/docs",
+        "Bug Reports": "https://github.com/haasonsaas/ocode/issues",
+        "Source": "https://github.com/haasonsaas/ocode",
+        "Documentation": "https://github.com/haasonsaas/ocode/blob/main/README.md",
     },
 )

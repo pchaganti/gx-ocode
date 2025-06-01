@@ -1,0 +1,130 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this bug! Please fill out the information below to help us diagnose and fix the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened and what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Run command '...'
+        2. Enter input '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Describe the expected outcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include any error messages.
+      placeholder: Describe what actually happened, including full error messages and stack traces.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      options:
+        - macOS
+        - Linux (Ubuntu)
+        - Linux (Other)
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: What version of Python are you using?
+      placeholder: "e.g., 3.11.0"
+    validations:
+      required: true
+
+  - type: input
+    id: ocode-version
+    attributes:
+      label: OCode Version
+      description: What version of OCode are you using?
+      placeholder: "e.g., 0.1.0 or commit hash if using development version"
+    validations:
+      required: true
+
+  - type: input
+    id: ollama-version
+    attributes:
+      label: Ollama Version
+      description: What version of Ollama are you using?
+      placeholder: "e.g., 0.7.1 (run 'ollama --version')"
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Any additional environment details that might be relevant
+      placeholder: |
+        - Model used: llama3.2:latest
+        - Project type: Python/JavaScript/etc.
+        - Virtual environment: Yes/No
+        - Docker: Yes/No
+        - Any relevant config settings
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and Error Output
+      description: Please include any relevant logs, error output, or debug information
+      placeholder: |
+        Paste logs here (use verbose mode with -v flag if possible)
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: Screenshots, configuration files, or other information that might help
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm you have completed these steps
+      options:
+        - label: I have searched existing issues to ensure this bug hasn't been reported before
+          required: true
+        - label: I have tested with the latest version of OCode
+          required: true
+        - label: I have included all relevant information above
+          required: true
