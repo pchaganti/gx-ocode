@@ -967,18 +967,22 @@ When a user asks you to perform an action, call the appropriate function."""
     def _map_tool_name(self, function_name: str) -> str:
         """Map function definition names to registry names.
 
-        Ensures consistency between tool names in function calls
-        and the tool registry by converting to lowercase.
+        Converts camelCase function names to snake_case for registry lookup.
+        This ensures consistency between tool names in function calls
+        and the tool registry.
 
         Args:
-            function_name: Name from function call.
+            function_name: Name from function call (may be camelCase).
 
         Returns:
-            Normalized name for registry lookup.
+            snake_case name for registry lookup.
         """
-        # The registry uses lowercase names with underscores preserved
-        # This ensures consistency with tool definitions in the registry
-        return function_name.lower()
+        import re
+
+        # Convert camelCase to snake_case
+        # e.g., "memoryWrite" -> "memory_write", "gitStatus" -> "git_status"
+        snake_case = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", function_name)
+        return snake_case.lower()
 
     async def _execute_tool_call(
         self, tool_name: str, arguments: Dict[str, Any], query: Optional[str] = None
@@ -1004,7 +1008,7 @@ When a user asks you to perform an action, call the appropriate function."""
         registry_name = self._map_tool_name(tool_name)
 
         # Add smart defaults for memory operations
-        if registry_name == "memorywrite":
+        if registry_name == "memory_write":
             # Default to persistent memory for profile-style facts
             if "memory_type" not in arguments:
                 arguments["memory_type"] = "persistent"
@@ -1021,7 +1025,7 @@ When a user asks you to perform an action, call the appropriate function."""
                 arguments.pop("key", None)
                 arguments.pop("value", None)
                 arguments.pop("category", None)
-        elif registry_name == "memoryread":
+        elif registry_name == "memory_read":
             # Smart defaults based on query context
             if "memory_type" not in arguments:
                 arguments["memory_type"] = "persistent"
@@ -1322,9 +1326,9 @@ When a user asks you to perform an action, call the appropriate function."""
 
                             # Yield when buffer is full
                             if len(chunk_buffer) >= chunk_size:
+                                metrics.tokens_processed += len(chunk_buffer.split())
                                 yield chunk_buffer
                                 chunk_buffer = ""
-                                metrics.tokens_processed += len(chunk_buffer.split())
                         elif chunk.done:
                             # Handle completion
                             if chunk_buffer:
