@@ -4,6 +4,7 @@ Pytest configuration and fixtures for OCode tests.
 
 import asyncio
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from typing import AsyncGenerator, Generator
@@ -231,7 +232,8 @@ def tool_registry():
 @pytest.fixture
 def context_manager(mock_project_dir: Path):
     """Create a test context manager."""
-    return ContextManager(mock_project_dir)
+    with ContextManager(mock_project_dir) as manager:
+        yield manager
 
 
 @pytest.fixture
@@ -248,7 +250,10 @@ def ocode_engine(mock_project_dir: Path, mock_ollama_client, mock_config: dict):
     engine.api_client = mock_ollama_client
     engine.config._config_cache = mock_config
 
-    return engine
+    yield engine
+    # Ensure all SQLite connections are closed for Windows compatibility
+    if hasattr(engine, "context_manager"):
+        engine.context_manager.close_all_connections()
 
 
 @pytest.fixture
@@ -293,7 +298,9 @@ def broken_function(
 @pytest.fixture
 def mock_git_repo(mock_project_dir: Path):
     """Create a mock git repository."""
+    import platform
     import subprocess
+    import time
 
     # Initialize git repo
     subprocess.run(["git", "init"], cwd=mock_project_dir, check=True)
@@ -310,7 +317,16 @@ def mock_git_repo(mock_project_dir: Path):
         ["git", "commit", "-m", "Initial commit"], cwd=mock_project_dir, check=True
     )
 
-    return mock_project_dir
+    yield mock_project_dir
+
+    # Windows-specific cleanup to release Git file handles
+    if platform.system() == "Windows":
+        # Force Git to release file handles
+        try:
+            subprocess.run(["git", "gc"], cwd=mock_project_dir, check=False)
+            time.sleep(0.2)  # Give Windows time to release file handles
+        except Exception:
+            pass
 
 
 @pytest.fixture
@@ -377,11 +393,11 @@ async def async_test_helper(coro):
 
 # Skip markers for optional dependencies
 pytest.mark.requires_git = pytest.mark.skipif(
-    not Path("/usr/bin/git").exists() and not Path("/usr/local/bin/git").exists(),
+    shutil.which("git") is None,
     reason="Git not available",
 )
 
 pytest.mark.requires_docker = pytest.mark.skipif(
-    not Path("/usr/bin/docker").exists() and not Path("/usr/local/bin/docker").exists(),
+    shutil.which("docker") is None,
     reason="Docker not available",
 )
