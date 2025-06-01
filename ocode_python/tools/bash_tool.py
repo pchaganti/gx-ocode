@@ -318,12 +318,27 @@ class BashTool(Tool):
                 # Use PowerShell if requested and available
                 powershell_path = shutil.which("pwsh") or shutil.which("powershell")
                 if powershell_path:
-                    return [powershell_path, "-Command", command]
+                    # Use ExecutionPolicy Bypass to avoid script execution restrictions
+                    # and wrap command in quotes to prevent injection
+                    return [
+                        powershell_path,
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-Command",
+                        f"& {{{command}}}",
+                    ]
 
             # Default to cmd.exe on Windows
             cmd_path = shutil.which("cmd") or "cmd.exe"
-            # Don't add extra quotes - let the subprocess module handle it
-            return [cmd_path, "/c", command]
+            # Escape the command for cmd.exe to prevent injection
+            escaped_command = (
+                command.replace("^", "^^")
+                .replace("&", "^&")
+                .replace("|", "^|")
+                .replace("<", "^<")
+                .replace(">", "^>")
+            )
+            return [cmd_path, "/c", escaped_command]
 
         # Unix-like systems
         shell_map = {
@@ -481,8 +496,17 @@ class BashTool(Tool):
                             "execution_time": time.time() - start_time,
                         }
                 else:
-                    # No output capture
+                    # No output capture, but still need to handle input_data
                     try:
+                        # Send input data if provided, even without capturing output
+                        if input_data:
+                            input_bytes = input_data.encode("utf-8", errors="replace")
+                            # Send input and close stdin
+                            if process.stdin:
+                                process.stdin.write(input_bytes)
+                                await process.stdin.drain()
+                                process.stdin.close()
+
                         if timeout > 0:
                             return_code = await asyncio.wait_for(
                                 process.wait(), timeout=timeout
