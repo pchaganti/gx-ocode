@@ -314,10 +314,9 @@ def auth(
         console.print("Choose authentication method:\n")
         console.print("1. API Key")
         console.print("2. Username/Password")
-        console.print("3. OAuth Device Flow")
-        console.print("4. Cancel\n")
+        console.print("3. Cancel\n")
 
-        choice = input("Select option (1-4): ").strip()
+        choice = input("Select option (1-3): ").strip()
 
         if choice == "1":
             # API Key authentication
@@ -359,16 +358,6 @@ def auth(
                     console.print("[red]✗ Login failed[/red]")
             else:
                 console.print("[yellow]Cancelled[/yellow]")
-
-        elif choice == "3":
-            # OAuth Device Flow
-            console.print("\n[bold]Device Authorization[/bold]")
-            console.print("1. Visit: https://haasonsaas.com/ocode/auth")
-            console.print("2. Enter code: [bold cyan]ABCD-1234[/bold cyan]")
-            console.print("\n[dim]Waiting for authorization...[/dim]")
-
-            # In production, this would poll the authorization endpoint
-            console.print("[yellow]Device flow not yet implemented[/yellow]")
 
         else:
             console.print("[yellow]Cancelled[/yellow]")
