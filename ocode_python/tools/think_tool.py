@@ -472,7 +472,7 @@ class ThinkTool(Tool):
             # This would integrate with the MemoryWriteTool
             memory_key = f"thinking_{thinking_session['type']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"  # noqa: E501
 
-            # For now, just save to a local file in .ocode directory
+            # Save to local file in .ocode directory
             memory_dir = Path.cwd() / ".ocode" / "thinking"
             memory_dir.mkdir(parents=True, exist_ok=True)
 

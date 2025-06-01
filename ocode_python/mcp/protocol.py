@@ -336,7 +336,7 @@ class MCPProtocol:
         if not resource:
             raise ValueError(f"Resource not found: {uri}")
 
-        # This is a placeholder - actual implementation would read resource content
+        # TODO: Implement actual resource content reading
         return {
             "contents": [
                 {
@@ -368,7 +368,7 @@ class MCPProtocol:
         if not tool:
             raise ValueError(f"Tool not found: {name}")
 
-        # This is a placeholder - actual implementation would execute the tool
+        # TODO: Implement actual tool execution
         return {
             "content": [
                 {
@@ -399,7 +399,7 @@ class MCPProtocol:
         if not prompt:
             raise ValueError(f"Prompt not found: {name}")
 
-        # This is a placeholder - actual implementation would render the prompt
+        # TODO: Implement actual prompt rendering
         return {
             "description": prompt.description,
             "messages": [
@@ -416,7 +416,7 @@ class MCPProtocol:
     def _handle_set_log_level(self, params: Dict[str, Any]):
         """Handle logging/setLevel notification."""
         level = params.get("level", "info")
-        # Set logging level - placeholder implementation
+        # TODO: Implement actual logging level setting
         print(f"Log level set to: {level}")
 
     def create_request(
@@ -518,8 +518,7 @@ class MCPClient(MCPProtocol):
 
     async def _send_request(self, transport, request: str) -> Any:
         """Send request and wait for response."""
-        # This is a placeholder - actual implementation would depend on transport
-        # For now, just return a mock response
+        # TODO: Implement actual transport-based request handling
         return {"protocolVersion": self.VERSION, "capabilities": {}}
 
 

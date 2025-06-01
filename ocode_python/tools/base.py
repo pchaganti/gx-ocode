@@ -1,5 +1,21 @@
 """
-Base classes for OCode tools.
+Base classes and infrastructure for the OCode tool system.
+
+This module provides the foundational abstractions and utilities for building
+and managing AI-callable tools in OCode. It defines the contract that all tools
+must follow, provides error handling utilities, and implements the tool registry
+system for dynamic tool discovery and execution.
+
+Key Components:
+- Tool definition framework for AI function calling
+- Standardized error handling and validation
+- Tool registry for discovery and execution
+- Parameter validation and type checking
+- Consistent result formatting
+
+The tool system is designed to be extensible, allowing new tools to be easily
+added while maintaining consistency in behavior and error handling across
+all tools.
 """
 
 import logging
@@ -11,7 +27,20 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class ToolParameter:
-    """Tool parameter definition."""
+    """Definition of a single parameter for a tool.
+
+    Represents a parameter that can be passed to a tool, including
+    its type information, description, and validation rules. This
+    information is used by the AI to understand how to call tools
+    and by the tool system for parameter validation.
+
+    Attributes:
+        name: Parameter name as it appears in function calls
+        type: JSON Schema type ("string", "number", "boolean", "array", "object")
+        description: Human-readable description of the parameter's purpose
+        required: Whether this parameter must be provided
+        default: Default value if parameter is not provided (None if no default)
+    """
 
     name: str
     type: str  # "string", "number", "boolean", "array", "object"
@@ -22,7 +51,19 @@ class ToolParameter:
 
 @dataclass
 class ToolDefinition:
-    """Tool definition for LLM function calling."""
+    """Complete definition of a tool for AI function calling.
+
+    Contains all metadata needed for the AI to understand and call a tool,
+    including its purpose, parameters, and categorization. This definition
+    is converted to various formats (like Ollama's function calling format)
+    for different AI systems.
+
+    Attributes:
+        name: Unique identifier for the tool (used in function calls)
+        description: Clear explanation of what the tool does and when to use it
+        parameters: List of ToolParameter objects defining expected inputs
+        category: Functional category for tool organization and discovery
+    """
 
     name: str
     description: str
@@ -69,7 +110,19 @@ class ToolDefinition:
 
 @dataclass
 class ToolResult:
-    """Result from tool execution."""
+    """Standardized result from tool execution.
+
+    Provides a consistent format for tool results that includes success status,
+    output content, error information, and additional metadata. This standard
+    format enables consistent error handling and result processing across
+    the entire system.
+
+    Attributes:
+        success: Whether the tool execution completed successfully
+        output: The primary output content (empty string if failed)
+        error: Error message if execution failed (None if successful)
+        metadata: Additional structured data about the execution
+    """
 
     success: bool
     output: str
@@ -314,13 +367,40 @@ class ErrorHandler:
 
 class Tool(ABC):
     """
-    Base class for all OCode tools.
+    Abstract base class for all OCode tools.
 
-    Tools are functions that can be called by the AI to perform specific tasks
-    like reading files, running git commands, executing shell commands, etc.
+    Defines the contract that all tools must implement to be usable by the AI.
+    Tools are specialized functions that can be called by AI models to perform
+    specific tasks like file operations, git commands, shell execution, etc.
+
+    Architecture:
+    - Each tool has a unique name and detailed definition for AI understanding
+    - Tools implement async execution for non-blocking operations
+    - Parameter validation ensures type safety and proper error handling
+    - Standardized error handling provides consistent user feedback
+
+    Tool Lifecycle:
+    1. Definition: Tool declares its name, description, and parameters
+    2. Registration: Tool is registered with the ToolRegistry
+    3. Discovery: AI discovers tool via registry and definition
+    4. Validation: Parameters are validated before execution
+    5. Execution: Tool performs its async operation
+    6. Result: Tool returns standardized ToolResult
+
+    Key Requirements for Implementations:
+    - Must provide a ToolDefinition via the definition property
+    - Must implement async execute() method
+    - Should use ErrorHandler utilities for consistent error handling
+    - Should follow parameter validation patterns
+    - Should provide meaningful error messages and metadata
     """
 
     def __init__(self):
+        """Initialize tool with name from definition.
+
+        Extracts the tool name from the definition for convenient access.
+        Subclasses should call super().__init__() to ensure proper initialization.
+        """
         self.name = self.definition.name
 
     @property
@@ -360,7 +440,28 @@ class Tool(ABC):
 
     @abstractmethod
     async def execute(self, **kwargs: Any) -> ToolResult:
-        """Execute the tool with given parameters."""
+        """Execute the tool's main functionality asynchronously.
+
+        This is the core method that performs the tool's actual work.
+        Implementations should:
+        1. Validate parameters thoroughly
+        2. Perform the tool's operation asynchronously when possible
+        3. Handle errors gracefully with appropriate categorization
+        4. Return standardized ToolResult with meaningful output
+        5. Include relevant metadata for debugging and monitoring
+
+        Args:
+            **kwargs: Parameters as defined in the tool's definition.
+                     Parameter names and types should match the ToolDefinition.
+
+        Returns:
+            ToolResult indicating success/failure with appropriate output,
+            error messages, and metadata.
+
+        Raises:
+            Should not raise exceptions - instead catch them and return
+            appropriate ToolResult with error information.
+        """
         pass
 
     def validate_parameters(self, kwargs: Dict[str, Any]) -> bool:
@@ -411,7 +512,33 @@ class Tool(ABC):
 
 class ToolRegistry:
     """
-    Registry for managing and executing tools.
+    Central registry for tool discovery, management, and execution.
+
+    The ToolRegistry serves as the central hub for all tool operations in OCode.
+    It manages tool instances, provides discovery mechanisms for the AI, handles
+    tool execution with proper validation, and maintains the catalog of available
+    capabilities.
+
+    Key Responsibilities:
+    - Tool registration and storage
+    - Tool discovery and metadata access
+    - Parameter validation and execution coordination
+    - Error handling and result standardization
+    - Core tool initialization and management
+
+    Architecture:
+    - Singleton pattern: One registry per application instance
+    - Name-based tool lookup for efficient access
+    - Async execution support for non-blocking operations
+    - Automatic core tool registration
+    - Extensible design for custom tool addition
+
+    Usage Patterns:
+    1. Initialize registry
+    2. Register core tools (automatically)
+    3. Register any custom tools
+    4. Provide tool definitions to AI
+    5. Execute tools based on AI function calls
     """
 
     def __init__(self):
@@ -426,10 +553,30 @@ class ToolRegistry:
         self.tools[tool.name] = tool
 
     def register_core_tools(self):
-        """Register all core tools.
+        """Register all built-in OCode tools.
 
-        Imports and registers all built-in OCode tools including
-        file operations, git tools, shell tools, and more.
+        Imports and registers the complete set of core tools that provide
+        the standard OCode functionality. This includes tools for file
+        operations, version control, shell execution, data processing,
+        analysis, and more.
+
+        Tool Categories Registered:
+        - File Operations: read, write, edit, list, copy, move, remove
+        - Version Control: git status, commit, diff, branch operations
+        - Shell and Execution: bash commands, script execution
+        - Text Processing: grep, find, head, tail, sort, uniq
+        - Data Tools: JSON/YAML processing, data analysis
+        - Development: code analysis, testing, documentation
+        - System: process monitoring, environment management
+        - AI Assistance: thinking, architecture analysis, agent management
+        - Specialized: notebook handling, memory management, annotations
+
+        This method is typically called once during application initialization
+        to make all standard tools available for AI use.
+
+        Side Effects:
+            Imports all tool modules and instantiates tool classes.
+            Registers approximately 30+ core tools in the registry.
         """
         from .agent_tool import AgentTool
         from .architect_tool import ArchitectTool
@@ -541,16 +688,39 @@ class ToolRegistry:
         return [tool.definition.to_ollama_format() for tool in self.tools.values()]
 
     async def execute_tool(self, tool_name: str, **kwargs) -> ToolResult:
-        """Execute a tool by name.
+        """Execute a tool by name with parameter validation.
 
-        Validates parameters and executes the specified tool.
+        This is the main entry point for tool execution, providing a safe
+        and standardized way to run tools with proper error handling and
+        validation. It coordinates the entire execution pipeline from
+        tool lookup through result generation.
+
+        Execution Pipeline:
+        1. Tool lookup: Find tool instance by name
+        2. Parameter validation: Check parameters against tool definition
+        3. Async execution: Run the tool's execute() method
+        4. Error handling: Catch and convert any exceptions to ToolResult
+        5. Result standardization: Ensure consistent ToolResult format
 
         Args:
-            tool_name: Name of the tool to execute.
-            **kwargs: Parameters to pass to the tool.
+            tool_name: Exact name of the tool to execute as registered
+                      in the registry.
+            **kwargs: All parameters to pass to the tool's execute() method.
+                     Parameter names and types should match the tool's definition.
 
         Returns:
-            ToolResult from the tool execution.
+            ToolResult indicating the outcome of the execution:
+            - Success: Contains tool output and optional metadata
+            - Failure: Contains error message, error type, and context
+
+        Error Conditions:
+        - Tool not found: Returns error if tool_name doesn't exist
+        - Invalid parameters: Returns error if validation fails
+        - Execution failure: Returns error if tool execution raises exception
+
+        Note:
+            This method never raises exceptions - all errors are captured
+            and returned as ToolResult objects for consistent handling.
         """
         tool = self.get_tool(tool_name)
         if not tool:
