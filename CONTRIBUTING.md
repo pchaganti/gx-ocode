@@ -332,7 +332,7 @@ def process_data(data: List[Dict[str, Any]],
 - **Discord**: Join our community server
 - **Discussions**: GitHub Discussions for questions
 - **Issues**: GitHub Issues for bugs
-- **Email**: dev@ocode.ai for security issues
+- **Email**: jonathan@haasonsaas.com for security issues
 
 ## Recognition
 

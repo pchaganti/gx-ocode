@@ -363,7 +363,7 @@ def auth(
         elif choice == "3":
             # OAuth Device Flow
             console.print("\n[bold]Device Authorization[/bold]")
-            console.print("1. Visit: https://ocode.dev/device")
+            console.print("1. Visit: https://haasonsaas.com/ocode/auth")
             console.print("2. Enter code: [bold cyan]ABCD-1234[/bold cyan]")
             console.print("\n[dim]Waiting for authorization...[/dim]")
 

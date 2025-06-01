@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "ocode"
 version = "0.1.0"
 description = "Terminal-native AI coding assistant powered by Ollama models"
-authors = [{name = "OCode Team", email = "team@ocode.dev"}]
+authors = [{name = "Jonathan Haas", email = "jonathan@haasonsaas.com"}]
 license = {text = "AGPL-3.0"}
 readme = "README.md"
 requires-python = ">=3.8"

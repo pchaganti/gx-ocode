@@ -14,8 +14,8 @@ setup(
     description="Terminal-native AI coding assistant powered by Ollama models",
     long_description="OCode delivers terminal-native workflow with deep codebase intelligence and autonomous task execution.",  # noqa: E501
     long_description_content_type="text/markdown",
-    author="OCode Team",
-    author_email="team@ocode.dev",
+    author="Jonathan Haas",
+    author_email="jonathan@haasonsaas.com",
     url="https://github.com/haasonsaas/ocode",
     packages=find_packages(),
     install_requires=[
