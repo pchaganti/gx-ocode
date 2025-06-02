@@ -14,7 +14,10 @@ from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
 from .api_client import CompletionRequest, Message, OllamaAPIClient
 from .context_manager import ContextManager, ProjectContext
+from .orchestrator import AdvancedOrchestrator
+from .semantic_context import DynamicContextManager, SemanticContextBuilder
 from .session import SessionManager
+from .stream_processor import StreamProcessor
 
 
 @dataclass
@@ -122,6 +125,37 @@ class OCodeEngine:
         # This makes them available for AI function calling
         self.tool_registry.register_core_tools()
 
+        # Pre-declare architecture component attributes
+        self.orchestrator: Optional[AdvancedOrchestrator] = None
+        self.stream_processor: Optional[StreamProcessor] = None
+        self.semantic_context_builder: Optional[SemanticContextBuilder] = None
+        self.dynamic_context_manager: Optional[DynamicContextManager] = None
+
+        # Store architecture configuration for lazy initialization
+        self._arch_config = self.config.get("architecture", {})
+
+        # Detect CI environment and adjust configuration for stability
+        import os
+
+        is_ci = bool(
+            os.getenv("CI") or os.getenv("GITHUB_ACTIONS") or os.getenv("JENKINS_URL")
+        )
+        if is_ci:
+            # In CI, disable potentially unstable features
+            self._arch_config = dict(
+                self._arch_config
+            )  # Copy to avoid modifying original
+            self._arch_config["enable_semantic_context"] = False
+            self._arch_config["enable_dynamic_context"] = False
+            if self.verbose:
+                print(
+                    "🤖 CI environment detected: disabled semantic features "
+                    "for stability"
+                )
+
+        # Flag to track initialization of asyncio-dependent components
+        self._components_initialized = False
+
         # Processing state management
         # These track the current conversation and processing state
         self.current_context: Optional[ProjectContext] = (
@@ -137,6 +171,38 @@ class OCodeEngine:
         # Performance optimization through caching
         # Tool descriptions are expensive to generate and rarely change
         self._tool_descriptions_cache: Optional[str] = None
+
+    async def _ensure_components_initialized(self) -> None:
+        """Ensure asyncio-dependent components are initialized with event loop."""
+        if self._components_initialized:
+            return
+
+        # Advanced orchestrator for priority-based command queuing and side effects
+        if self._arch_config.get("enable_advanced_orchestrator", True):
+            max_concurrent = self._arch_config.get("orchestrator_max_concurrent", 5)
+            self.orchestrator = AdvancedOrchestrator(self.tool_registry, max_concurrent)
+        else:
+            self.orchestrator = None
+
+        # Stream processor for read-write pipeline separation and intelligent batching
+        if self._arch_config.get("enable_stream_processing", True):
+            self.stream_processor = StreamProcessor(self.context_manager)
+        else:
+            self.stream_processor = None
+
+        # Semantic context builder for embedding-based file selection
+        if self._arch_config.get("enable_semantic_context", True):
+            self.semantic_context_builder = SemanticContextBuilder(self.context_manager)
+        else:
+            self.semantic_context_builder = None
+
+        # Dynamic context manager for intelligent context expansion
+        if self._arch_config.get("enable_dynamic_context", True):
+            self.dynamic_context_manager = DynamicContextManager(self.context_manager)
+        else:
+            self.dynamic_context_manager = None
+
+        self._components_initialized = True
 
         # Build the comprehensive system prompt that guides AI behavior
         # This includes role definition, tool descriptions, and workflow guidance
@@ -440,7 +506,7 @@ Before responding, consider:
     async def _prepare_context(self, query: str) -> ProjectContext:
         """Prepare project context for the query.
 
-        Analyzes the project and builds relevant context based on the query.
+        Uses advanced semantic context selection and dynamic expansion when available.
         Shows progress information if verbose mode is enabled.
 
         Args:
@@ -449,12 +515,32 @@ Before responding, consider:
         Returns:
             ProjectContext object with relevant files and metadata.
         """
+        # Ensure asyncio-dependent components are initialized
+        await self._ensure_components_initialized()
+
         if self.verbose:
             print("🔍 Analyzing project context...")
 
-        context = await self.context_manager.build_context(
-            query=query, max_files=self.config.get("max_context_files", 20)
-        )
+        # Use dynamic context manager if available for enhanced context selection
+        if self.dynamic_context_manager:
+            arch_config = self.config.get("architecture", {})
+            max_files = arch_config.get("semantic_context_max_files", 20)
+            expansion_factor = arch_config.get("context_expansion_factor", 1.5)
+            context = await self.dynamic_context_manager.build_dynamic_context(
+                query=query,
+                initial_max_files=max_files,
+                expansion_factor=expansion_factor,
+            )
+            if self.verbose:
+                insights = self.dynamic_context_manager.get_context_insights()
+                if insights:
+                    embeddings_enabled = insights.get("embeddings_enabled", False)
+                    print(f"🧠 Semantic analysis: {embeddings_enabled}")
+        else:
+            # Fallback to basic context manager
+            context = await self.context_manager.build_context(
+                query=query, max_files=self.config.get("max_context_files", 20)
+            )
 
         if self.verbose:
             print(f"📁 Analyzed {len(context.files)} files")
@@ -991,6 +1077,7 @@ When a user asks you to perform an action, call the appropriate function."""
 
         Handles tool execution with smart defaults for memory operations,
         confirmation requests for dangerous commands, and error handling.
+        Uses the AdvancedOrchestrator when available for enhanced execution.
 
         Args:
             tool_name: Name of the tool to execute.
@@ -1000,6 +1087,9 @@ When a user asks you to perform an action, call the appropriate function."""
         Returns:
             ToolResult with success status, output, and any errors.
         """
+        # Ensure asyncio-dependent components are initialized
+        await self._ensure_components_initialized()
+
         if self.verbose:
             print(f"🔧 Executing tool: {tool_name}")
             print(f"📋 Arguments: {arguments}")
@@ -1071,7 +1161,19 @@ When a user asks you to perform an action, call the appropriate function."""
                 print(f"Memory read arguments: {arguments}")
 
         try:
-            result = await self.tool_registry.execute_tool(registry_name, **arguments)
+            # Use advanced orchestrator if available for enhanced tool execution
+            if self.orchestrator:
+                # Execute through orchestrator for priority queuing and side effects
+                result = await self.orchestrator.execute_tool_with_context(
+                    tool_name=registry_name,
+                    arguments=arguments,
+                    context={"query": query, "engine": self},
+                )
+            else:
+                # Fallback to direct tool registry execution
+                result = await self.tool_registry.execute_tool(
+                    registry_name, **arguments
+                )
 
             # Handle confirmation requests for shell commands
             if (
@@ -1091,9 +1193,16 @@ When a user asks you to perform an action, call the appropriate function."""
                 if confirmed:
                     # Re-execute with confirmation
                     arguments["confirmed"] = True
-                    result = await self.tool_registry.execute_tool(
-                        registry_name, **arguments
-                    )
+                    if self.orchestrator:
+                        result = await self.orchestrator.execute_tool_with_context(
+                            tool_name=registry_name,
+                            arguments=arguments,
+                            context={"query": query, "engine": self},
+                        )
+                    else:
+                        result = await self.tool_registry.execute_tool(
+                            registry_name, **arguments
+                        )
                 else:
                     result = ToolResult(
                         success=False, output="", error="Command cancelled by user"
@@ -1516,7 +1625,58 @@ When a user asks you to perform an action, call the appropriate function."""
             "conversation_length": len(self.conversation_history),
             "tools_available": len(self.tool_registry.tools),
             "project_root": str(self.context_manager.root),
+            "orchestrator_enabled": self.orchestrator is not None,
+            "stream_processor_enabled": self.stream_processor is not None,
+            "semantic_context_enabled": self.semantic_context_builder is not None,
+            "dynamic_context_enabled": self.dynamic_context_manager is not None,
         }
+
+    async def start_orchestrator(self) -> None:
+        """Start the advanced orchestrator if available."""
+        await self._ensure_components_initialized()
+        if self.orchestrator:
+            await self.orchestrator.start()
+            if self.verbose:
+                print("🚀 Advanced orchestrator started")
+
+    async def stop_orchestrator(self) -> None:
+        """Stop the advanced orchestrator if available."""
+        await self._ensure_components_initialized()
+        if self.orchestrator:
+            await self.orchestrator.stop()
+            if self.verbose:
+                print("🛑 Advanced orchestrator stopped")
+
+    async def cleanup_architecture_components(self) -> None:
+        """Clean up all architecture components."""
+        await self._ensure_components_initialized()
+        # Clean up stream processor
+        if self.stream_processor:
+            try:
+                await self.stream_processor.cleanup()
+                if self.verbose:
+                    print("🧹 Stream processor cleaned up")
+            except Exception as e:
+                if self.verbose:
+                    print(f"⚠️ Stream processor cleanup error: {e}")
+
+        # Clean up orchestrator
+        await self.stop_orchestrator()
+
+        # Other components don't need explicit cleanup but we could add logging
+        if self.verbose and (
+            self.semantic_context_builder or self.dynamic_context_manager
+        ):
+            print("🧹 Architecture components cleaned up")
+
+    async def __aenter__(self):
+        """Async context manager entry - start orchestrator."""
+        await self.start_orchestrator()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit - cleanup all architecture components."""
+        await self.cleanup_architecture_components()
 
 
 async def main() -> None:
