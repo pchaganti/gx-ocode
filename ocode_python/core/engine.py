@@ -172,7 +172,7 @@ class OCodeEngine:
         # Performance optimization through caching
         # Tool descriptions are expensive to generate and rarely change
         self._tool_descriptions_cache: Optional[str] = None
-        
+
         # Initialize prompt composer for modular prompt construction
         self.prompt_composer = PromptComposer()
 
@@ -233,7 +233,7 @@ class OCodeEngine:
         """
         # Get available tools dynamically
         tool_descriptions = self._get_tool_descriptions_by_category()
-        
+
         # Use the prompt composer to build the system prompt
         # This allows for easier maintenance and dynamic prompt construction
         return self.prompt_composer.build_system_prompt(

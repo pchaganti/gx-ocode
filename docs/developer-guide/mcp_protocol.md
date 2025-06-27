@@ -70,11 +70,11 @@ Prompts are reusable templates that help structure interactions with the AI.
 def security_review_prompt(code: str, language: str) -> str:
     return f"""
     Please perform a security review of this {language} code:
-    
+
     ```{language}
     {code}
     ```
-    
+
     Focus on:
     - Input validation
     - Authentication/authorization
@@ -108,7 +108,7 @@ logger = logging.getLogger(__name__)
 
 class DatabaseSpecialist:
     """Database specialist agent with SQL expertise."""
-    
+
     def __init__(self):
         self.server = MCPServer(
             name="Database Specialist",
@@ -116,13 +116,13 @@ class DatabaseSpecialist:
             description="Expert in SQL optimization, schema design, and database operations"
         )
         self._register_capabilities()
-        
+
     def _register_capabilities(self):
         """Register all capabilities of this specialist."""
         self._register_resources()
         self._register_tools()
         self._register_prompts()
-        
+
     def _register_resources(self):
         """Register available resources."""
         # Resource: Database best practices
@@ -132,7 +132,7 @@ class DatabaseSpecialist:
             description="Guidelines for optimal database indexing",
             mime_type="text/markdown"
         ))
-        
+
         # Resource: Common SQL patterns
         self.server.add_resource(MCPResource(
             uri="db://patterns/queries",
@@ -140,7 +140,7 @@ class DatabaseSpecialist:
             description="Common SQL query patterns and optimizations",
             mime_type="text/markdown"
         ))
-        
+
     def _register_tools(self):
         """Register available tools."""
         # Tool: SQL formatter
@@ -163,7 +163,7 @@ class DatabaseSpecialist:
                 "required": ["query"]
             }
         ))
-        
+
         # Tool: Query optimizer
         self.server.add_tool(MCPTool(
             name="optimize_query",
@@ -183,7 +183,7 @@ class DatabaseSpecialist:
                 "required": ["query"]
             }
         ))
-        
+
         # Tool: Schema analyzer
         self.server.add_tool(MCPTool(
             name="analyze_schema",
@@ -199,7 +199,7 @@ class DatabaseSpecialist:
                 "required": ["schema"]
             }
         ))
-        
+
     def _register_prompts(self):
         """Register available prompts."""
         # Prompt: Query optimization
@@ -219,7 +219,7 @@ class DatabaseSpecialist:
                 }
             ]
         ))
-        
+
     async def format_sql(self, query: str, dialect: str = "postgresql") -> Dict[str, Any]:
         """Format SQL query implementation."""
         try:
@@ -240,14 +240,14 @@ class DatabaseSpecialist:
                 "success": False,
                 "error": str(e)
             }
-            
+
     async def optimize_query(self, query: str, schema: Dict[str, Any] = None) -> Dict[str, Any]:
         """Analyze and suggest query optimizations."""
         suggestions = []
-        
+
         # Parse the query
         parsed = sqlparse.parse(query)[0]
-        
+
         # Check for SELECT *
         if "SELECT *" in query.upper():
             suggestions.append({
@@ -255,7 +255,7 @@ class DatabaseSpecialist:
                 "severity": "medium",
                 "suggestion": "Avoid SELECT *, specify only needed columns"
             })
-            
+
         # Check for missing WHERE clause in UPDATE/DELETE
         if parsed.get_type() in ('UPDATE', 'DELETE') and 'WHERE' not in query.upper():
             suggestions.append({
@@ -263,7 +263,7 @@ class DatabaseSpecialist:
                 "severity": "high",
                 "suggestion": "Add WHERE clause to avoid updating/deleting all rows"
             })
-            
+
         # Check for JOIN without indexes (if schema provided)
         if schema and 'JOIN' in query.upper():
             # Analyze join conditions and check indexes
@@ -272,17 +272,17 @@ class DatabaseSpecialist:
                 "severity": "medium",
                 "suggestion": "Ensure JOIN columns are indexed"
             })
-            
+
         return {
             "original_query": query,
             "suggestions": suggestions,
             "optimized_query": query  # In real implementation, generate optimized version
         }
-        
+
     async def analyze_schema(self, schema: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze database schema for improvements."""
         recommendations = []
-        
+
         # Check for tables without primary keys
         for table_name, table_info in schema.get("tables", {}).items():
             if not table_info.get("primary_key"):
@@ -291,38 +291,38 @@ class DatabaseSpecialist:
                     "issue": "Missing primary key",
                     "recommendation": "Add a primary key for data integrity and performance"
                 })
-                
+
         # Check for missing indexes on foreign keys
         # Check for appropriate data types
         # Check for normalization issues
-        
+
         return {
             "schema_score": 85,  # Overall schema health score
             "recommendations": recommendations
         }
-        
+
     async def start(self, host: str = "localhost", port: int = 8765):
         """Start the MCP server."""
         # Set up tool handlers
         self.server.set_tool_handler("format_sql", self.format_sql)
         self.server.set_tool_handler("optimize_query", self.optimize_query)
         self.server.set_tool_handler("analyze_schema", self.analyze_schema)
-        
+
         # Set up resource handlers
-        self.server.set_resource_handler("db://best-practices/indexing", 
+        self.server.set_resource_handler("db://best-practices/indexing",
             lambda: "# Indexing Best Practices\n\n1. Index columns used in WHERE...\n")
         self.server.set_resource_handler("db://patterns/queries",
             lambda: "# Common SQL Patterns\n\n## Pagination\n```sql\n...\n")
-            
+
         # Start server
         await self.server.start(host, port)
         logger.info(f"Database Specialist running on {host}:{port}")
-        
+
 
 async def main():
     specialist = DatabaseSpecialist()
     await specialist.start()
-    
+
     # Keep running
     try:
         await asyncio.Event().wait()
@@ -385,18 +385,18 @@ The main engine can now discover and use your specialist:
 async def handle_database_query(query: str):
     # Discover database specialist
     specialist = await mcp_manager.get_server("database_specialist")
-    
+
     # Format the query
     result = await specialist.call_tool("format_sql", {
         "query": query,
         "dialect": "postgresql"
     })
-    
+
     # Get optimization suggestions
     optimization = await specialist.call_tool("optimize_query", {
         "query": result["formatted_query"]
     })
-    
+
     return optimization
 ```
 
@@ -419,13 +419,13 @@ class SecureMCPServer(MCPServer):
     def __init__(self, name: str, auth_token: str):
         super().__init__(name)
         self.auth_token = auth_token
-        
+
     async def handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Verify token
         provided_token = params.get("auth_token")
         if provided_token != self.auth_token:
             raise ValueError("Authentication failed: Invalid token")
-            
+
         # Continue with normal initialization
         return await super().handle_initialize(params)
 ```
@@ -499,7 +499,7 @@ For long-running operations:
 async def analyze_large_schema(self, schema: Dict, ctx: Context):
     tables = schema.get("tables", {})
     total = len(tables)
-    
+
     for i, (table_name, table_info) in enumerate(tables.items()):
         await ctx.report_progress(i, total, f"Analyzing {table_name}")
         # Perform analysis
@@ -530,7 +530,7 @@ from database_specialist import DatabaseSpecialist
 async def test_format_sql():
     specialist = DatabaseSpecialist()
     result = await specialist.format_sql("select * from users where id=1")
-    
+
     assert result["success"] is True
     assert "SELECT" in result["formatted_query"]
     assert result["line_count"] > 0
@@ -538,11 +538,11 @@ async def test_format_sql():
 @pytest.mark.asyncio
 async def test_authentication():
     server = SecureMCPServer("Test", auth_token="test-token")
-    
+
     # Should fail with wrong token
     with pytest.raises(ValueError):
         await server.handle_initialize({"auth_token": "wrong-token"})
-    
+
     # Should succeed with correct token
     result = await server.handle_initialize({"auth_token": "test-token"})
     assert "capabilities" in result

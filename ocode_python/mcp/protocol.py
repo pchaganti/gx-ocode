@@ -153,7 +153,7 @@ class MCPProtocol:
         self.resources: Dict[str, MCPResource] = {}
         self.tools: Dict[str, MCPTool] = {}
         self.prompts: Dict[str, MCPPrompt] = {}
-        
+
         # Handler registrations for resources, tools, and prompts
         self._resource_handlers: Dict[str, Callable] = {}
         self._tool_handlers: Dict[str, Callable] = {}
@@ -201,19 +201,19 @@ class MCPProtocol:
         """Register a prompt template."""
         self.prompts[prompt.name] = prompt
         self.add_capability(MCPCapability.PROMPTS)
-        
+
     def set_resource_handler(self, uri: str, handler: Callable):
         """Set a handler function for a resource URI."""
         self._resource_handlers[uri] = handler
-        
+
     def set_tool_handler(self, name: str, handler: Callable):
         """Set a handler function for a tool."""
         self._tool_handlers[name] = handler
-        
+
     def set_prompt_handler(self, name: str, handler: Callable):
         """Set a handler function for a prompt."""
         self._prompt_handlers[name] = handler
-        
+
     def _guess_mime_type(self, file_path: Path) -> str:
         """Guess MIME type from file extension."""
         ext = file_path.suffix.lower()
@@ -338,7 +338,7 @@ class MCPProtocol:
             provided_token = params.get("auth_token") or params.get("authToken")
             if provided_token != self.auth_token:
                 raise ValueError("Authentication failed: Invalid or missing token")
-        
+
         # Client info is available but not used in current implementation
         # _client_info = params.get("clientInfo", {})
         protocol_version = params.get("protocolVersion", self.VERSION)
@@ -382,7 +382,7 @@ class MCPProtocol:
 
         # Implementation for resource content reading
         contents = []
-        
+
         # Check if we have a handler for this resource
         if hasattr(self, '_resource_handlers') and uri in self._resource_handlers:
             handler = self._resource_handlers[uri]
@@ -419,7 +419,7 @@ class MCPProtocol:
                     "mimeType": resource.mime_type or "text/plain",
                     "text": f"Resource content for: {uri}"
                 })
-        
+
         return {"contents": contents}
 
     async def _handle_list_tools(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -450,7 +450,7 @@ class MCPProtocol:
             try:
                 # Execute the tool handler
                 result = await handler(**arguments) if asyncio.iscoroutinefunction(handler) else handler(**arguments)
-                
+
                 # Format the result based on type
                 if isinstance(result, dict):
                     # Structured output
@@ -470,7 +470,7 @@ class MCPProtocol:
                         "type": "text",
                         "text": str(result)
                     }]
-                    
+
                 return {"content": content}
             except Exception as e:
                 # Return error as content
@@ -514,14 +514,14 @@ class MCPProtocol:
 
         # Implementation for prompt rendering
         messages = []
-        
+
         # Check if we have a handler for this prompt
         if hasattr(self, '_prompt_handlers') and name in self._prompt_handlers:
             handler = self._prompt_handlers[name]
             try:
                 # Execute the prompt handler
                 result = await handler(**arguments) if asyncio.iscoroutinefunction(handler) else handler(**arguments)
-                
+
                 # Handle different result types
                 if isinstance(result, str):
                     # Simple string prompt
@@ -573,7 +573,7 @@ class MCPProtocol:
             # Simple template substitution
             for arg_name, arg_value in arguments.items():
                 template = template.replace(f"{{{arg_name}}}", str(arg_value))
-            
+
             messages.append({
                 "role": "user",
                 "content": {
@@ -581,7 +581,7 @@ class MCPProtocol:
                     "text": template
                 }
             })
-        
+
         return {
             "description": prompt.description,
             "messages": messages
@@ -590,7 +590,7 @@ class MCPProtocol:
     def _handle_set_log_level(self, params: Dict[str, Any]):
         """Handle logging/setLevel notification."""
         level = params.get("level", "info")
-        
+
         # Map MCP log levels to Python logging levels
         level_map = {
             "debug": logging.DEBUG,
@@ -599,7 +599,7 @@ class MCPProtocol:
             "error": logging.ERROR,
             "critical": logging.CRITICAL
         }
-        
+
         if level.lower() in level_map:
             import logging
             logging.getLogger().setLevel(level_map[level.lower()])
@@ -709,27 +709,27 @@ class MCPClient(MCPProtocol):
         """Send request and wait for response."""
         # Send the request
         await transport.send(request)
-        
+
         # Wait for response with timeout
         try:
             # Create a future to wait for response
             response_future = asyncio.Future()
             request_data = json.loads(request)
             request_id = request_data.get("id")
-            
+
             # Store the future for this request ID
             if not hasattr(self, '_pending_requests'):
                 self._pending_requests = {}
             self._pending_requests[request_id] = response_future
-            
+
             # Wait for response with timeout
             response = await asyncio.wait_for(response_future, timeout=30.0)
-            
+
             # Clean up
             del self._pending_requests[request_id]
-            
+
             return response
-            
+
         except asyncio.TimeoutError:
             # Clean up on timeout
             if request_id in self._pending_requests:

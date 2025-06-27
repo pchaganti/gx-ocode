@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class DatabaseSpecialist(MCPServer):
     """Database specialist MCP server with SQL expertise."""
-    
+
     def __init__(self, auth_token: str = None):
         """Initialize the database specialist."""
         super().__init__(
@@ -26,12 +26,12 @@ class DatabaseSpecialist(MCPServer):
             version="1.0.0",
             auth_token=auth_token or os.environ.get("MCP_AUTH_TOKEN")
         )
-        
+
         # Register capabilities
         self._register_resources()
         self._register_tools()
         self._register_prompts()
-        
+
     def _register_resources(self):
         """Register database-related resources."""
         # Best practices document
@@ -41,7 +41,7 @@ class DatabaseSpecialist(MCPServer):
             description="Guidelines for optimal database indexing strategies",
             mime_type="text/markdown"
         ))
-        
+
         # SQL patterns
         self.register_resource(MCPResource(
             uri="db://patterns/common-queries",
@@ -49,7 +49,7 @@ class DatabaseSpecialist(MCPServer):
             description="Frequently used SQL query patterns and optimizations",
             mime_type="text/markdown"
         ))
-        
+
         # Schema design guide
         self.register_resource(MCPResource(
             uri="db://guides/schema-design",
@@ -57,7 +57,7 @@ class DatabaseSpecialist(MCPServer):
             description="Best practices for designing database schemas",
             mime_type="text/markdown"
         ))
-        
+
     def _register_tools(self):
         """Register database tools."""
         # SQL formatter tool
@@ -81,7 +81,7 @@ class DatabaseSpecialist(MCPServer):
                 "required": ["query"]
             }
         ))
-        
+
         # Query analyzer tool
         self.register_tool(MCPTool(
             name="analyze_query",
@@ -107,7 +107,7 @@ class DatabaseSpecialist(MCPServer):
                 "required": ["query"]
             }
         ))
-        
+
         # Schema validator tool
         self.register_tool(MCPTool(
             name="validate_schema",
@@ -123,7 +123,7 @@ class DatabaseSpecialist(MCPServer):
                 "required": ["schema"]
             }
         ))
-        
+
     def _register_prompts(self):
         """Register database-related prompts."""
         # Query optimization prompt
@@ -143,7 +143,7 @@ class DatabaseSpecialist(MCPServer):
                 }
             ]
         ))
-        
+
         # Schema design prompt
         self.register_prompt(MCPPrompt(
             name="design_schema",
@@ -161,27 +161,27 @@ class DatabaseSpecialist(MCPServer):
                 }
             ]
         ))
-        
+
     async def start(self):
         """Start the MCP server and register handlers."""
         # Register resource handlers
         self.set_resource_handler("db://best-practices/indexing", self._get_indexing_guide)
         self.set_resource_handler("db://patterns/common-queries", self._get_query_patterns)
         self.set_resource_handler("db://guides/schema-design", self._get_schema_guide)
-        
+
         # Register tool handlers
         self.set_tool_handler("format_sql", self._format_sql)
         self.set_tool_handler("analyze_query", self._analyze_query)
         self.set_tool_handler("validate_schema", self._validate_schema)
-        
+
         # Register prompt handlers
         self.set_prompt_handler("optimize_query", self._optimize_query_prompt)
         self.set_prompt_handler("design_schema", self._design_schema_prompt)
-        
+
         logger.info("Database Specialist MCP Server started")
-        
+
     # Resource handlers
-    
+
     async def _get_indexing_guide(self) -> str:
         """Return database indexing best practices."""
         return """# Database Indexing Best Practices
@@ -232,14 +232,14 @@ class DatabaseSpecialist(MCPServer):
 
 ```sql
 -- Offset-based (simple but can be slow for large offsets)
-SELECT * FROM users 
-ORDER BY created_at DESC 
+SELECT * FROM users
+ORDER BY created_at DESC
 LIMIT 10 OFFSET 20;
 
 -- Cursor-based (more efficient)
-SELECT * FROM users 
-WHERE created_at < '2024-01-01' 
-ORDER BY created_at DESC 
+SELECT * FROM users
+WHERE created_at < '2024-01-01'
+ORDER BY created_at DESC
 LIMIT 10;
 ```
 
@@ -247,13 +247,13 @@ LIMIT 10;
 
 ```sql
 -- PostgreSQL
-INSERT INTO users (email, name) 
+INSERT INTO users (email, name)
 VALUES ('user@example.com', 'John')
-ON CONFLICT (email) 
+ON CONFLICT (email)
 DO UPDATE SET name = EXCLUDED.name;
 
 -- MySQL
-INSERT INTO users (email, name) 
+INSERT INTO users (email, name)
 VALUES ('user@example.com', 'John')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 ```
@@ -262,14 +262,14 @@ ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 ```sql
 -- Running total
-SELECT 
+SELECT
     date,
     amount,
     SUM(amount) OVER (ORDER BY date) as running_total
 FROM transactions;
 
 -- Rank within groups
-SELECT 
+SELECT
     department,
     employee_name,
     salary,
@@ -281,13 +281,13 @@ FROM employees;
 
 ```sql
 WITH monthly_sales AS (
-    SELECT 
+    SELECT
         DATE_TRUNC('month', order_date) as month,
         SUM(total) as total_sales
     FROM orders
     GROUP BY 1
 )
-SELECT 
+SELECT
     month,
     total_sales,
     LAG(total_sales) OVER (ORDER BY month) as prev_month,
@@ -377,58 +377,58 @@ CREATE TABLE categories (
 );
 ```
 """
-    
+
     # Tool handlers
-    
+
     async def _format_sql(self, query: str, dialect: str = "postgresql") -> Dict[str, Any]:
         """Format SQL query."""
         # Simple formatting implementation
         # In production, use sqlparse or similar library
-        
+
         # Basic formatting rules
-        keywords = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 
+        keywords = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER',
                    'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
                    'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP']
-        
+
         formatted = query
-        
+
         # Uppercase keywords
         for keyword in keywords:
             formatted = formatted.replace(keyword.lower(), keyword)
             formatted = formatted.replace(keyword.capitalize(), keyword)
-        
+
         # Add newlines before major clauses
         for keyword in ['FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT']:
             formatted = formatted.replace(f' {keyword}', f'\n{keyword}')
-        
+
         # Indent subqueries (basic)
         lines = formatted.split('\n')
         formatted_lines = []
         indent_level = 0
-        
+
         for line in lines:
             if '(' in line:
                 indent_level += line.count('(')
             if ')' in line:
                 indent_level -= line.count(')')
-                
+
             formatted_lines.append('  ' * max(0, indent_level) + line.strip())
-        
+
         formatted = '\n'.join(formatted_lines)
-        
+
         return {
             "formatted_query": formatted,
             "dialect": dialect,
             "line_count": len(formatted_lines)
         }
-    
+
     async def _analyze_query(self, query: str, schema: Dict[str, Any] = None) -> Dict[str, Any]:
         """Analyze SQL query for performance issues."""
         issues = []
         suggestions = []
-        
+
         query_upper = query.upper()
-        
+
         # Check for SELECT *
         if 'SELECT *' in query_upper:
             issues.append({
@@ -438,7 +438,7 @@ CREATE TABLE categories (
                 "line": query_upper.find('SELECT *')
             })
             suggestions.append("Specify only the columns you need")
-        
+
         # Check for missing WHERE in UPDATE/DELETE
         if ('UPDATE' in query_upper or 'DELETE' in query_upper) and 'WHERE' not in query_upper:
             issues.append({
@@ -448,7 +448,7 @@ CREATE TABLE categories (
                 "line": 0
             })
             suggestions.append("Add a WHERE clause to limit affected rows")
-        
+
         # Check for LIKE with leading wildcard
         import re
         if re.search(r"LIKE\s+['\"]%", query_upper):
@@ -459,7 +459,7 @@ CREATE TABLE categories (
                 "line": 0
             })
             suggestions.append("Consider full-text search or reverse the pattern")
-        
+
         # Check for OR conditions
         if ' OR ' in query_upper:
             issues.append({
@@ -469,7 +469,7 @@ CREATE TABLE categories (
                 "line": 0
             })
             suggestions.append("Consider using UNION for better performance")
-        
+
         # Check for NOT IN with subquery
         if 'NOT IN' in query_upper and '(SELECT' in query_upper:
             issues.append({
@@ -479,24 +479,24 @@ CREATE TABLE categories (
                 "line": 0
             })
             suggestions.append("Consider using NOT EXISTS or LEFT JOIN")
-        
+
         return {
             "query": query,
             "issues": issues,
             "suggestions": suggestions,
             "score": max(0, 100 - len(issues) * 20)  # Simple scoring
         }
-    
+
     async def _validate_schema(self, schema: Dict[str, Any]) -> Dict[str, Any]:
         """Validate database schema design."""
         issues = []
         recommendations = []
-        
+
         tables = schema.get("tables", {})
-        
+
         for table_name, table_info in tables.items():
             columns = table_info.get("columns", {})
-            
+
             # Check for primary key
             has_primary_key = any(col.get("primary_key") for col in columns.values())
             if not has_primary_key:
@@ -506,11 +506,11 @@ CREATE TABLE categories (
                     "message": "Table lacks a primary key"
                 })
                 recommendations.append(f"Add a primary key to {table_name}")
-            
+
             # Check for appropriate data types
             for col_name, col_info in columns.items():
                 data_type = col_info.get("type", "").upper()
-                
+
                 # Check for VARCHAR without length
                 if data_type == "VARCHAR" and not col_info.get("length"):
                     issues.append({
@@ -519,38 +519,38 @@ CREATE TABLE categories (
                         "type": "data_type",
                         "message": "VARCHAR without specified length"
                     })
-                
+
                 # Check for TEXT when VARCHAR might be better
                 if data_type == "TEXT" and col_name.endswith(("_name", "_code", "_id")):
                     recommendations.append(
                         f"Consider using VARCHAR for {table_name}.{col_name}"
                     )
-            
+
             # Check indexes
             indexes = table_info.get("indexes", [])
-            foreign_keys = [col for col, info in columns.items() 
+            foreign_keys = [col for col, info in columns.items()
                           if info.get("foreign_key")]
-            
+
             for fk in foreign_keys:
                 if not any(fk in idx.get("columns", []) for idx in indexes):
                     recommendations.append(
                         f"Consider indexing foreign key {table_name}.{fk}"
                     )
-        
+
         # Calculate score
         total_tables = len(tables)
         issues_count = len(issues)
         score = max(0, 100 - (issues_count * 10))
-        
+
         return {
             "tables_analyzed": total_tables,
             "issues": issues,
             "recommendations": recommendations,
             "score": score
         }
-    
+
     # Prompt handlers
-    
+
     async def _optimize_query_prompt(self, query: str, performance_metrics: Dict = None) -> str:
         """Generate query optimization prompt."""
         prompt = f"""Please help me optimize this SQL query:
@@ -559,7 +559,7 @@ CREATE TABLE categories (
 {query}
 ```
 """
-        
+
         if performance_metrics:
             prompt += f"""
 Current Performance Metrics:
@@ -567,7 +567,7 @@ Current Performance Metrics:
 - Rows Scanned: {performance_metrics.get('rows_scanned', 'Unknown')}
 - Rows Returned: {performance_metrics.get('rows_returned', 'Unknown')}
 """
-        
+
         prompt += """
 Please analyze the query and provide:
 1. Identified performance issues
@@ -576,21 +576,21 @@ Please analyze the query and provide:
 4. Expected performance improvements
 5. Any additional indexes that might help
 """
-        
+
         return prompt
-    
+
     async def _design_schema_prompt(self, requirements: str, constraints: Dict = None) -> str:
         """Generate schema design prompt."""
         prompt = f"""Please help me design a database schema for the following requirements:
 
 {requirements}
 """
-        
+
         if constraints:
             prompt += "\nTechnical Constraints:\n"
             for key, value in constraints.items():
                 prompt += f"- {key}: {value}\n"
-        
+
         prompt += """
 Please provide:
 1. Complete schema design with tables and relationships
@@ -600,7 +600,7 @@ Please provide:
 5. Potential scalability considerations
 6. Sample SQL for creating the schema
 """
-        
+
         return prompt
 
 
@@ -611,15 +611,15 @@ async def main():
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    
+
     # Create and start server
     specialist = DatabaseSpecialist()
     await specialist.start()
-    
+
     # Simple message handler for testing
     print(f"Database Specialist MCP Server running...")
     print(f"Authentication: {'Enabled' if specialist.auth_token else 'Disabled'}")
-    
+
     # In a real implementation, this would handle stdio or network transport
     # For now, just keep the server running
     try:
