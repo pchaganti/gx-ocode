@@ -103,6 +103,75 @@ class PromptComposer:
 
         return content
 
+    def _determine_components_to_include(
+        self, 
+        include_components: Optional[Set[str]], 
+        exclude_components: Optional[Set[str]]
+    ) -> Set[str]:
+        """Determine which components to include in the prompt."""
+        if include_components is None:
+            components_to_include = set(self.core_components)
+        else:
+            components_to_include = set(include_components)
+
+        if exclude_components:
+            components_to_include -= set(exclude_components)
+            
+        return components_to_include
+
+    def _add_basic_sections(self, sections: List[str], components: Set[str]) -> None:
+        """Add basic system prompt sections."""
+        if "role" in components:
+            role_content = self.load_component("role")
+            sections.append(f"<role>\n{role_content}\n</role>")
+
+        if "core_capabilities" in components:
+            capabilities = self.load_component("core_capabilities")
+            sections.append(
+                f"<core_capabilities>\n{capabilities}\n</core_capabilities>"
+            )
+
+        if "task_analysis_framework" in components:
+            framework = self.load_component("task_analysis_framework")
+            sections.append(
+                f"<task_analysis_framework>\n{framework}\n</task_analysis_framework>"
+            )
+
+    def _add_decision_sections(self, sections: List[str], components: Set[str]) -> None:
+        """Add decision-making and workflow sections."""
+        if "decision_criteria" in components:
+            try:
+                criteria = self.load_component("decision_criteria", "analysis")
+                sections.append(
+                    f"<decision_criteria>\n{criteria}\n</decision_criteria>"
+                )
+            except FileNotFoundError:
+                pass  # Skip if not available
+
+        if "workflow_patterns" in components:
+            patterns = self.load_component("workflow_patterns")
+            sections.append(f"<workflow_patterns>\n{patterns}\n</workflow_patterns>")
+
+    def _add_response_sections(self, sections: List[str], components: Set[str]) -> None:
+        """Add response and output guidance sections."""
+        if "response_strategies" in components:
+            strategies = self.load_component("response_strategies")
+            sections.append(
+                f"<response_strategies>\n{strategies}\n</response_strategies>"
+            )
+
+        if "error_handling" in components:
+            error_handling = self.load_component("error_handling")
+            sections.append(f"<error_handling>\n{error_handling}\n</error_handling>")
+
+        if "output_guidelines" in components:
+            guidelines = self.load_component("output_guidelines")
+            sections.append(f"<output_guidelines>\n{guidelines}\n</output_guidelines>")
+
+        if "thinking_framework" in components:
+            thinking = self.load_component("thinking_framework")
+            sections.append(f"<thinking_framework>\n{thinking}\n</thinking_framework>")
+
     def build_system_prompt(
         self,
         tool_descriptions: str,

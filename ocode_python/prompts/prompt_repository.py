@@ -20,9 +20,6 @@ from typing import Any, Dict, List, Optional
 
 # Optional imports for advanced similarity features
 try:
-    import numpy as np
-    from sklearn.metrics.pairwise import cosine_similarity
-
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -145,7 +142,8 @@ class SQLiteExampleStore(ExampleStore):
 
             conn.execute(
                 """
-                CREATE INDEX IF NOT EXISTS idx_performance ON examples(performance_score)
+                CREATE INDEX IF NOT EXISTS idx_performance 
+                ON examples(performance_score)
             """
             )
 
@@ -170,7 +168,9 @@ class SQLiteExampleStore(ExampleStore):
         """Add a new example to the database."""
         if not example.id:
             # Generate ID from query hash
-            example.id = hashlib.md5(example.query.encode(), usedforsecurity=False).hexdigest()[:12]
+            example.id = hashlib.md5(
+                example.query.encode(), usedforsecurity=False
+            ).hexdigest()[:12]
 
         with sqlite3.connect(self.db_path) as conn:
             data = example.to_dict()
@@ -250,10 +250,12 @@ class SQLiteExampleStore(ExampleStore):
             conn.row_factory = sqlite3.Row
 
             # Build query with keyword matching
+            # nosec B608 - SQL is constructed from safe parameterized components
             conditions = " OR ".join(["query LIKE ?" for _ in keywords])
+            values_clause = ','.join(['(?)' for _ in keywords])
             query_sql = f"""
                 SELECT *,
-                (SELECT COUNT(*) FROM (VALUES {','.join(['(?)' for _ in keywords])})
+                (SELECT COUNT(*) FROM (VALUES {values_clause})
                  WHERE query LIKE '%' || column1 || '%') as match_count
                 FROM examples
                 WHERE {conditions}
@@ -299,10 +301,8 @@ class SQLiteExampleStore(ExampleStore):
         """Add or update a prompt component."""
         with sqlite3.connect(self.db_path) as conn:
             # Check if component exists
-            existing = conn.execute(
-                "SELECT id, version FROM components WHERE name = ? ORDER BY version DESC LIMIT 1",
-                (component.name,),
-            ).fetchone()
+            query = "SELECT id, version FROM components WHERE name = ? ORDER BY version DESC LIMIT 1"
+            existing = conn.execute(query, (component.name,)).fetchone()
 
             if existing:
                 component.version = existing[1] + 1
@@ -327,10 +327,8 @@ class SQLiteExampleStore(ExampleStore):
 
             # Deactivate previous versions
             if existing:
-                conn.execute(
-                    "UPDATE components SET active = 0 WHERE name = ? AND version < ?",
-                    (component.name, component.version),
-                )
+                query = "UPDATE components SET active = 0 WHERE name = ? AND version < ?"
+                conn.execute(query, (component.name, component.version))
 
             return conn.lastrowid
 

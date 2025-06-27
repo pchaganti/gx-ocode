@@ -3,10 +3,8 @@ Session and checkpoint management tool for interactive conversation control.
 """
 
 import time
-from typing import Optional
-
 from ..core.checkpoint import CheckpointManager
-from ..core.session import Session, SessionManager, export_session_to_markdown
+from ..core.session import SessionManager, export_session_to_markdown
 from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
 

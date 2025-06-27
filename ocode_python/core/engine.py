@@ -474,7 +474,7 @@ class OCodeEngine:
             r"\bguide\b",
             r"\bconcept\b",
             r"\btheory\b",
-            r"\balgorithm\b(?!\s+in\s+file)",  # algorithm but not "algorithm in file.py"
+            r"\balgorithm\b(?!\s+in\s+file)",  # not "algorithm in file.py"
             r"\bdata\s+structure\b(?!\s+in\s+file)",
         ]
 
@@ -1284,9 +1284,8 @@ When a user asks you to perform an action, call the appropriate function."""
             if heuristic_result is not None:
                 # Heuristic gave definitive answer
                 if self.verbose:
-                    print(
-                        f"⚡ Heuristic decision: {'Use tools' if heuristic_result else 'Knowledge response'}"
-                    )
+                    decision = 'Use tools' if heuristic_result else 'Knowledge response'
+                print(f"⚡ Heuristic decision: {decision}")
 
                 # Create analysis result matching LLM format
                 llm_analysis = {
@@ -1300,9 +1299,8 @@ When a user asks you to perform an action, call the appropriate function."""
                 # Log heuristic usage for tracking
                 import logging
 
-                logging.info(
-                    f"Heuristic tool decision for query: {query[:100]}... -> {heuristic_result}"
-                )
+                query_preview = f"{query[:100]}..."
+                logging.info(f"Heuristic tool decision: {query_preview} -> {heuristic_result}")
             else:
                 # Heuristic uncertain, fall back to LLM
                 if self.verbose:
@@ -1314,16 +1312,15 @@ When a user asks you to perform an action, call the appropriate function."""
                 # Log LLM fallback usage
                 import logging
 
-                logging.info(
-                    f"LLM fallback for query: {query[:100]}... -> {llm_analysis.get('should_use_tools')}"
-                )
+                query_preview = f"{query[:100]}..."
+                should_use = llm_analysis.get('should_use_tools')
+                logging.info(f"LLM fallback: {query_preview} -> {should_use}")
 
             if self.verbose:
                 print(f"🤖 LLM Analysis: {llm_analysis.get('reasoning', '')}")
                 if llm_analysis.get("suggested_tools"):
-                    print(
-                        f"🔧 Suggested tools: {', '.join(llm_analysis['suggested_tools'])}"  # noqa: E501
-                    )
+                    tools = ', '.join(llm_analysis['suggested_tools'])
+                    print(f"🔧 Suggested tools: {tools}")
 
             # Prepare messages for API
             messages = self._prepare_messages(query, context, llm_analysis)

@@ -93,7 +93,7 @@ class DatabaseSpecialist(MCPServer):
         self.register_tool(
             MCPTool(
                 name="analyze_query",
-                description="Analyze SQL query for performance issues and optimization opportunities",
+                description="Analyze SQL query for performance issues and optimizations",
                 input_schema={
                     "type": "object",
                     "properties": {
@@ -103,7 +103,7 @@ class DatabaseSpecialist(MCPServer):
                         },
                         "schema": {
                             "type": "object",
-                            "description": "Optional database schema for deeper analysis",
+                            "description": "Optional database schema for analysis",
                             "properties": {
                                 "tables": {
                                     "type": "object",
@@ -150,7 +150,7 @@ class DatabaseSpecialist(MCPServer):
                     },
                     {
                         "name": "performance_metrics",
-                        "description": "Current performance metrics (execution time, rows scanned, etc.)",
+                        "description": "Current performance metrics (time, rows, etc.)",
                         "required": False,
                     },
                 ],
@@ -170,7 +170,7 @@ class DatabaseSpecialist(MCPServer):
                     },
                     {
                         "name": "constraints",
-                        "description": "Technical constraints (performance, scalability, etc.)",
+                        "description": "Technical constraints (performance, scale, etc.)",
                         "required": False,
                     },
                 ],
@@ -527,7 +527,7 @@ CREATE TABLE categories (
                 {
                     "severity": "medium",
                     "type": "performance",
-                    "message": "NOT IN with subquery can be slow and has NULL handling issues",
+                    "message": "NOT IN with subquery can be slow and has NULL issues",
                     "line": 0,
                 }
             )
@@ -643,7 +643,7 @@ Please analyze the query and provide:
         self, requirements: str, constraints: Dict = None
     ) -> str:
         """Generate schema design prompt."""
-        prompt = f"""Please help me design a database schema for the following requirements:
+        prompt = f"""Help me design a database schema for these requirements:
 
 {requirements}
 """
@@ -679,7 +679,7 @@ async def main():
     await specialist.start()
 
     # Simple message handler for testing
-    print(f"Database Specialist MCP Server running...")
+    print("Database Specialist MCP Server running...")
     print(f"Authentication: {'Enabled' if specialist.auth_token else 'Disabled'}")
 
     # In a real implementation, this would handle stdio or network transport
