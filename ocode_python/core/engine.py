@@ -552,6 +552,145 @@ Before responding, consider:
         self.current_context = context
         return context
 
+    def _heuristic_tool_check(self, query: str) -> Optional[bool]:
+        """Fast heuristic check to determine if tools are needed.
+
+        Uses regex and string matching to identify common patterns that indicate
+        whether a query needs tools or is a knowledge question.
+
+        Args:
+            query: User query to analyze.
+
+        Returns:
+            True if tools are likely needed, False if knowledge response suffices,
+            None if uncertain (requiring LLM fallback).
+        """
+        import re
+
+        # Normalize query for matching
+        query_lower = query.lower().strip()
+
+        # Knowledge patterns - these typically don't need tools
+        knowledge_patterns = [
+            r"\bwhat\s+is\b",
+            r"\bexplain\b",
+            r"\bhow\s+does\b",
+            r"\bhow\s+(would|do|can)\s+i\b",  # Hypothetical/instructional
+            r"\bwhy\b",
+            r"\bwhen\s+should\b",
+            r"\bcompare\b",
+            r"\bdifferences?\s+between\b",
+            r"\btell\s+me\s+about\b",
+            r"\bdefine\b",
+            r"\bdescribe\b",
+            r"\bbest\s+practices?\b",
+            r"\btips?\b",
+            r"\badvice\b",
+            r"\btutorial\b",
+            r"\bguide\b",
+            r"\bconcept\b",
+            r"\btheory\b",
+            r"\balgorithm\b(?!\s+in\s+file)",  # algorithm but not "algorithm in file.py"
+            r"\bdata\s+structure\b(?!\s+in\s+file)",
+        ]
+
+        # Tool patterns - these typically need tools
+        tool_patterns = [
+            # File operations
+            r"\blist\s+files?\b",
+            r"\bshow\s+(me\s+)?(the\s+)?files?\b",
+            r"\bread\b.*\bfile\b",
+            r"\bwrite\b.*\bfile\b",
+            r"\bcreate\b.*\bfile\b",
+            r"\bedit\b.*\bfile\b",
+            r"\bmodify\b.*\bfile\b",
+            r"\bdelete\b.*\bfile\b",
+            r"\bremove\b.*\bfile\b",
+            r"\bcopy\b.*\bfile\b",
+            r"\bmove\b.*\bfile\b",
+            r"\bfind\b.*\b(file|files|python|js|java)\b",
+            r"\bsearch\b.*\b(file|files|for|in)\b",
+            r"\bgrep\b",
+            r"\bhead\b",
+            r"\btail\b",
+            r"\bcat\b",
+            r"\bls\b",
+            # Directory operations
+            r"\bcurrent\s+directory\b",
+            r"\bworking\s+directory\b",
+            r"\bmkdir\b",
+            r"\bcd\b",
+            # Git operations
+            r"\bgit\s+status\b",
+            r"\bgit\s+commit\b",
+            r"\bgit\s+diff\b",
+            r"\bgit\s+log\b",
+            r"\bgit\s+push\b",
+            r"\bgit\s+pull\b",
+            r"\bcommit\b.*\b(changes|my|the)\b",
+            # System operations
+            r"\brun\b.*\bcommand\b",
+            r"\bexecute\b",
+            r"\bbash\b",
+            r"\bshell\b",
+            r"\bwhich\b",
+            r"\bdownload\b",
+            r"\bcurl\b",
+            r"\bfetch\b.*\burl\b",
+            r"\bhttp\s+request\b",
+            # Memory operations
+            r"\bremember\b",
+            r"\bstore\b.*\binformation\b",
+            r"\bsave\b.*\bfor\s+later\b",
+            r"\brecall\b",
+            r"\bretrieve\b.*\bmemory\b",
+            # Analysis operations
+            r"\banalyze\b.*\b(this|current|my)\s+(project|code|codebase)\b",
+            r"\barchitecture\s+of\s+(this|my|the)\s+(project|codebase)\b",
+            # File paths mentioned
+            r"[./][\w/.-]+\.\w+",  # Looks like a file path
+            r"\b\w+\.(py|js|java|cpp|c|h|md|txt|json|yaml|yml|xml|html|css)\b",
+        ]
+
+        # First check if query mentions specific files or paths (highest priority)
+        if re.search(r"[./][\w/.-]+\.\w+", query):  # Has file path
+            return True
+        if re.search(
+            r"\b\w+\.(py|js|java|cpp|c|h|md|txt|json|yaml|yml|xml|html|css)\b",
+            query_lower,
+        ):
+            return True
+
+        # Check for explicit knowledge indicators (check these before tool patterns)
+        for pattern in knowledge_patterns:
+            if re.search(pattern, query_lower):
+                # But check if it's asking about a specific file/project
+                if re.search(
+                    r"\b(this|current|my)\s+(file|project|code|codebase)\b", query_lower
+                ):
+                    return True  # Needs tools to analyze specific code
+                return False
+
+        # Check for tool indicators after knowledge patterns
+        for pattern in tool_patterns:
+            if re.search(pattern, query_lower):
+                return True
+
+        # Check for ambiguous cases that need LLM
+        ambiguous_indicators = [
+            "show",  # Could be "show me how" (knowledge) or "show file" (tool)
+            "get",  # Could be "get started" (knowledge) or "get file" (tool)
+            "check",  # Could be conceptual or actual checking
+            "look",  # Could be "look at" file or "look into" concept
+        ]
+
+        for indicator in ambiguous_indicators:
+            if indicator in query_lower.split():
+                return None  # Uncertain, need LLM
+
+        # Default to None for uncertain cases
+        return None
+
     async def _llm_should_use_tools(self, query: str) -> Dict[str, Any]:
         """Use LLM to determine if and which tools should be used for the query.
 
@@ -1351,8 +1490,45 @@ When a user asks you to perform an action, call the appropriate function."""
             context = await self._prepare_context(query)
             metrics.files_analyzed = len(context.files)
 
-            # Analyze if tools should be used
-            llm_analysis = await self._llm_should_use_tools(query)
+            # Analyze if tools should be used - try heuristic first
+            heuristic_result = self._heuristic_tool_check(query)
+
+            if heuristic_result is not None:
+                # Heuristic gave definitive answer
+                if self.verbose:
+                    print(
+                        f"⚡ Heuristic decision: {'Use tools' if heuristic_result else 'Knowledge response'}"
+                    )
+
+                # Create analysis result matching LLM format
+                llm_analysis = {
+                    "should_use_tools": heuristic_result,
+                    "suggested_tools": [],
+                    "reasoning": "Determined by heuristic pattern matching",
+                    "context_complexity": "simple",
+                    "heuristic_used": True,
+                }
+
+                # Log heuristic usage for tracking
+                import logging
+
+                logging.info(
+                    f"Heuristic tool decision for query: {query[:100]}... -> {heuristic_result}"
+                )
+            else:
+                # Heuristic uncertain, fall back to LLM
+                if self.verbose:
+                    print("🤔 Heuristic uncertain, using LLM analysis...")
+
+                llm_analysis = await self._llm_should_use_tools(query)
+                llm_analysis["heuristic_used"] = False
+
+                # Log LLM fallback usage
+                import logging
+
+                logging.info(
+                    f"LLM fallback for query: {query[:100]}... -> {llm_analysis.get('should_use_tools')}"
+                )
 
             if self.verbose:
                 print(f"🤖 LLM Analysis: {llm_analysis.get('reasoning', '')}")
