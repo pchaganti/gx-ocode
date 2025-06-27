@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote_plus
 
 import aiohttp
@@ -15,13 +15,13 @@ from bs4 import BeautifulSoup
 
 from .base import Tool, ToolDefinition, ToolResult
 
-
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class SearchResult:
     """Represents a single search result."""
+
     title: str
     url: str
     snippet: str
@@ -46,75 +46,82 @@ class SearchTool(Tool):
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The search query to execute"
+                        "description": "The search query to execute",
                     },
                     "max_results": {
                         "type": "integer",
                         "description": "Maximum number of results to return",
-                        "default": 5
+                        "default": 5,
                     },
                     "include_snippets": {
                         "type": "boolean",
                         "description": "Whether to include content snippets",
-                        "default": True
-                    }
+                        "default": True,
+                    },
                 },
-                "required": ["query"]
-            }
+                "required": ["query"],
+            },
         )
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
         if self._session is None or self._session.closed:
             headers = {
-                'User-Agent': 'OCode-CLI/1.0 (Web Search Tool)',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Connection': 'keep-alive'
+                "User-Agent": "OCode-CLI/1.0 (Web Search Tool)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate",
+                "Connection": "keep-alive",
             }
             self._session = aiohttp.ClientSession(
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=30)
+                headers=headers, timeout=aiohttp.ClientTimeout(total=30)
             )
         return self._session
 
-    async def _search_duckduckgo(self, query: str, max_results: int = 5) -> List[SearchResult]:
+    async def _search_duckduckgo(
+        self, query: str, max_results: int = 5
+    ) -> List[SearchResult]:
         """Perform search using DuckDuckGo API."""
         try:
             session = await self._get_session()
 
             # DuckDuckGo Instant Answer API
             params = {
-                'q': query,
-                'format': 'json',
-                'no_html': '1',
-                'skip_disambig': '1'
+                "q": query,
+                "format": "json",
+                "no_html": "1",
+                "skip_disambig": "1",
             }
 
-            async with session.get('https://api.duckduckgo.com/', params=params) as response:
+            async with session.get(
+                "https://api.duckduckgo.com/", params=params
+            ) as response:
                 if response.status == 200:
                     data = await response.json()
                     results = []
 
                     # Extract instant answer if available
-                    if data.get('Abstract'):
-                        results.append(SearchResult(
-                            title=data.get('Heading', 'DuckDuckGo Summary'),
-                            url=data.get('AbstractURL', ''),
-                            snippet=data.get('Abstract', ''),
-                            source='DuckDuckGo'
-                        ))
+                    if data.get("Abstract"):
+                        results.append(
+                            SearchResult(
+                                title=data.get("Heading", "DuckDuckGo Summary"),
+                                url=data.get("AbstractURL", ""),
+                                snippet=data.get("Abstract", ""),
+                                source="DuckDuckGo",
+                            )
+                        )
 
                     # Extract related topics
-                    for topic in data.get('RelatedTopics', [])[:max_results]:
-                        if isinstance(topic, dict) and 'Text' in topic:
-                            results.append(SearchResult(
-                                title=topic.get('Text', '').split(' - ')[0],
-                                url=topic.get('FirstURL', ''),
-                                snippet=topic.get('Text', ''),
-                                source='DuckDuckGo'
-                            ))
+                    for topic in data.get("RelatedTopics", [])[:max_results]:
+                        if isinstance(topic, dict) and "Text" in topic:
+                            results.append(
+                                SearchResult(
+                                    title=topic.get("Text", "").split(" - ")[0],
+                                    url=topic.get("FirstURL", ""),
+                                    snippet=topic.get("Text", ""),
+                                    source="DuckDuckGo",
+                                )
+                            )
 
                     return results[:max_results]
 
@@ -123,7 +130,9 @@ class SearchTool(Tool):
 
         return []
 
-    async def _search_html_scraping(self, query: str, max_results: int = 5) -> List[SearchResult]:
+    async def _search_html_scraping(
+        self, query: str, max_results: int = 5
+    ) -> List[SearchResult]:
         """Fallback search using HTML scraping."""
         try:
             session = await self._get_session()
@@ -134,28 +143,30 @@ class SearchTool(Tool):
             async with session.get(search_url) as response:
                 if response.status == 200:
                     html = await response.text()
-                    soup = BeautifulSoup(html, 'html.parser')
+                    soup = BeautifulSoup(html, "html.parser")
 
                     results = []
-                    for link in soup.find_all('a', class_='result__a')[:max_results]:
+                    for link in soup.find_all("a", class_="result__a")[:max_results]:
                         title = link.get_text(strip=True)
-                        url = link.get('href', '')
+                        url = link.get("href", "")
 
                         # Find snippet in parent container
                         snippet = ""
-                        parent = link.find_parent('div', class_='result')
+                        parent = link.find_parent("div", class_="result")
                         if parent:
-                            snippet_elem = parent.find('a', class_='result__snippet')
+                            snippet_elem = parent.find("a", class_="result__snippet")
                             if snippet_elem:
                                 snippet = snippet_elem.get_text(strip=True)
 
                         if title and url:
-                            results.append(SearchResult(
-                                title=title,
-                                url=url,
-                                snippet=snippet,
-                                source='DuckDuckGo HTML'
-                            ))
+                            results.append(
+                                SearchResult(
+                                    title=title,
+                                    url=url,
+                                    snippet=snippet,
+                                    source="DuckDuckGo HTML",
+                                )
+                            )
 
                     return results
 
@@ -164,7 +175,9 @@ class SearchTool(Tool):
 
         return []
 
-    async def _enhance_with_content(self, results: List[SearchResult], include_snippets: bool) -> List[SearchResult]:
+    async def _enhance_with_content(
+        self, results: List[SearchResult], include_snippets: bool
+    ) -> List[SearchResult]:
         """Enhance search results with page content if requested."""
         if not include_snippets:
             return results
@@ -178,10 +191,12 @@ class SearchTool(Tool):
             # If snippet is empty or very short, try to fetch content
             if len(result.snippet) < 50 and result.url:
                 try:
-                    async with session.get(result.url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    async with session.get(
+                        result.url, timeout=aiohttp.ClientTimeout(total=10)
+                    ) as response:
                         if response.status == 200:
                             html = await response.text()
-                            soup = BeautifulSoup(html, 'html.parser')
+                            soup = BeautifulSoup(html, "html.parser")
 
                             # Remove script and style elements
                             for script in soup(["script", "style"]):
@@ -192,8 +207,12 @@ class SearchTool(Tool):
 
                             # Clean up text and create snippet
                             lines = (line.strip() for line in text.splitlines())
-                            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-                            text = ' '.join(chunk for chunk in chunks if chunk)
+                            chunks = (
+                                phrase.strip()
+                                for line in lines
+                                for phrase in line.split("  ")
+                            )
+                            text = " ".join(chunk for chunk in chunks if chunk)
 
                             # Create snippet (first 200 characters)
                             if len(text) > 200:
@@ -206,7 +225,7 @@ class SearchTool(Tool):
                                 url=result.url,
                                 snippet=snippet or result.snippet,
                                 timestamp=result.timestamp,
-                                source=result.source
+                                source=result.source,
                             )
 
                 except Exception as e:
@@ -216,7 +235,9 @@ class SearchTool(Tool):
 
         return enhanced_results
 
-    async def execute(self, query: str, max_results: int = 5, include_snippets: bool = True) -> ToolResult:
+    async def execute(
+        self, query: str, max_results: int = 5, include_snippets: bool = True
+    ) -> ToolResult:
         """Execute web search and return results."""
         try:
             # Try primary search method
@@ -230,7 +251,7 @@ class SearchTool(Tool):
                 return ToolResult(
                     success=False,
                     content="No search results found for the query.",
-                    metadata={"query": query, "results_count": 0}
+                    metadata={"query": query, "results_count": 0},
                 )
 
             # Enhance results with content if requested
@@ -245,7 +266,7 @@ class SearchTool(Tool):
                     "title": result.title,
                     "url": result.url,
                     "snippet": result.snippet,
-                    "source": result.source
+                    "source": result.source,
                 }
                 if result.timestamp:
                     formatted_result["timestamp"] = result.timestamp
@@ -257,7 +278,7 @@ class SearchTool(Tool):
             for result in formatted_results:
                 summary_lines.append(f"{result['rank']}. {result['title']}")
                 summary_lines.append(f"   URL: {result['url']}")
-                if result['snippet']:
+                if result["snippet"]:
                     summary_lines.append(f"   Summary: {result['snippet']}")
                 summary_lines.append("")
 
@@ -267,8 +288,8 @@ class SearchTool(Tool):
                 metadata={
                     "query": query,
                     "results_count": len(results),
-                    "results": formatted_results
-                }
+                    "results": formatted_results,
+                },
             )
 
         except Exception as e:
@@ -276,7 +297,7 @@ class SearchTool(Tool):
             return ToolResult(
                 success=False,
                 content=f"Search failed: {str(e)}",
-                metadata={"query": query, "error": str(e)}
+                metadata={"query": query, "error": str(e)},
             )
 
     async def cleanup(self):

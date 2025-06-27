@@ -953,7 +953,7 @@ Examples:
             ]:  # Limit to first 20
                 file_list = ", ".join(str(f.name) for f in files[:3])
                 if len(files) > 3:
-                    file_list += f" (+{len(files)-3} more)"
+                    file_list += f" (+{len(files) - 3} more)"
                 lines.append(f"  {symbol}: {file_list}")
             lines.append("")
 

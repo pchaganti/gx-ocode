@@ -17,7 +17,12 @@ try:
     from rich.table import Table
     from rich.text import Text
     from rich.theme import Theme
+
     RICH_AVAILABLE = True
+
+    # Import our theming components
+    from ..ui.components import StatusIndicator, ThemedPanel, ThemeSelector
+    from ..ui.theme import get_themed_console, theme_manager
 except ImportError:
     RICH_AVAILABLE = False
 
@@ -32,41 +37,49 @@ class OnboardingManager:
         if RICH_AVAILABLE:
             # Define themes
             self.themes = {
-                "default": Theme({
-                    "info": "cyan",
-                    "warning": "yellow",
-                    "error": "red",
-                    "success": "green",
-                    "accent": "magenta bold",
-                    "muted": "dim",
-                }),
-                "dark": Theme({
-                    "info": "bright_cyan",
-                    "warning": "bright_yellow",
-                    "error": "bright_red",
-                    "success": "bright_green",
-                    "accent": "bright_magenta bold",
-                    "muted": "bright_black",
-                }),
-                "light": Theme({
-                    "info": "blue",
-                    "warning": "orange3",
-                    "error": "red3",
-                    "success": "green3",
-                    "accent": "purple bold",
-                    "muted": "grey50",
-                }),
-                "minimal": Theme({
-                    "info": "default",
-                    "warning": "default",
-                    "error": "default",
-                    "success": "default",
-                    "accent": "bold",
-                    "muted": "dim",
-                })
+                "default": Theme(
+                    {
+                        "info": "cyan",
+                        "warning": "yellow",
+                        "error": "red",
+                        "success": "green",
+                        "accent": "magenta bold",
+                        "muted": "dim",
+                    }
+                ),
+                "dark": Theme(
+                    {
+                        "info": "bright_cyan",
+                        "warning": "bright_yellow",
+                        "error": "bright_red",
+                        "success": "bright_green",
+                        "accent": "bright_magenta bold",
+                        "muted": "bright_black",
+                    }
+                ),
+                "light": Theme(
+                    {
+                        "info": "blue",
+                        "warning": "orange3",
+                        "error": "red3",
+                        "success": "green3",
+                        "accent": "purple bold",
+                        "muted": "grey50",
+                    }
+                ),
+                "minimal": Theme(
+                    {
+                        "info": "default",
+                        "warning": "default",
+                        "error": "default",
+                        "success": "default",
+                        "accent": "bold",
+                        "muted": "dim",
+                    }
+                ),
             }
 
-            self.console = Console(theme=self.themes["default"])
+            self.console = get_themed_console()
         else:
             self.console = None
 
@@ -86,7 +99,9 @@ class OnboardingManager:
             print(text)
             print("=" * (len(title) + 8))
 
-    def prompt_choice(self, question: str, choices: List[str], default: Optional[str] = None) -> str:
+    def prompt_choice(
+        self, question: str, choices: List[str], default: Optional[str] = None
+    ) -> str:
         """Prompt user for choice with validation."""
         if RICH_AVAILABLE:
             return Prompt.ask(
@@ -94,7 +109,7 @@ class OnboardingManager:
                 choices=choices,
                 default=default,
                 show_choices=True,
-                show_default=True
+                show_default=True,
             )
         else:
             while True:
@@ -119,7 +134,7 @@ class OnboardingManager:
 
             if not response:
                 return default
-            return response in ['y', 'yes', 'true', '1']
+            return response in ["y", "yes", "true", "1"]
 
     def prompt_text(self, question: str, default: Optional[str] = None) -> str:
         """Prompt user for text input."""
@@ -152,11 +167,7 @@ Features you'll unlock:
 This quick setup will take just a few minutes.
         """.strip()
 
-        self.print_panel(
-            welcome_text,
-            title="🎉 Welcome to OCode",
-            style="accent"
-        )
+        self.print_panel(welcome_text, title="🎉 Welcome to OCode", style="accent")
 
     async def select_theme(self) -> str:
         """Let user select a color theme."""
@@ -165,42 +176,20 @@ This quick setup will take just a few minutes.
 
         self.print("\n🎨 Choose your color theme:", style="info")
 
-        # Show theme preview
-        table = Table(title="Theme Preview")
-        table.add_column("Theme", style="bold")
-        table.add_column("Description")
-        table.add_column("Preview")
+        # Use the new ThemeSelector for a better experience
+        selector = ThemeSelector(self.console)
+        selected = selector.select_theme()
 
-        theme_descriptions = {
-            "default": "Balanced colors for most terminals",
-            "dark": "Bright colors for dark backgrounds",
-            "light": "Muted colors for light backgrounds",
-            "minimal": "No colors, maximum compatibility"
-        }
-
-        for theme_name, description in theme_descriptions.items():
-            # Create a small preview
-            # preview_console = Console(theme=self.themes[theme_name], file=None)
-            preview = Text()
-            preview.append("Info ", style="info")
-            preview.append("Success ", style="success")
-            preview.append("Warning", style="warning")
-
-            table.add_row(theme_name.title(), description, preview)
-
-        self.console.print(table)
-
-        selected_theme = self.prompt_choice(
-            "\nWhich theme would you like to use?",
-            list(self.themes.keys()),
-            default="default"
-        )
-
-        # Apply selected theme
-        self.console = Console(theme=self.themes[selected_theme])
-
-        self.print(f"✓ Theme set to '{selected_theme}'", style="success")
-        return selected_theme
+        if selected:
+            # Apply the selected theme
+            theme_manager.set_active_theme(selected)
+            self.console = get_themed_console()
+            self.print("✓ Theme applied successfully", style="success")
+            return selected
+        else:
+            # Default fallback
+            self.print("Using default theme", style="info")
+            return "default_dark"
 
     async def configure_model(self) -> Dict[str, Any]:
         """Configure AI model settings."""
@@ -212,37 +201,45 @@ This quick setup will take just a few minutes.
         # Check for Ollama
         if shutil.which("ollama"):
             self.print("  ✓ Ollama detected", style="success")
-            model_configs.append({
-                "name": "ollama",
-                "display_name": "Ollama (Local)",
-                "description": "Use local Ollama models"
-            })
+            model_configs.append(
+                {
+                    "name": "ollama",
+                    "display_name": "Ollama (Local)",
+                    "description": "Use local Ollama models",
+                }
+            )
 
         # Check for OpenAI API key
         if os.getenv("OPENAI_API_KEY"):
             self.print("  ✓ OpenAI API key detected", style="success")
-            model_configs.append({
-                "name": "openai",
-                "display_name": "OpenAI",
-                "description": "Use OpenAI models (GPT-3.5, GPT-4)"
-            })
+            model_configs.append(
+                {
+                    "name": "openai",
+                    "display_name": "OpenAI",
+                    "description": "Use OpenAI models (GPT-3.5, GPT-4)",
+                }
+            )
 
         # Check for Anthropic API key
         if os.getenv("ANTHROPIC_API_KEY"):
             self.print("  ✓ Anthropic API key detected", style="success")
-            model_configs.append({
-                "name": "anthropic",
-                "display_name": "Anthropic",
-                "description": "Use Claude models"
-            })
+            model_configs.append(
+                {
+                    "name": "anthropic",
+                    "display_name": "Anthropic",
+                    "description": "Use Claude models",
+                }
+            )
 
         if not model_configs:
             self.print("  ⚠ No AI providers detected", style="warning")
-            model_configs.append({
-                "name": "manual",
-                "display_name": "Manual Setup",
-                "description": "Configure manually later"
-            })
+            model_configs.append(
+                {
+                    "name": "manual",
+                    "display_name": "Manual Setup",
+                    "description": "Configure manually later",
+                }
+            )
 
         # Let user choose
         if len(model_configs) == 1:
@@ -251,54 +248,67 @@ This quick setup will take just a few minutes.
         else:
             choices = [config["name"] for config in model_configs]
             choice = self.prompt_choice(
-                "Which AI provider would you like to use?",
-                choices,
-                default=choices[0]
+                "Which AI provider would you like to use?", choices, default=choices[0]
             )
-            selected = next(config for config in model_configs if config["name"] == choice)
+            selected = next(
+                config for config in model_configs if config["name"] == choice
+            )
 
         config = {"provider": selected["name"]}
 
         # Provider-specific configuration
         if selected["name"] == "ollama":
-            config.update({
-                "base_url": "http://localhost:11434",
-                "model": "llama3.1:8b",  # Default model
-                "timeout": 300
-            })
+            config.update(
+                {
+                    "base_url": "http://localhost:11434",
+                    "model": "llama3.1:8b",  # Default model
+                    "timeout": 300,
+                }
+            )
 
             # Check if we can connect to Ollama
             try:
                 import aiohttp
+
                 async with aiohttp.ClientSession() as session:
-                    async with session.get("http://localhost:11434/api/tags", timeout=5) as resp:
+                    async with session.get(
+                        "http://localhost:11434/api/tags", timeout=5
+                    ) as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             models = [model["name"] for model in data.get("models", [])]
                             if models:
-                                self.print(f"Available models: {', '.join(models[:3])}{'...' if len(models) > 3 else ''}", style="muted")
+                                self.print(
+                                    f"Available models: {', '.join(models[:3])}{'...' if len(models) > 3 else ''}",
+                                    style="muted",
+                                )
 
-                                if self.prompt_confirm(f"Use default model '{config['model']}'?", default=True):
+                                if self.prompt_confirm(
+                                    f"Use default model '{config['model']}'?",
+                                    default=True,
+                                ):
                                     pass  # Keep default
                                 else:
-                                    model = self.prompt_choice("Select model:", models, default=models[0])
+                                    model = self.prompt_choice(
+                                        "Select model:", models, default=models[0]
+                                    )
                                     config["model"] = model
             except Exception:
                 self.print("  ⚠ Could not connect to Ollama", style="warning")
 
         elif selected["name"] == "openai":
-            config.update({
-                "model": "gpt-3.5-turbo",
-                "max_tokens": 4000,
-                "temperature": 0.1
-            })
+            config.update(
+                {"model": "gpt-3.5-turbo", "max_tokens": 4000, "temperature": 0.1}
+            )
 
         elif selected["name"] == "anthropic":
-            config.update({
-                "model": "claude-3-haiku-20240307",
-                "max_tokens": 4000,
-                "temperature": 0.1
-            })
+            config.update(
+                {
+                    "model": "claude-3-haiku-20240307",
+                    "max_tokens": 4000,
+                    "temperature": 0.1,
+                }
+            )
 
         self.print("✓ Model configuration ready", style="success")
         return config
@@ -312,38 +322,30 @@ This quick setup will take just a few minutes.
         # Web search
         features["web_search"] = self.prompt_confirm(
             "Enable web search for grounding responses with current information?",
-            default=True
+            default=True,
         )
 
         # Session management
         features["session_management"] = self.prompt_confirm(
-            "Enable session management and checkpointing?",
-            default=True
+            "Enable session management and checkpointing?", default=True
         )
 
         # Auto-save interval
         if features["session_management"]:
             auto_save = self.prompt_confirm(
-                "Enable automatic session saving?",
-                default=True
+                "Enable automatic session saving?", default=True
             )
             features["auto_save"] = auto_save
 
             if auto_save:
-                interval = self.prompt_text(
-                    "Auto-save interval (minutes)",
-                    default="5"
-                )
+                interval = self.prompt_text("Auto-save interval (minutes)", default="5")
                 try:
                     features["auto_save_interval"] = int(interval)
                 except ValueError:
                     features["auto_save_interval"] = 5
 
         # Memory limits
-        memory_limit = self.prompt_text(
-            "Maximum context memory (MB)",
-            default="100"
-        )
+        memory_limit = self.prompt_text("Maximum context memory (MB)", default="100")
         try:
             features["memory_limit_mb"] = int(memory_limit)
         except ValueError:
@@ -351,8 +353,7 @@ This quick setup will take just a few minutes.
 
         # Git integration
         features["git_integration"] = self.prompt_confirm(
-            "Enable enhanced Git integration?",
-            default=True
+            "Enable enhanced Git integration?", default=True
         )
 
         self.print("✓ Features configured", style="success")
@@ -367,14 +368,18 @@ This quick setup will take just a few minutes.
         # Safe mode
         security["safe_mode"] = self.prompt_confirm(
             "Enable safe mode (requires confirmation for file operations)?",
-            default=True
+            default=True,
         )
 
         # Allowed directories
-        if self.prompt_confirm("Restrict file access to specific directories?", default=False):
+        if self.prompt_confirm(
+            "Restrict file access to specific directories?", default=False
+        ):
             allowed_dirs = []
             while True:
-                dir_path = self.prompt_text("Enter allowed directory path (empty to finish):")
+                dir_path = self.prompt_text(
+                    "Enter allowed directory path (empty to finish):"
+                )
                 if not dir_path:
                     break
 
@@ -389,8 +394,7 @@ This quick setup will take just a few minutes.
 
         # Command restrictions
         security["restrict_commands"] = self.prompt_confirm(
-            "Restrict dangerous shell commands?",
-            default=True
+            "Restrict dangerous shell commands?", default=True
         )
 
         self.print("✓ Security settings configured", style="success")
@@ -404,7 +408,7 @@ This quick setup will take just a few minutes.
         config["_meta"] = {
             "created": asyncio.get_event_loop().time(),
             "version": "1.0.0",
-            "onboarding_completed": True
+            "onboarding_completed": True,
         }
 
         try:
@@ -451,11 +455,7 @@ Now that OCode is configured, here are some things to try:
 💡 Pro tip: Start conversations with context about what you're working on!
         """.strip()
 
-        self.print_panel(
-            quick_start,
-            title="🚀 You're all set!",
-            style="success"
-        )
+        self.print_panel(quick_start, title="🚀 You're all set!", style="success")
 
     async def run_onboarding(self) -> Dict[str, Any]:
         """Run the complete onboarding flow."""
@@ -465,8 +465,12 @@ Now that OCode is configured, here are some things to try:
             # Welcome
             await self.welcome_screen()
 
-            if not self.prompt_confirm("\nWould you like to run the setup wizard?", default=True):
-                self.print("Skipping setup. You can run 'ocode --setup' later.", style="muted")
+            if not self.prompt_confirm(
+                "\nWould you like to run the setup wizard?", default=True
+            ):
+                self.print(
+                    "Skipping setup. You can run 'ocode --setup' later.", style="muted"
+                )
                 return {}
 
             # Theme selection
@@ -492,7 +496,9 @@ Now that OCode is configured, here are some things to try:
             return config
 
         except KeyboardInterrupt:
-            self.print("\n\nSetup cancelled. You can run 'ocode --setup' later.", style="muted")
+            self.print(
+                "\n\nSetup cancelled. You can run 'ocode --setup' later.", style="muted"
+            )
             return {}
         except Exception as e:
             self.print(f"\n✗ Setup failed: {e}", style="error")

@@ -22,14 +22,16 @@ from typing import Optional
 import click
 from rich.console import Console
 
+from ..ui.components import StatusIndicator, ThemedPanel
+from ..ui.theme import get_themed_console
 from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
 from ..utils.onboarding import OnboardingManager
 from .engine import OCodeEngine
 
-# Global console instance for rich terminal output
+# Global console instance for rich terminal output with theming
 # Used throughout the CLI for consistent formatting and colors
-console = Console()
+console = get_themed_console()
 
 
 async def run_setup_wizard():
@@ -523,6 +525,84 @@ def config(get: Optional[str], set: Optional[str], list: bool):
         console.print("Use --help for available options")
 
 
+@cli.command()
+@click.option("--list", is_flag=True, help="List available themes")
+@click.option("--set", metavar="THEME", help="Set active theme")
+@click.option("--preview", metavar="THEME", help="Preview a theme")
+@click.option("--current", is_flag=True, help="Show current theme")
+def theme(list: bool, set: Optional[str], preview: Optional[str], current: bool):
+    """Manage UI themes and color schemes."""
+    from rich.table import Table
+
+    from ..ui.components import ThemeSelector
+    from ..ui.theme import theme_manager
+
+    if list:
+        themes = theme_manager.list_themes()
+
+        if not themes:
+            console.print("[dim]No themes available[/dim]")
+            return
+
+        table = Table(title="Available Themes")
+        table.add_column("Name", style="primary")
+        table.add_column("Type", style="secondary")
+        table.add_column("Description", style="default")
+
+        for theme in themes:
+            type_icon = {
+                "dark": "🌙",
+                "light": "☀️",
+                "high_contrast": "🔍",
+                "minimal": "⚡",
+            }.get(theme.type.value, "🎨")
+
+            table.add_row(
+                theme.name, f"{type_icon} {theme.type.value.title()}", theme.description
+            )
+
+        console.print(table)
+
+        # Show current active theme
+        active = theme_manager.get_active_theme()
+        console.print(f"\n[dim]Current theme:[/dim] [bold]{active.name}[/bold]")
+
+    elif set:
+        if theme_manager.set_active_theme(set):
+            console.print(f"[green]✓[/green] Theme set to: [bold]{set}[/bold]")
+            console.print("[dim]Restart OCode to see the new theme in effect[/dim]")
+        else:
+            console.print(f"[red]✗[/red] Theme '{set}' not found")
+            console.print("[dim]Use 'ocode theme --list' to see available themes[/dim]")
+
+    elif preview:
+        selector = ThemeSelector(console)
+        selector.show_theme_preview(preview)
+
+    elif current:
+        active = theme_manager.get_active_theme()
+        console.print(
+            ThemedPanel.info(
+                f"Name: {active.name}\n"
+                f"Type: {active.type.value.title()}\n"
+                f"Description: {active.description}",
+                title="Current Theme",
+            )
+        )
+
+    else:
+        # Interactive theme selection
+        selector = ThemeSelector(console)
+        selected = selector.select_theme()
+
+        if selected:
+            theme_manager.set_active_theme(selected)
+            console.print(
+                f"\n[green]✓[/green] Theme changed to: [bold]{selected}[/bold]"
+            )
+            console.print("[dim]Restart OCode to see the new theme in effect[/dim]")
+
+
 async def handle_single_prompt(prompt: str, options: dict):
     """Handle single prompt in non-interactive mode.
 
@@ -583,10 +663,15 @@ async def interactive_mode(options: dict):
     from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
     from prompt_toolkit.history import FileHistory
 
-    console.print("[bold blue]OCode[/bold blue] - AI Coding Assistant")
-    console.print(f"Model: [cyan]{options['model']}[/cyan]")
-    console.print("Type [bold]/help[/bold] for commands or [bold]/exit[/bold] to quit")
-    console.print("Type [bold]/continue[/bold] to continue from previous response\n")
+    # Welcome banner with themed styling
+    welcome_panel = ThemedPanel.info(
+        f"Model: {options['model']}\n"
+        "Type /help for commands or /exit to quit\n"
+        "Type /continue to continue from previous response",
+        title="🤖 OCode - AI Coding Assistant",
+    )
+    console.print(welcome_panel)
+    console.print()
 
     # Create prompt session with history
     history_file = Path.home() / ".ocode" / "history"
@@ -617,6 +702,9 @@ async def interactive_mode(options: dict):
 
                 if prompt.strip() in ["/exit", "/quit", "/q"]:
                     break
+                elif prompt.strip() == "/help":
+                    show_help()
+                    continue
                 elif prompt.strip() == "/continue":
                     if not engine.current_response:
                         console.print(
@@ -660,15 +748,20 @@ async def interactive_mode(options: dict):
 
 
 @cli.command()
-@click.option("--action", type=click.Choice(["list", "load", "delete", "cleanup"]),
-              default="list", help="Session action to perform")
+@click.option(
+    "--action",
+    type=click.Choice(["list", "load", "delete", "cleanup"]),
+    default="list",
+    help="Session action to perform",
+)
 @click.option("--session-id", help="Session ID for load/delete operations")
 @click.option("--days", type=int, default=30, help="Days for cleanup operation")
 def sessions(action: str, session_id: Optional[str], days: int):
     """Manage conversation sessions and checkpoints."""
-    from ..core.session import SessionManager
-    from ..core.checkpoint import CheckpointManager
     from rich.table import Table
+
+    from ..core.checkpoint import CheckpointManager
+    from ..core.session import SessionManager
 
     session_manager = SessionManager()
     checkpoint_manager = CheckpointManager()
@@ -689,14 +782,19 @@ def sessions(action: str, session_id: Optional[str], days: int):
 
         for session in sessions:
             import time
-            created = time.strftime('%Y-%m-%d %H:%M', time.localtime(session['created_at']))
-            preview = session.get('preview', '')[:50] + ('...' if len(session.get('preview', '')) > 50 else '')
+
+            created = time.strftime(
+                "%Y-%m-%d %H:%M", time.localtime(session["created_at"])
+            )
+            preview = session.get("preview", "")[:50] + (
+                "..." if len(session.get("preview", "")) > 50 else ""
+            )
 
             table.add_row(
-                session['id'][:8] + "...",
+                session["id"][:8] + "...",
                 created,
-                str(session['message_count']),
-                preview
+                str(session["message_count"]),
+                preview,
             )
 
         console.print(table)
@@ -714,13 +812,17 @@ def sessions(action: str, session_id: Optional[str], days: int):
 
             for checkpoint in checkpoints:
                 import time as time_module
-                created = time_module.strftime('%Y-%m-%d %H:%M', time_module.localtime(checkpoint['timestamp']))
+
+                created = time_module.strftime(
+                    "%Y-%m-%d %H:%M", time_module.localtime(checkpoint["timestamp"])
+                )
 
                 checkpoint_table.add_row(
-                    checkpoint['id'][:8] + "...",
-                    checkpoint['session_id'][:8] + "...",
+                    checkpoint["id"][:8] + "...",
+                    checkpoint["session_id"][:8] + "...",
                     created,
-                    checkpoint.get('description', '')[:40] + ('...' if len(checkpoint.get('description', '')) > 40 else '')
+                    checkpoint.get("description", "")[:40]
+                    + ("..." if len(checkpoint.get("description", "")) > 40 else ""),
                 )
 
             console.print(checkpoint_table)
@@ -735,13 +837,19 @@ def sessions(action: str, session_id: Optional[str], days: int):
             console.print(f"[red]Error:[/red] Session {session_id} not found")
             return
 
-        console.print(f"[green]✓[/green] Session loaded: {len(session.messages)} messages")
+        console.print(
+            f"[green]✓[/green] Session loaded: {len(session.messages)} messages"
+        )
 
         # Show recent messages
-        recent = session.messages[-3:] if len(session.messages) > 3 else session.messages
+        recent = (
+            session.messages[-3:] if len(session.messages) > 3 else session.messages
+        )
         for msg in recent:
             role_icon = "👤" if msg.role == "user" else "🤖"
-            content = msg.content[:100] + "..." if len(msg.content) > 100 else msg.content
+            content = (
+                msg.content[:100] + "..." if len(msg.content) > 100 else msg.content
+            )
             console.print(f"{role_icon} [bold]{msg.role}:[/bold] {content}")
 
     elif action == "delete":
@@ -758,7 +866,9 @@ def sessions(action: str, session_id: Optional[str], days: int):
 
     elif action == "cleanup":
         sessions_deleted = asyncio.run(session_manager.cleanup_old_sessions(days))
-        checkpoints_deleted = asyncio.run(checkpoint_manager.cleanup_old_checkpoints(days))
+        checkpoints_deleted = asyncio.run(
+            checkpoint_manager.cleanup_old_checkpoints(days)
+        )
 
         console.print("[green]✓[/green] Cleanup completed:")
         console.print(f"  Sessions deleted: {sessions_deleted}")
@@ -770,35 +880,49 @@ def show_help():
 
     Displays available commands and usage tips for the interactive mode.
     """
-    console.print(
-        """
-[bold]Available Commands:[/bold]
-  /help     - Show this help message
-  /exit     - Exit OCode
-  /quit     - Exit OCode
-  /q        - Exit OCode
-  /continue - Continue from previous response
-
-[bold]Session Management:[/bold]
-  Use the session_manager tool to save, load, and manage conversations:
-  - "Save this conversation as a checkpoint"
-  - "Resume from my last session"
-  - "Create a checkpoint before trying this approach"
-
-[bold]Web Search:[/bold]
-  Ask questions that require current information:
-  - "Search for the latest Python security best practices"
-  - "What's new in the latest React version?"
-
-[bold]Tips:[/bold]
-  - Use /continue to continue from a truncated response
-  - Press Ctrl+C to interrupt the current response
-  - Use --verbose for detailed logging
-  - Use --out json for JSON output format
-  - Try 'ocode sessions' to manage saved conversations
-  - Run 'ocode --setup' to configure your preferences
-"""
+    # Commands panel
+    commands_panel = ThemedPanel.info(
+        "/help     - Show this help message\n"
+        "/exit     - Exit OCode\n"
+        "/quit     - Exit OCode\n"
+        "/q        - Exit OCode\n"
+        "/continue - Continue from previous response",
+        title="📋 Available Commands",
     )
+
+    # Session management panel
+    session_panel = ThemedPanel.info(
+        "Use the session_manager tool to save, load, and manage conversations:\n"
+        '• "Save this conversation as a checkpoint"\n'
+        '• "Resume from my last session"\n'
+        '• "Create a checkpoint before trying this approach"',
+        title="💾 Session Management",
+    )
+
+    # Web search panel
+    search_panel = ThemedPanel.info(
+        "Ask questions that require current information:\n"
+        '• "Search for the latest Python security best practices"\n'
+        '• "What\'s new in the latest React version?"',
+        title="🔍 Web Search",
+    )
+
+    # Tips panel
+    tips_panel = ThemedPanel.info(
+        "• Use /continue to continue from a truncated response\n"
+        "• Press Ctrl+C to interrupt the current response\n"
+        "• Use --verbose for detailed logging\n"
+        "• Use --out json for JSON output format\n"
+        "• Try 'ocode sessions' to manage saved conversations\n"
+        "• Run 'ocode --setup' to configure your preferences\n"
+        "• Use 'ocode theme' to change color schemes",
+        title="💡 Tips & Tricks",
+    )
+
+    console.print(commands_panel)
+    console.print(session_panel)
+    console.print(search_panel)
+    console.print(tips_panel)
 
 
 def main():

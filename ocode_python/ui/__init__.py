@@ -2,12 +2,18 @@
 UI components and theming system for OCode.
 """
 
-from .theme import Theme, ThemeManager, create_default_themes
 from .components import (
-    ThemedPanel, ThemedTable, ThemedSyntax, StatusIndicator,
-    ThemedProgress, ConversationRenderer, ThemeSelector,
-    LoadingSpinner, ConfirmationDialog
+    ConfirmationDialog,
+    ConversationRenderer,
+    LoadingSpinner,
+    StatusIndicator,
+    ThemedPanel,
+    ThemedProgress,
+    ThemedSyntax,
+    ThemedTable,
+    ThemeSelector,
 )
+from .theme import Theme, ThemeManager, create_default_themes
 
 __all__ = [
     "Theme",
@@ -21,5 +27,5 @@ __all__ = [
     "ConversationRenderer",
     "ThemeSelector",
     "LoadingSpinner",
-    "ConfirmationDialog"
+    "ConfirmationDialog",
 ]

@@ -39,7 +39,7 @@ class Checkpoint:
             "execution_state": self.execution_state,
             "tags": list(self.tags) if self.tags else [],
             "description": self.description,
-            "metadata": self.metadata or {}
+            "metadata": self.metadata or {},
         }
 
         # Custom serialization for context
@@ -101,7 +101,7 @@ class Checkpoint:
             execution_state=data.get("execution_state"),
             tags=set(data.get("tags", [])),
             description=data.get("description"),
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
         )
 
 
@@ -138,7 +138,7 @@ class CheckpointManager:
         execution_state: Optional[Dict[str, Any]] = None,
         tags: Optional[Set[str]] = None,
         description: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Create a new checkpoint.
 
@@ -167,7 +167,7 @@ class CheckpointManager:
             execution_state=execution_state,
             tags=tags or set(),
             description=description,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         # Save checkpoint
@@ -222,7 +222,7 @@ class CheckpointManager:
         self,
         session_id: Optional[str] = None,
         tags: Optional[Set[str]] = None,
-        limit: int = 50
+        limit: int = 50,
     ) -> List[Dict[str, Any]]:
         """List checkpoints with optional filtering.
 
@@ -264,7 +264,7 @@ class CheckpointManager:
                     "has_execution_state": bool(data.get("execution_state")),
                     "tags": data.get("tags", []),
                     "description": data.get("description"),
-                    "metadata": data.get("metadata", {})
+                    "metadata": data.get("metadata", {}),
                 }
 
                 # Add message preview
@@ -288,9 +288,7 @@ class CheckpointManager:
         return checkpoints
 
     async def resume_from_checkpoint(
-        self,
-        checkpoint_id: str,
-        session_manager: SessionManager
+        self, checkpoint_id: str, session_manager: SessionManager
     ) -> Optional[Tuple[Session, Dict[str, Any]]]:
         """Resume conversation from a checkpoint.
 
@@ -313,8 +311,8 @@ class CheckpointManager:
                 "resumed_from_checkpoint": checkpoint_id,
                 "original_session": checkpoint.session_id,
                 "checkpoint_timestamp": checkpoint.timestamp,
-                **(checkpoint.metadata or {})
-            }
+                **(checkpoint.metadata or {}),
+            },
         )
 
         # Return session and execution state for restoration
@@ -325,7 +323,7 @@ class CheckpointManager:
         checkpoint_id: str,
         new_messages: List[Message],
         session_manager: SessionManager,
-        branch_description: Optional[str] = None
+        branch_description: Optional[str] = None,
     ) -> Optional[Session]:
         """Create a new conversation branch from a checkpoint.
 
@@ -354,8 +352,8 @@ class CheckpointManager:
                 "original_session": checkpoint.session_id,
                 "branch_description": branch_description,
                 "branch_timestamp": time.time(),
-                **(checkpoint.metadata or {})
-            }
+                **(checkpoint.metadata or {}),
+            },
         )
 
         return branch_session
@@ -366,7 +364,7 @@ class CheckpointManager:
         messages: List[Message],
         context: Optional[ProjectContext] = None,
         execution_state: Optional[Dict[str, Any]] = None,
-        interval_messages: int = 10
+        interval_messages: int = 10,
     ) -> Optional[str]:
         """Automatically create checkpoints based on message intervals.
 
@@ -387,7 +385,7 @@ class CheckpointManager:
                 context=context,
                 execution_state=execution_state,
                 tags={"auto"},
-                description=f"Auto-checkpoint at {len(messages)} messages"
+                description=f"Auto-checkpoint at {len(messages)} messages",
             )
         return None
 
@@ -445,7 +443,9 @@ class CheckpointManager:
 
 
 # Utility functions
-async def export_checkpoint_to_markdown(checkpoint: Checkpoint, output_file: Path) -> None:
+async def export_checkpoint_to_markdown(
+    checkpoint: Checkpoint, output_file: Path
+) -> None:
     """Export checkpoint to markdown format.
 
     Args:
@@ -467,34 +467,35 @@ async def export_checkpoint_to_markdown(checkpoint: Checkpoint, output_file: Pat
 
     # Add context information
     if checkpoint.context:
-        lines.extend([
-            "## Project Context",
-            f"Root: {checkpoint.context.project_root}",
-            f"Files: {len(checkpoint.context.files)}",
-            ""
-        ])
+        lines.extend(
+            [
+                "## Project Context",
+                f"Root: {checkpoint.context.project_root}",
+                f"Files: {len(checkpoint.context.files)}",
+                "",
+            ]
+        )
 
     # Add execution state
     if checkpoint.execution_state:
-        lines.extend([
-            "## Execution State",
-            "```json",
-            json.dumps(checkpoint.execution_state, indent=2),
-            "```",
-            ""
-        ])
+        lines.extend(
+            [
+                "## Execution State",
+                "```json",
+                json.dumps(checkpoint.execution_state, indent=2),
+                "```",
+                "",
+            ]
+        )
 
     # Add conversation
     lines.extend(["## Conversation", ""])
 
     for i, message in enumerate(checkpoint.messages):
         role_icon = "👤" if message.role == "user" else "🤖"
-        lines.extend([
-            f"### {role_icon} {message.role.title()} {i + 1}",
-            "",
-            message.content,
-            ""
-        ])
+        lines.extend(
+            [f"### {role_icon} {message.role.title()} {i + 1}", "", message.content, ""]
+        )
 
     # Write to file
     with open(output_file, "w", encoding="utf-8") as f:
@@ -509,7 +510,9 @@ async def main() -> None:
     # Create test session
     messages = [
         Message("user", "Hello, can you help me refactor this function?"),
-        Message("assistant", "Of course! Please share the function you'd like to refactor."),
+        Message(
+            "assistant", "Of course! Please share the function you'd like to refactor."
+        ),
         Message("user", "Here's the function: def complex_function()..."),
     ]
 
@@ -521,7 +524,7 @@ async def main() -> None:
         session_id=session_id,
         messages=messages,
         tags={"refactoring", "function"},
-        description="Before starting function refactoring"
+        description="Before starting function refactoring",
     )
     print(f"Created checkpoint: {checkpoint_id}")
 
@@ -530,7 +533,9 @@ async def main() -> None:
     messages.append(Message("user", "Actually, let me try a different approach"))
 
     # Resume from checkpoint to try different approach
-    result = await checkpoint_manager.resume_from_checkpoint(checkpoint_id, session_manager)
+    result = await checkpoint_manager.resume_from_checkpoint(
+        checkpoint_id, session_manager
+    )
     if result:
         resumed_session, exec_state = result
         print(f"Resumed conversation in new session: {resumed_session.id}")

@@ -434,7 +434,7 @@ async def export_session_to_markdown(session: Session, output_file: Path) -> Non
     for i, message in enumerate(session.messages):
         role_icon = "👤" if message.role == "user" else "🤖"
         lines.extend(
-            [f"### {role_icon} {message.role.title()} {i+1}", "", message.content, ""]
+            [f"### {role_icon} {message.role.title()} {i + 1}", "", message.content, ""]
         )
 
     # Write to file
