@@ -457,9 +457,13 @@ class OCodeEngine:
         # Knowledge patterns - these typically don't need tools
         knowledge_patterns = [
             r"\bwhat\s+is\b",
+            r"\bwhat\s+does\b",
+            r"\bwhat\s+are\b",
+            r"\bwhat'?s\b",
             r"\bexplain\b",
             r"\bhow\s+does\b",
             r"\bhow\s+(would|do|can)\s+i\b",  # Hypothetical/instructional
+            r"\bhow\s+do\s+you\s+implement\b",  # Implementation questions
             r"\bwhy\b",
             r"\bwhen\s+should\b",
             r"\bcompare\b",
@@ -490,6 +494,8 @@ class OCodeEngine:
             r"\bmodify\b.*\bfile\b",
             r"\bdelete\b.*\bfile\b",
             r"\bremove\b.*\bfile\b",
+            r"\bdelete\b.*\bold\s+files\b",
+            r"\bremove\b.*\bold\s+files\b",
             r"\bcopy\b.*\bfile\b",
             r"\bmove\b.*\bfile\b",
             r"\bfind\b.*\b(file|files|python|js|java)\b",
@@ -511,9 +517,15 @@ class OCodeEngine:
             r"\bgit\s+log\b",
             r"\bgit\s+push\b",
             r"\bgit\s+pull\b",
+            r"\bpush\b.*\b(to\s+)?remote\b",
+            r"\bpull\b.*\b(latest\s+)?changes\b",
             r"\bcommit\b.*\b(changes|my|the)\b",
             # System operations
             r"\brun\b.*\bcommand\b",
+            r"\brun\b.*\btests?\b",
+            r"\brun\b.*\btest\s+suite\b",
+            r"\brun\b.*\bpytest\b",
+            r"\brun\b.*\bbuild\b",
             r"\bexecute\b",
             r"\bbash\b",
             r"\bshell\b",
@@ -525,6 +537,7 @@ class OCodeEngine:
             # Memory operations
             r"\bremember\b",
             r"\bstore\b.*\binformation\b",
+            r"\bstore\b.*\b(user\s+)?preferences\b",
             r"\bsave\b.*\bfor\s+later\b",
             r"\brecall\b",
             r"\bretrieve\b.*\bmemory\b",
@@ -549,8 +562,15 @@ class OCodeEngine:
         for pattern in knowledge_patterns:
             if re.search(pattern, query_lower):
                 # But check if it's asking about a specific file/project
-                if re.search(
-                    r"\b(this|current|my)\s+(file|project|code|codebase)\b", query_lower
+                if (
+                    re.search(
+                        r"\b(this|current|my)\s+(file|project|code|codebase)\b",
+                        query_lower,
+                    )
+                    or re.search(r"\bthis\s+code\b", query_lower)
+                    or re.search(r"\bwhat\s+are\s+the\s+(files|contents)", query_lower)
+                    or re.search(r"\bwhat'?s\s+in\s+(this|the|my|src)", query_lower)
+                    or re.search(r"\bwhat'?s\s+in\s+.*\bfile\b", query_lower)
                 ):
                     return True  # Needs tools to analyze specific code
                 return False
@@ -1320,27 +1340,33 @@ When a user asks you to perform an action, call the appropriate function."""
 
             if self.verbose:
                 print(f"🤖 LLM Analysis: {llm_analysis.get('reasoning', '')}")
-                if llm_analysis.get("suggested_tools"):
-                    tools = ", ".join(llm_analysis["suggested_tools"])
-                    print(f"🔧 Suggested tools: {tools}")
+                suggested_tools = llm_analysis.get("suggested_tools")
+                if suggested_tools and isinstance(suggested_tools, list):
+                    tools_str = ", ".join(suggested_tools)
+                    print(f"🔧 Suggested tools: {tools_str}")
 
             # Prepare messages for API
             messages = self._prepare_messages(query, context, llm_analysis)
 
             # Add tools to request if tools should be used
-            tools = None
+            tools: Optional[List[Dict[str, Any]]] = None
             if llm_analysis.get("should_use_tools", False):
                 use_simple_context = self._should_use_simple_context(
                     query, llm_analysis
                 )
-                if use_simple_context and llm_analysis.get("suggested_tools"):
-                    # For simple context, only include suggested tools to avoid confusion # noqa: E501
-                    suggested_tool_names = llm_analysis.get("suggested_tools", [])
+                suggested_tools_list = llm_analysis.get("suggested_tools")
+                if (
+                    use_simple_context
+                    and suggested_tools_list
+                    and isinstance(suggested_tools_list, list)
+                ):
+                    # For simple context, only include suggested tools to avoid confusion
                     tools = []
-                    for tool_name in suggested_tool_names:
-                        tool = self.tool_registry.get_tool(tool_name)
-                        if tool:
-                            tools.append(tool.definition.to_ollama_format())
+                    for tool_name in suggested_tools_list:
+                        if isinstance(tool_name, str):
+                            tool = self.tool_registry.get_tool(tool_name)
+                            if tool:
+                                tools.append(tool.definition.to_ollama_format())
                 else:
                     # For complex context, include all tools
                     tools = self.tool_registry.get_tool_definitions()
