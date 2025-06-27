@@ -6,22 +6,18 @@ import asyncio
 import json
 import os
 import shutil
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 try:
-    from rich.console import Console
     from rich.panel import Panel
     from rich.prompt import Confirm, Prompt
-    from rich.table import Table
-    from rich.text import Text
     from rich.theme import Theme
 
     RICH_AVAILABLE = True
 
     # Import our theming components
-    from ..ui.components import StatusIndicator, ThemedPanel, ThemeSelector
+    from ..ui.components import ThemeSelector
     from ..ui.theme import get_themed_console, theme_manager
 except ImportError:
     RICH_AVAILABLE = False
@@ -279,7 +275,9 @@ This quick setup will take just a few minutes.
                             models = [model["name"] for model in data.get("models", [])]
                             if models:
                                 self.print(
-                                    f"Available models: {', '.join(models[:3])}{'...' if len(models) > 3 else ''}",
+                                    f"Available models: "
+                                    f"{', '.join(models[:3])}"
+                                    f"{'...' if len(models) > 3 else ''}",
                                     style="muted",
                                 )
 

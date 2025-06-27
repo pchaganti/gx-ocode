@@ -3,12 +3,9 @@ Enhanced UI components for OCode with theming support.
 """
 
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
-from rich.align import Align
-from rich.columns import Columns
 from rich.console import Console
-from rich.layout import Layout
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -297,7 +294,9 @@ class ThemeSelector:
 
         preview_content.append(
             ThemedPanel.info(
-                f"Theme: {theme.name}\nType: {theme.type.value}\nDescription: {theme.description}",
+                f"Theme: {theme.name}\n"
+                f"Type: {theme.type.value}\n"
+                f"Description: {theme.description}",
                 title="Theme Info",
             )
         )

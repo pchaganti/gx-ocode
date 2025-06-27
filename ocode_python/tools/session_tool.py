@@ -2,9 +2,8 @@
 Session and checkpoint management tool for interactive conversation control.
 """
 
-import json
 import time
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from ..core.checkpoint import CheckpointManager
 from ..core.session import SessionManager, export_session_to_markdown
@@ -23,7 +22,10 @@ class SessionTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="session_manager",
-            description="Manage conversation sessions and checkpoints - save, load, resume, and branch conversations",
+            description=(
+                "Manage conversation sessions and checkpoints - save, load, "
+                "resume, and branch conversations"
+            ),
             parameters={
                 "type": "object",
                 "properties": {
@@ -184,7 +186,9 @@ class SessionTool(Tool):
                     role_icon = "👤" if msg.role == "user" else "🤖"
                     lines.extend(
                         [
-                            f"**{role_icon} {msg.role.title()}:** {msg.content[:100]}{'...' if len(msg.content) > 100 else ''}",
+                            f"**{role_icon} {msg.role.title()}:** "
+                            f"{msg.content[:100]}"
+                            f"{'...' if len(msg.content) > 100 else ''}",
                             "",
                         ]
                     )
@@ -295,7 +299,8 @@ class SessionTool(Tool):
 
                         if checkpoint.get("last_message_preview"):
                             lines.append(
-                                f"**Last Message:** {checkpoint['last_message_preview']}"
+                                f"**Last Message:** "
+                                f"{checkpoint['last_message_preview']}"
                             )
 
                         lines.append("")
@@ -350,7 +355,8 @@ class SessionTool(Tool):
                 # For branching, we'll create an empty branch that can be continued
                 branch_session = await self.checkpoint_manager.branch_from_checkpoint(
                     checkpoint_id=checkpoint_id,
-                    new_messages=[],  # Empty - will be filled by subsequent conversation
+                    # Empty - will be filled by subsequent conversation
+                    new_messages=[],
                     session_manager=self.session_manager,
                     branch_description=description,
                 )
@@ -358,7 +364,10 @@ class SessionTool(Tool):
                 if not branch_session:
                     return ToolResult(
                         success=False,
-                        content=f"Failed to create branch from checkpoint {checkpoint_id}",
+                        content=(
+                            f"Failed to create branch from checkpoint "
+                            f"{checkpoint_id}"
+                        ),
                     )
 
                 return ToolResult(
@@ -398,7 +407,10 @@ class SessionTool(Tool):
 
                 return ToolResult(
                     success=True,
-                    content=f"Cleanup completed: {sessions_deleted} sessions and {checkpoints_deleted} checkpoints deleted",
+                    content=(
+                        f"Cleanup completed: {sessions_deleted} sessions and "
+                        f"{checkpoints_deleted} checkpoints deleted"
+                    ),
                     metadata={
                         "sessions_deleted": sessions_deleted,
                         "checkpoints_deleted": checkpoints_deleted,

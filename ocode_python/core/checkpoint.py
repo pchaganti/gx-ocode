@@ -282,7 +282,8 @@ class CheckpointManager:
                 if len(checkpoints) >= limit:
                     break
 
-            except Exception:
+            except Exception:  # nosec B112
+                # Skip corrupted checkpoint files
                 continue
 
         return checkpoints
@@ -436,7 +437,8 @@ class CheckpointManager:
                     if checkpoint_id in self._checkpoint_cache:
                         del self._checkpoint_cache[checkpoint_id]
 
-            except Exception:
+            except Exception:  # nosec B112
+                # Skip unreadable checkpoint files during cleanup
                 continue
 
         return deleted_count
@@ -455,7 +457,8 @@ async def export_checkpoint_to_markdown(
     lines = [
         f"# OCode Checkpoint: {checkpoint.id}",
         f"Session: {checkpoint.session_id}",
-        f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(checkpoint.timestamp))}",
+        f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', "
+        f"time.localtime(checkpoint.timestamp))}",
         "",
     ]
 

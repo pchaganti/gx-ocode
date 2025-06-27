@@ -20,9 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
-from rich.console import Console
-
-from ..ui.components import StatusIndicator, ThemedPanel
+from ..ui.components import ThemedPanel
 from ..ui.theme import get_themed_console
 from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
@@ -192,7 +190,8 @@ def cli(
     if not config_file.exists() and ctx.invoked_subcommand is None:
         # First run - offer onboarding
         console.print(
-            "[cyan]🎉 Welcome to OCode![/cyan] It looks like this is your first time here.\n"
+            "[cyan]🎉 Welcome to OCode![/cyan] "
+            "It looks like this is your first time here.\n"
         )
 
         if click.confirm("Would you like to run the setup wizard?", default=True):

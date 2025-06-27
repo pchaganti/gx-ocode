@@ -3,11 +3,9 @@ Web search tool for grounding AI responses with current information.
 Provides access to real-time web search results for enhanced context.
 """
 
-import asyncio
-import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from urllib.parse import quote_plus
 
 import aiohttp
@@ -40,7 +38,10 @@ class SearchTool(Tool):
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="web_search",
-            description="Search the web for current information to enhance responses with real-time data",
+            description=(
+                "Search the web for current information to enhance responses "
+                "with real-time data"
+            ),
             parameters={
                 "type": "object",
                 "properties": {
@@ -68,7 +69,10 @@ class SearchTool(Tool):
         if self._session is None or self._session.closed:
             headers = {
                 "User-Agent": "OCode-CLI/1.0 (Web Search Tool)",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept": (
+                    "text/html,application/xhtml+xml,application/xml;"
+                    "q=0.9,*/*;q=0.8"
+                ),
                 "Accept-Language": "en-US,en;q=0.5",
                 "Accept-Encoding": "gzip, deflate",
                 "Connection": "keep-alive",
