@@ -1284,7 +1284,7 @@ When a user asks you to perform an action, call the appropriate function."""
             if heuristic_result is not None:
                 # Heuristic gave definitive answer
                 if self.verbose:
-                    decision = 'Use tools' if heuristic_result else 'Knowledge response'
+                    decision = "Use tools" if heuristic_result else "Knowledge response"
                 print(f"⚡ Heuristic decision: {decision}")
 
                 # Create analysis result matching LLM format
@@ -1300,7 +1300,9 @@ When a user asks you to perform an action, call the appropriate function."""
                 import logging
 
                 query_preview = f"{query[:100]}..."
-                logging.info(f"Heuristic tool decision: {query_preview} -> {heuristic_result}")
+                logging.info(
+                    f"Heuristic tool decision: {query_preview} -> {heuristic_result}"
+                )
             else:
                 # Heuristic uncertain, fall back to LLM
                 if self.verbose:
@@ -1313,13 +1315,13 @@ When a user asks you to perform an action, call the appropriate function."""
                 import logging
 
                 query_preview = f"{query[:100]}..."
-                should_use = llm_analysis.get('should_use_tools')
+                should_use = llm_analysis.get("should_use_tools")
                 logging.info(f"LLM fallback: {query_preview} -> {should_use}")
 
             if self.verbose:
                 print(f"🤖 LLM Analysis: {llm_analysis.get('reasoning', '')}")
                 if llm_analysis.get("suggested_tools"):
-                    tools = ', '.join(llm_analysis['suggested_tools'])
+                    tools = ", ".join(llm_analysis["suggested_tools"])
                     print(f"🔧 Suggested tools: {tools}")
 
             # Prepare messages for API

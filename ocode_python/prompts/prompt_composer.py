@@ -104,9 +104,9 @@ class PromptComposer:
         return content
 
     def _determine_components_to_include(
-        self, 
-        include_components: Optional[Set[str]], 
-        exclude_components: Optional[Set[str]]
+        self,
+        include_components: Optional[Set[str]],
+        exclude_components: Optional[Set[str]],
     ) -> Set[str]:
         """Determine which components to include in the prompt."""
         if include_components is None:
@@ -116,7 +116,7 @@ class PromptComposer:
 
         if exclude_components:
             components_to_include -= set(exclude_components)
-            
+
         return components_to_include
 
     def _add_basic_sections(self, sections: List[str], components: Set[str]) -> None:

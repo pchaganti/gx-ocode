@@ -252,7 +252,7 @@ class SQLiteExampleStore(ExampleStore):
             # Build query with keyword matching
             # nosec B608 - SQL is constructed from safe parameterized components
             conditions = " OR ".join(["query LIKE ?" for _ in keywords])
-            values_clause = ','.join(['(?)' for _ in keywords])
+            values_clause = ",".join(["(?)" for _ in keywords])
             query_sql = f"""
                 SELECT *,
                 (SELECT COUNT(*) FROM (VALUES {values_clause})
@@ -327,7 +327,9 @@ class SQLiteExampleStore(ExampleStore):
 
             # Deactivate previous versions
             if existing:
-                query = "UPDATE components SET active = 0 WHERE name = ? AND version < ?"
+                query = (
+                    "UPDATE components SET active = 0 WHERE name = ? AND version < ?"
+                )
                 conn.execute(query, (component.name, component.version))
 
             return conn.lastrowid
