@@ -604,8 +604,9 @@ class ToolRegistry:
 
         try:
             from .search_tool import SearchTool
+            search_tool_available = True
         except ImportError:
-            SearchTool = None
+            search_tool_available = False
         from .session_tool import SessionTool
         from .shell_tools import ShellCommandTool
         from .sticker_tool import StickerRequestTool
@@ -665,7 +666,7 @@ class ToolRegistry:
         ]
 
         # Add SearchTool if available
-        if SearchTool is not None:
+        if search_tool_available:
             core_tools.append(SearchTool())
 
         for tool in core_tools:

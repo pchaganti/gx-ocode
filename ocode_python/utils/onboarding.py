@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 try:
+    from rich.console import Console
     from rich.panel import Panel
     from rich.prompt import Confirm, Prompt
     from rich.theme import Theme
@@ -32,7 +33,7 @@ class OnboardingManager:
 
         if RICH_AVAILABLE:
             # Define themes
-            self.themes = {
+            self.themes: Dict[str, Theme] = {
                 "default": Theme(
                     {
                         "info": "cyan",
@@ -75,7 +76,7 @@ class OnboardingManager:
                 ),
             }
 
-            self.console = get_themed_console()
+            self.console: Optional[Console] = get_themed_console()
         else:
             self.console = None
 
@@ -103,7 +104,7 @@ class OnboardingManager:
             return Prompt.ask(
                 question,
                 choices=choices,
-                default=default,
+                default=default if default is not None else "",
                 show_choices=True,
                 show_default=True,
             )
@@ -135,7 +136,7 @@ class OnboardingManager:
     def prompt_text(self, question: str, default: Optional[str] = None) -> str:
         """Prompt user for text input."""
         if RICH_AVAILABLE:
-            return Prompt.ask(question, default=default)
+            return Prompt.ask(question, default=default if default is not None else "")
         else:
             default_str = f" (default: {default})" if default else ""
             response = input(f"{question}{default_str}: ").strip()
@@ -258,7 +259,7 @@ This quick setup will take just a few minutes.
                 {
                     "base_url": "http://localhost:11434",
                     "model": "llama3.1:8b",  # Default model
-                    "timeout": 300,
+                    "timeout": "300",
                 }
             )
 
@@ -296,15 +297,15 @@ This quick setup will take just a few minutes.
 
         elif selected["name"] == "openai":
             config.update(
-                {"model": "gpt-3.5-turbo", "max_tokens": 4000, "temperature": 0.1}
+                {"model": "gpt-3.5-turbo", "max_tokens": "4000", "temperature": "0.1"}
             )
 
         elif selected["name"] == "anthropic":
             config.update(
                 {
                     "model": "claude-3-haiku-20240307",
-                    "max_tokens": 4000,
-                    "temperature": 0.1,
+                    "max_tokens": "4000",
+                    "temperature": "0.1",
                 }
             )
 
@@ -315,7 +316,7 @@ This quick setup will take just a few minutes.
         """Configure optional features."""
         self.print("\n⚙️ Configure features:", style="info")
 
-        features = {}
+        features: Dict[str, Any] = {}
 
         # Web search
         features["web_search"] = self.prompt_confirm(
@@ -338,9 +339,9 @@ This quick setup will take just a few minutes.
             if auto_save:
                 interval = self.prompt_text("Auto-save interval (minutes)", default="5")
                 try:
-                    features["auto_save_interval"] = int(interval)
+                    features["auto_save_interval_minutes"] = int(interval)
                 except ValueError:
-                    features["auto_save_interval"] = 5
+                    features["auto_save_interval_minutes"] = 5
 
         # Memory limits
         memory_limit = self.prompt_text("Maximum context memory (MB)", default="100")
@@ -361,7 +362,7 @@ This quick setup will take just a few minutes.
         """Configure security settings."""
         self.print("\n🔒 Configure security settings:", style="info")
 
-        security = {}
+        security: Dict[str, Any] = {}
 
         # Safe mode
         security["safe_mode"] = self.prompt_confirm(
@@ -457,7 +458,7 @@ Now that OCode is configured, here are some things to try:
 
     async def run_onboarding(self) -> Dict[str, Any]:
         """Run the complete onboarding flow."""
-        config = {}
+        config: Dict[str, Any] = {}
 
         try:
             # Welcome

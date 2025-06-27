@@ -212,7 +212,13 @@ class ThemeManager:
         """Get the currently active theme."""
         # Check for NO_COLOR environment variable
         if os.getenv("NO_COLOR"):
-            return self._themes.get("minimal", self._active_theme)
+            minimal_theme = self._themes.get("minimal")
+            if minimal_theme:
+                return minimal_theme
+            elif self._active_theme:
+                return self._active_theme
+            else:
+                return self._themes["default_dark"]
 
         return self._active_theme or self._themes["default_dark"]
 

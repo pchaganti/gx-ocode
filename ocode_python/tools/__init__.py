@@ -28,7 +28,7 @@ from .notebook_tools import NotebookEditTool, NotebookReadTool
 try:
     from .search_tool import SearchTool
 except ImportError:
-    SearchTool = None
+    SearchTool = None  # type: ignore[assignment, misc]
 from .session_tool import SessionTool
 from .shell_tools import EnvironmentTool, ProcessListTool, ShellCommandTool
 from .sticker_tool import StickerRequestTool

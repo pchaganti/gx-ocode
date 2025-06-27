@@ -186,9 +186,9 @@ def cli(
 
     # Check for first run and offer onboarding
     config_dir = Path.home() / ".ocode"
-    config_file = config_dir / "config.json"
+    config_file_path = config_dir / "config.json"
 
-    if not config_file.exists() and ctx.invoked_subcommand is None:
+    if not config_file_path.exists() and ctx.invoked_subcommand is None:
         # First run - offer onboarding
         console.print(
             "[cyan]🎉 Welcome to OCode![/cyan] "
@@ -650,6 +650,25 @@ async def handle_single_prompt(prompt: str, options: dict):
         sys.exit(1)
 
 
+def show_help():
+    """Display help for interactive mode commands."""
+    help_text = """
+[bold]Interactive Mode Commands:[/bold]
+
+[cyan]/help[/cyan]      - Show this help message
+[cyan]/exit[/cyan]      - Exit OCode (/quit, /q also work)
+[cyan]/continue[/cyan]  - Continue from previous incomplete response
+[cyan]/clear[/cyan]     - Clear screen (not implemented yet)
+
+[bold]Tips:[/bold]
+• Use arrow keys to navigate command history
+• Press Tab for auto-suggestions
+• Use Ctrl+C to interrupt current operation
+• Type normally to chat with the AI assistant
+    """
+    console.print(help_text)
+
+
 async def interactive_mode(options: dict):
     """Start interactive OCode session.
 
@@ -832,18 +851,18 @@ def sessions(action: str, session_id: Optional[str], days: int):
             console.print("[red]Error:[/red] Session ID required for load operation")
             return
 
-        session = asyncio.run(session_manager.load_session(session_id))
-        if not session:
+        session_obj = asyncio.run(session_manager.load_session(session_id))
+        if not session_obj:
             console.print(f"[red]Error:[/red] Session {session_id} not found")
             return
 
         console.print(
-            f"[green]✓[/green] Session loaded: {len(session.messages)} messages"
+            f"[green]✓[/green] Session loaded: {len(session_obj.messages)} messages"
         )
 
         # Show recent messages
         recent = (
-            session.messages[-3:] if len(session.messages) > 3 else session.messages
+            session_obj.messages[-3:] if len(session_obj.messages) > 3 else session_obj.messages
         )
         for msg in recent:
             role_icon = "👤" if msg.role == "user" else "🤖"
@@ -875,54 +894,6 @@ def sessions(action: str, session_id: Optional[str], days: int):
         console.print(f"  Checkpoints deleted: {checkpoints_deleted}")
 
 
-def show_help():
-    """Show help message.
-
-    Displays available commands and usage tips for the interactive mode.
-    """
-    # Commands panel
-    commands_panel = ThemedPanel.info(
-        "/help     - Show this help message\n"
-        "/exit     - Exit OCode\n"
-        "/quit     - Exit OCode\n"
-        "/q        - Exit OCode\n"
-        "/continue - Continue from previous response",
-        title="📋 Available Commands",
-    )
-
-    # Session management panel
-    session_panel = ThemedPanel.info(
-        "Use the session_manager tool to save, load, and manage conversations:\n"
-        '• "Save this conversation as a checkpoint"\n'
-        '• "Resume from my last session"\n'
-        '• "Create a checkpoint before trying this approach"',
-        title="💾 Session Management",
-    )
-
-    # Web search panel
-    search_panel = ThemedPanel.info(
-        "Ask questions that require current information:\n"
-        '• "Search for the latest Python security best practices"\n'
-        '• "What\'s new in the latest React version?"',
-        title="🔍 Web Search",
-    )
-
-    # Tips panel
-    tips_panel = ThemedPanel.info(
-        "• Use /continue to continue from a truncated response\n"
-        "• Press Ctrl+C to interrupt the current response\n"
-        "• Use --verbose for detailed logging\n"
-        "• Use --out json for JSON output format\n"
-        "• Try 'ocode sessions' to manage saved conversations\n"
-        "• Run 'ocode --setup' to configure your preferences\n"
-        "• Use 'ocode theme' to change color schemes",
-        title="💡 Tips & Tricks",
-    )
-
-    console.print(commands_panel)
-    console.print(session_panel)
-    console.print(search_panel)
-    console.print(tips_panel)
 
 
 def main():

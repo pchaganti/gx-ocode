@@ -9,9 +9,9 @@ from typing import List, Optional
 from urllib.parse import quote_plus
 
 import aiohttp
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup  # type: ignore[import-untyped]
 
-from .base import Tool, ToolDefinition, ToolResult
+from .base import Tool, ToolDefinition, ToolParameter, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -42,26 +42,29 @@ class SearchTool(Tool):
                 "Search the web for current information to enhance responses "
                 "with real-time data"
             ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to execute",
-                    },
-                    "max_results": {
-                        "type": "integer",
-                        "description": "Maximum number of results to return",
-                        "default": 5,
-                    },
-                    "include_snippets": {
-                        "type": "boolean",
-                        "description": "Whether to include content snippets",
-                        "default": True,
-                    },
-                },
-                "required": ["query"],
-            },
+            category="Search",
+            parameters=[
+                ToolParameter(
+                    name="query",
+                    type="string",
+                    description="The search query to execute",
+                    required=True,
+                ),
+                ToolParameter(
+                    name="max_results",
+                    type="number",
+                    description="Maximum number of results to return",
+                    required=False,
+                    default=5,
+                ),
+                ToolParameter(
+                    name="include_snippets",
+                    type="boolean",
+                    description="Whether to include content snippets",
+                    required=False,
+                    default=True,
+                ),
+            ],
         )
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -238,10 +241,20 @@ class SearchTool(Tool):
 
         return enhanced_results
 
-    async def execute(
-        self, query: str, max_results: int = 5, include_snippets: bool = True
-    ) -> ToolResult:
+    async def execute(self, **kwargs) -> ToolResult:
         """Execute web search and return results."""
+        query = kwargs.get("query", "")
+        max_results = kwargs.get("max_results", 5)
+        include_snippets = kwargs.get("include_snippets", True)
+        
+        if not query:
+            return ToolResult(
+                success=False,
+                output="",
+                error="Query parameter is required",
+                metadata={"error": "Missing query parameter"},
+            )
+        
         try:
             # Try primary search method
             results = await self._search_duckduckgo(query, max_results)
@@ -253,7 +266,8 @@ class SearchTool(Tool):
             if not results:
                 return ToolResult(
                     success=False,
-                    content="No search results found for the query.",
+                    output="",
+                    error="No search results found for the query.",
                     metadata={"query": query, "results_count": 0},
                 )
 
@@ -278,16 +292,16 @@ class SearchTool(Tool):
 
             # Create summary text
             summary_lines = [f"Search results for '{query}':\n"]
-            for result in formatted_results:
-                summary_lines.append(f"{result['rank']}. {result['title']}")
-                summary_lines.append(f"   URL: {result['url']}")
-                if result["snippet"]:
-                    summary_lines.append(f"   Summary: {result['snippet']}")
+            for fmt_result in formatted_results:
+                summary_lines.append(f"{fmt_result['rank']}. {fmt_result['title']}")
+                summary_lines.append(f"   URL: {fmt_result['url']}")
+                if fmt_result["snippet"]:
+                    summary_lines.append(f"   Summary: {fmt_result['snippet']}")
                 summary_lines.append("")
 
             return ToolResult(
                 success=True,
-                content="\n".join(summary_lines),
+                output="\n".join(summary_lines),
                 metadata={
                     "query": query,
                     "results_count": len(results),
@@ -299,7 +313,8 @@ class SearchTool(Tool):
             logger.error(f"Search execution failed: {e}", exc_info=True)
             return ToolResult(
                 success=False,
-                content=f"Search failed: {str(e)}",
+                output="",
+                error=f"Search failed: {str(e)}",
                 metadata={"query": query, "error": str(e)},
             )
 
