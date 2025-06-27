@@ -93,7 +93,9 @@ class DatabaseSpecialist(MCPServer):
         self.register_tool(
             MCPTool(
                 name="analyze_query",
-                description="Analyze SQL query for performance issues and optimizations",
+                description=(
+                    "Analyze SQL query for performance issues and optimizations"
+                ),
                 input_schema={
                     "type": "object",
                     "properties": {
@@ -170,7 +172,9 @@ class DatabaseSpecialist(MCPServer):
                     },
                     {
                         "name": "constraints",
-                        "description": "Technical constraints (performance, scale, etc.)",
+                        "description": (
+                            "Technical constraints (performance, scale, etc.)"
+                        ),
                         "required": False,
                     },
                 ],

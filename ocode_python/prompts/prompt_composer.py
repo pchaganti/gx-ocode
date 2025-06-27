@@ -192,75 +192,24 @@ class PromptComposer:
             Complete system prompt with XML-style tags
         """
         # Determine which components to include
-        if include_components is None:
-            components_to_include = set(self.core_components)
-        else:
-            components_to_include = set(include_components)
-
-        if exclude_components:
-            components_to_include -= set(exclude_components)
+        components_to_include = self._determine_components_to_include(
+            include_components, exclude_components
+        )
 
         # Build the prompt sections
         sections = []
 
-        # Add role section
-        if "role" in components_to_include:
-            role_content = self.load_component("role")
-            sections.append(f"<role>\n{role_content}\n</role>")
-
-        # Add core capabilities
-        if "core_capabilities" in components_to_include:
-            capabilities = self.load_component("core_capabilities")
-            sections.append(
-                f"<core_capabilities>\n{capabilities}\n</core_capabilities>"
-            )
-
-        # Add task analysis framework
-        if "task_analysis_framework" in components_to_include:
-            framework = self.load_component("task_analysis_framework")
-            sections.append(
-                f"<task_analysis_framework>\n{framework}\n</task_analysis_framework>"
-            )
+        # Add basic sections
+        self._add_basic_sections(sections, components_to_include)
 
         # Add available tools section
         sections.append(f"<available_tools>\n{tool_descriptions}\n</available_tools>")
 
-        # Add decision criteria
-        if "decision_criteria" in components_to_include:
-            try:
-                criteria = self.load_component("decision_criteria", "analysis")
-                sections.append(
-                    f"<decision_criteria>\n{criteria}\n</decision_criteria>"
-                )
-            except FileNotFoundError:
-                pass  # Skip if not available
+        # Add decision and workflow sections
+        self._add_decision_sections(sections, components_to_include)
 
-        # Add workflow patterns
-        if "workflow_patterns" in components_to_include:
-            patterns = self.load_component("workflow_patterns")
-            sections.append(f"<workflow_patterns>\n{patterns}\n</workflow_patterns>")
-
-        # Add response strategies
-        if "response_strategies" in components_to_include:
-            strategies = self.load_component("response_strategies")
-            sections.append(
-                f"<response_strategies>\n{strategies}\n</response_strategies>"
-            )
-
-        # Add error handling
-        if "error_handling" in components_to_include:
-            error_handling = self.load_component("error_handling")
-            sections.append(f"<error_handling>\n{error_handling}\n</error_handling>")
-
-        # Add output guidelines
-        if "output_guidelines" in components_to_include:
-            guidelines = self.load_component("output_guidelines")
-            sections.append(f"<output_guidelines>\n{guidelines}\n</output_guidelines>")
-
-        # Add thinking framework
-        if "thinking_framework" in components_to_include:
-            framework = self.load_component("thinking_framework")
-            sections.append(f"<thinking_framework>\n{framework}\n</thinking_framework>")
+        # Add response and output sections
+        self._add_response_sections(sections, components_to_include)
 
         # Add any additional context sections
         if additional_context:
@@ -286,7 +235,9 @@ class PromptComposer:
             tool_descriptions=tool_descriptions,
             include_components={"role", "core_capabilities"},
             additional_context={
-                "instruction": "Execute the user's request efficiently using available tools."
+                "instruction": (
+                    "Execute the user's request efficiently using available tools."
+                )
             },
         )
 
@@ -327,9 +278,14 @@ class PromptComposer:
         except FileNotFoundError:
             thinking_questions = ""
 
-        return f"""<role>You are an expert AI assistant specialized in distinguishing between general knowledge questions and actionable tasks that require tools.</role>
-
-<task>Analyze the user query and determine if it requires tools or can be answered directly with knowledge.</task>
+        prompt_header = (
+            "<role>You are an expert AI assistant specialized in distinguishing "
+            "between general knowledge questions and actionable tasks that "
+            "require tools.</role>\\n\\n"
+            "<task>Analyze the user query and determine if it requires tools or can be "
+            "answered directly with knowledge.</task>"
+        )
+        return f"""{prompt_header}
 
 <query>"{query}"</query>
 
@@ -499,9 +455,14 @@ Respond with ONLY a JSON object following this exact format:
         else:
             examples = self._load_or_default("tool_examples", "analysis", "")
 
-        return f"""<role>You are an expert AI assistant specialized in distinguishing between general knowledge questions and actionable tasks that require tools.</role>
-
-<task>Analyze the user query and determine if it requires tools or can be answered directly with knowledge.</task>
+        prompt_header = (
+            "<role>You are an expert AI assistant specialized in distinguishing "
+            "between general knowledge questions and actionable tasks that "
+            "require tools.</role>\\n\\n"
+            "<task>Analyze the user query and determine if it requires tools or can be "
+            "answered directly with knowledge.</task>"
+        )
+        return f"""{prompt_header}
 
 <query>"{query}"</query>
 

@@ -142,7 +142,7 @@ class SQLiteExampleStore(ExampleStore):
 
             conn.execute(
                 """
-                CREATE INDEX IF NOT EXISTS idx_performance 
+                CREATE INDEX IF NOT EXISTS idx_performance
                 ON examples(performance_score)
             """
             )
@@ -253,7 +253,8 @@ class SQLiteExampleStore(ExampleStore):
             # nosec B608 - SQL is constructed from safe parameterized components
             conditions = " OR ".join(["query LIKE ?" for _ in keywords])
             values_clause = ",".join(["(?)" for _ in keywords])
-            query_sql = f"""
+            # nosec B608 - SQL is constructed from safe parameterized components
+            query_sql = f"""  # nosec B608
                 SELECT *,
                 (SELECT COUNT(*) FROM (VALUES {values_clause})
                  WHERE query LIKE '%' || column1 || '%') as match_count
@@ -301,7 +302,10 @@ class SQLiteExampleStore(ExampleStore):
         """Add or update a prompt component."""
         with sqlite3.connect(self.db_path) as conn:
             # Check if component exists
-            query = "SELECT id, version FROM components WHERE name = ? ORDER BY version DESC LIMIT 1"
+            query = (
+                "SELECT id, version FROM components WHERE name = ? "
+                "ORDER BY version DESC LIMIT 1"
+            )
             existing = conn.execute(query, (component.name,)).fetchone()
 
             if existing:
@@ -310,7 +314,16 @@ class SQLiteExampleStore(ExampleStore):
             conn.execute(
                 """
                 INSERT INTO components
-                (name, content, component_type, version, active, metadata, created_at, updated_at)
+                (
+                    name,
+                    content,
+                    component_type,
+                    version,
+                    active,
+                    metadata,
+                    created_at,
+                    updated_at,
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
