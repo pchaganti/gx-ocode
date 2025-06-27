@@ -135,13 +135,17 @@ class SessionTool(Tool):
             elif action == "load_session":
                 if not session_id:
                     return ToolResult(
-                        success=False, output="", error="Session ID required for load operation"
+                        success=False,
+                        output="",
+                        error="Session ID required for load operation",
                     )
 
                 session_obj = await self.session_manager.load_session(session_id)
                 if not session_obj:
                     return ToolResult(
-                        success=False, output="", error=f"Session {session_id} not found"
+                        success=False,
+                        output="",
+                        error=f"Session {session_id} not found",
                     )
 
                 # Format session details
@@ -212,7 +216,9 @@ class SessionTool(Tool):
                     )
                 else:
                     return ToolResult(
-                        success=False, output="", error=f"Failed to delete session {session_id}"
+                        success=False,
+                        output="",
+                        error=f"Failed to delete session {session_id}",
                     )
 
             elif action == "export_session":
@@ -226,7 +232,9 @@ class SessionTool(Tool):
                 session_obj = await self.session_manager.load_session(session_id)
                 if not session_obj:
                     return ToolResult(
-                        success=False, output="", error=f"Session {session_id} not found"
+                        success=False,
+                        output="",
+                        error=f"Session {session_id} not found",
                     )
 
                 from pathlib import Path
@@ -248,7 +256,9 @@ class SessionTool(Tool):
                 session_obj = await self.session_manager.load_session(session_id)
                 if not session_obj:
                     return ToolResult(
-                        success=False, output="", error=f"Session {session_id} not found"
+                        success=False,
+                        output="",
+                        error=f"Session {session_id} not found",
                     )
 
                 checkpoint_id = await self.checkpoint_manager.create_checkpoint(
@@ -424,7 +434,9 @@ class SessionTool(Tool):
                 )
 
             else:
-                return ToolResult(success=False, output="", error=f"Unknown action: {action}")
+                return ToolResult(
+                    success=False, output="", error=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return ToolResult(

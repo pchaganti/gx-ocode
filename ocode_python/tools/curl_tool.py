@@ -9,7 +9,7 @@ from typing import Any
 
 import aiohttp
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class CurlTool(Tool):
@@ -26,6 +26,7 @@ class CurlTool(Tool):
         return ToolDefinition(
             name="curl",
             description="Make HTTP requests and download files",
+            resource_locks=[ResourceLock.NETWORK],
             parameters=[
                 ToolParameter(
                     name="url",

@@ -862,7 +862,9 @@ def sessions(action: str, session_id: Optional[str], days: int):
 
         # Show recent messages
         recent = (
-            session_obj.messages[-3:] if len(session_obj.messages) > 3 else session_obj.messages
+            session_obj.messages[-3:]
+            if len(session_obj.messages) > 3
+            else session_obj.messages
         )
         for msg in recent:
             role_icon = "👤" if msg.role == "user" else "🤖"
@@ -892,8 +894,6 @@ def sessions(action: str, session_id: Optional[str], days: int):
         console.print("[green]✓[/green] Cleanup completed:")
         console.print(f"  Sessions deleted: {sessions_deleted}")
         console.print(f"  Checkpoints deleted: {checkpoints_deleted}")
-
-
 
 
 def main():

@@ -7,7 +7,7 @@ from typing import Any
 
 from git import InvalidGitRepositoryError, Repo
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class GitStatusTool(Tool):
@@ -25,6 +25,7 @@ class GitStatusTool(Tool):
             name="git_status",
             description="Get the current git repository status",
             category="Git Operations",
+            resource_locks=[ResourceLock.GIT],
             parameters=[
                 ToolParameter(
                     name="path",
@@ -112,6 +113,7 @@ class GitCommitTool(Tool):
         return ToolDefinition(
             name="git_commit",
             description="Create a git commit with specified message",
+            resource_locks=[ResourceLock.GIT],
             parameters=[
                 ToolParameter(
                     name="message",
@@ -212,6 +214,7 @@ class GitDiffTool(Tool):
         return ToolDefinition(
             name="git_diff",
             description="Show git diff for files or commits",
+            resource_locks=[ResourceLock.GIT],
             parameters=[
                 ToolParameter(
                     name="file",

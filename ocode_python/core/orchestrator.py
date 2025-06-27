@@ -19,7 +19,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from ..tools.base import ToolRegistry, ToolResult
+from ..tools.base import ResourceLock, ToolRegistry, ToolResult
 
 # Constants for retry and timing behavior
 DEFAULT_MAX_RETRIES = 3
@@ -328,7 +328,7 @@ class ConcurrentToolExecutor:
     ) -> List[ToolResult]:
         """Execute independent tools in parallel."""
         # Identify truly independent tasks (no shared resources)
-        independent_groups = self._group_independent_tasks(tasks)
+        independent_groups = self._group_independent_tasks(tasks, tool_registry)
 
         results = []
         for group in independent_groups:
@@ -348,7 +348,7 @@ class ConcurrentToolExecutor:
         return results
 
     def _group_independent_tasks(
-        self, tasks: List[CommandTask]
+        self, tasks: List[CommandTask], tool_registry: ToolRegistry
     ) -> List[List[CommandTask]]:
         """Group tasks that can be executed independently."""
         # Simple implementation: group by resource conflicts
@@ -356,7 +356,7 @@ class ConcurrentToolExecutor:
         used_resources: Set[str] = set()
 
         for task in tasks:
-            task_resources = self._get_task_resources(task)
+            task_resources = self._get_task_resources(task, tool_registry)
 
             if task_resources.isdisjoint(used_resources):
                 # Can be executed with existing group
@@ -372,27 +372,38 @@ class ConcurrentToolExecutor:
 
         return groups
 
-    def _get_task_resources(self, task: CommandTask) -> Set[str]:
-        """Get the resources that a task will access."""
+    def _get_task_resources(
+        self, task: CommandTask, tool_registry: ToolRegistry
+    ) -> Set[str]:
+        """Get the resources that a task will access from tool definition."""
         resources = set()
 
-        # Check for file operations
-        for arg_name, arg_value in task.arguments.items():
-            if "path" in arg_name.lower() or "file" in arg_name.lower():
-                if isinstance(arg_value, str):
-                    resources.add(f"file:{arg_value}")
+        # Get tool definition from registry
+        tool = tool_registry.get_tool(task.tool_name)
+        if tool and hasattr(tool, "definition"):
+            tool_def = tool.definition
 
-        # Tool-specific resource mapping
-        resource_maps = {
-            "git_status": {"git:status"},
-            "git_commit": {"git:commit"},
-            "git_diff": {"git:diff"},
-            "memory_write": {"memory:write"},
-            "memory_read": {"memory:read"},
-        }
+            # Get resource locks from tool definition
+            for lock in tool_def.resource_locks:
+                resources.add(lock.value)
+        else:
+            # Fallback to basic heuristics if tool not found
+            # Check for file operations
+            for arg_name, arg_value in task.arguments.items():
+                if "path" in arg_name.lower() or "file" in arg_name.lower():
+                    if isinstance(arg_value, str):
+                        resources.add(ResourceLock.FILESYSTEM_WRITE.value)
+                        break
 
-        if task.tool_name in resource_maps:
-            resources.update(resource_maps[task.tool_name])
+            # Basic tool name heuristics as fallback
+            if "git" in task.tool_name.lower():
+                resources.add(ResourceLock.GIT.value)
+            elif "memory" in task.tool_name.lower():
+                resources.add(ResourceLock.MEMORY.value)
+            elif "shell" in task.tool_name.lower() or "bash" in task.tool_name.lower():
+                resources.add(ResourceLock.SHELL.value)
+            elif "curl" in task.tool_name.lower() or "search" in task.tool_name.lower():
+                resources.add(ResourceLock.NETWORK.value)
 
         return resources
 

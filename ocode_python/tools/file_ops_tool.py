@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class CopyTool(Tool):
@@ -23,6 +23,7 @@ class CopyTool(Tool):
         return ToolDefinition(
             name="cp",
             description="Copy files or directories",
+            resource_locks=[ResourceLock.FILESYSTEM_WRITE],
             parameters=[
                 ToolParameter(
                     name="source",
@@ -156,6 +157,7 @@ class MoveTool(Tool):
         return ToolDefinition(
             name="mv",
             description="Move or rename files and directories",
+            resource_locks=[ResourceLock.FILESYSTEM_WRITE],
             parameters=[
                 ToolParameter(
                     name="source",
@@ -228,6 +230,7 @@ class RemoveTool(Tool):
         return ToolDefinition(
             name="rm",
             description="Remove files and directories (with safety checks)",
+            resource_locks=[ResourceLock.FILESYSTEM_WRITE],
             parameters=[
                 ToolParameter(
                     name="path",

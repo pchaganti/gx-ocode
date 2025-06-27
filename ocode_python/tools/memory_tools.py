@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class MemoryReadTool(Tool):
@@ -365,6 +365,7 @@ class MemoryWriteTool(Tool):
         return ToolDefinition(
             name="memory_write",
             description="Write and manage session memory, context data, and persistent information",  # noqa: E501
+            resource_locks=[ResourceLock.MEMORY],
             parameters=[
                 ToolParameter(
                     name="memory_type",

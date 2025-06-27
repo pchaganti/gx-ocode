@@ -20,7 +20,7 @@ all tools.
 
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -49,6 +49,20 @@ class ToolParameter:
     default: Optional[Any] = None
 
 
+class ResourceLock(Enum):
+    """Resource locks that tools can acquire to prevent conflicts.
+
+    Tools declare which resources they need exclusive access to,
+    allowing the orchestrator to run tools safely in parallel.
+    """
+
+    FILESYSTEM_WRITE = "filesystem_write"
+    GIT = "git"
+    MEMORY = "memory"
+    SHELL = "shell"
+    NETWORK = "network"
+
+
 @dataclass
 class ToolDefinition:
     """Complete definition of a tool for AI function calling.
@@ -63,12 +77,14 @@ class ToolDefinition:
         description: Clear explanation of what the tool does and when to use it
         parameters: List of ToolParameter objects defining expected inputs
         category: Functional category for tool organization and discovery
+        resource_locks: List of resources this tool needs exclusive access to
     """
 
     name: str
     description: str
     parameters: List[ToolParameter]
     category: str = "General"  # Default category for backward compatibility
+    resource_locks: List[ResourceLock] = field(default_factory=list)
 
     def to_ollama_format(self) -> Dict[str, Any]:
         """Convert to Ollama function calling format.
@@ -604,6 +620,7 @@ class ToolRegistry:
 
         try:
             from .search_tool import SearchTool
+
             search_tool_available = True
         except ImportError:
             search_tool_available = False

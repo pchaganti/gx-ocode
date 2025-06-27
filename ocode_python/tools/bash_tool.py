@@ -24,7 +24,7 @@ except ImportError:
     PEXPECT_AVAILABLE = False
 
 from ..utils import command_sanitizer, path_validator
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class ProcessManager:
@@ -135,6 +135,7 @@ class BashTool(Tool):
             name="bash",
             description="Execute shell commands with advanced features and safety controls",  # noqa: E501
             category="System Operations",  # noqa: E501
+            resource_locks=[ResourceLock.SHELL],
             parameters=[
                 ToolParameter(
                     name="command",
@@ -728,6 +729,7 @@ class ScriptTool(Tool):
             name="script",
             description="Create and execute shell scripts with multiple commands",
             category="System Operations",
+            resource_locks=[ResourceLock.SHELL, ResourceLock.FILESYSTEM_WRITE],
             parameters=[
                 ToolParameter(
                     name="script_content",

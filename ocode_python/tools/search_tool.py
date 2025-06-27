@@ -11,7 +11,7 @@ from urllib.parse import quote_plus
 import aiohttp
 from bs4 import BeautifulSoup  # type: ignore[import-untyped]
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,7 @@ class SearchTool(Tool):
                 "with real-time data"
             ),
             category="Search",
+            resource_locks=[ResourceLock.NETWORK],
             parameters=[
                 ToolParameter(
                     name="query",
@@ -246,7 +247,7 @@ class SearchTool(Tool):
         query = kwargs.get("query", "")
         max_results = kwargs.get("max_results", 5)
         include_snippets = kwargs.get("include_snippets", True)
-        
+
         if not query:
             return ToolResult(
                 success=False,
@@ -254,7 +255,7 @@ class SearchTool(Tool):
                 error="Query parameter is required",
                 metadata={"error": "Missing query parameter"},
             )
-        
+
         try:
             # Try primary search method
             results = await self._search_duckduckgo(query, max_results)

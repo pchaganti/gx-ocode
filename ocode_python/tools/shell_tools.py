@@ -8,7 +8,7 @@ import re
 from typing import Any
 
 from ..utils.security_config import SecurityConfigManager
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class ShellCommandTool(Tool):
@@ -29,6 +29,7 @@ class ShellCommandTool(Tool):
         return ToolDefinition(
             name="shell_command",
             description="Execute shell commands with interactive safety confirmation",
+            resource_locks=[ResourceLock.SHELL],
             parameters=[
                 ToolParameter(
                     name="command",

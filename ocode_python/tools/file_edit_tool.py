@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .base import Tool, ToolDefinition, ToolParameter, ToolResult
+from .base import ResourceLock, Tool, ToolDefinition, ToolParameter, ToolResult
 
 
 class FileEditTool(Tool):
@@ -24,6 +24,7 @@ class FileEditTool(Tool):
         return ToolDefinition(
             name="file_edit",
             description="Edit files in-place with find/replace, line operations, and transformations",  # noqa: E501
+            resource_locks=[ResourceLock.FILESYSTEM_WRITE],
             parameters=[
                 ToolParameter(
                     name="path",

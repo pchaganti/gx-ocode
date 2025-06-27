@@ -14,6 +14,7 @@ from .base import ToolError  # noqa: F401
 from .base import (
     ErrorHandler,
     ErrorType,
+    ResourceLock,
     Tool,
     ToolDefinition,
     ToolParameter,
@@ -311,6 +312,7 @@ class FileWriteTool(Tool):
             name="file_write",
             description="Write content to a file",
             category="File Operations",
+            resource_locks=[ResourceLock.FILESYSTEM_WRITE],
             parameters=[
                 ToolParameter(
                     name="path",
