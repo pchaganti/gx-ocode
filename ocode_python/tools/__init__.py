@@ -24,6 +24,8 @@ from .ls_tool import LsTool
 from .mcp_tool import MCPTool
 from .memory_tools import MemoryReadTool, MemoryWriteTool
 from .notebook_tools import NotebookEditTool, NotebookReadTool
+from .search_tool import SearchTool
+from .session_tool import SessionTool
 from .shell_tools import EnvironmentTool, ProcessListTool, ShellCommandTool
 from .sticker_tool import StickerRequestTool
 from .test_tools import CoverageTool, ExecutionTool, LintTool
@@ -83,4 +85,6 @@ __all__ = [
     "UniqTool",
     "CurlTool",
     "WhichTool",
+    "SearchTool",
+    "SessionTool",
 ]

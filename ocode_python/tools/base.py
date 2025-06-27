@@ -601,6 +601,8 @@ class ToolRegistry:
         from .notebook_tools import NotebookEditTool, NotebookReadTool
         from .ping_tool import PingTool
         from .process_tool import ProcessMonitorTool
+        from .search_tool import SearchTool
+        from .session_tool import SessionTool
         from .shell_tools import ShellCommandTool
         from .sticker_tool import StickerRequestTool
         from .test_tools import ExecutionTool
@@ -655,6 +657,8 @@ class ToolRegistry:
             JsonYamlTool(),
             ProcessMonitorTool(),
             EnvironmentTool(),
+            SearchTool(),
+            SessionTool(),
         ]
 
         for tool in core_tools:
