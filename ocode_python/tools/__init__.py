@@ -24,7 +24,10 @@ from .ls_tool import LsTool
 from .mcp_tool import MCPTool
 from .memory_tools import MemoryReadTool, MemoryWriteTool
 from .notebook_tools import NotebookEditTool, NotebookReadTool
-from .search_tool import SearchTool
+try:
+    from .search_tool import SearchTool
+except ImportError:
+    SearchTool = None
 from .session_tool import SessionTool
 from .shell_tools import EnvironmentTool, ProcessListTool, ShellCommandTool
 from .sticker_tool import StickerRequestTool
