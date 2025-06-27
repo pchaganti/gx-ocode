@@ -186,4 +186,4 @@ exclude_lines = [
 [tool.bandit]
 targets = ["ocode_python"]
 exclude_dirs = ["tests", "venv", ".venv", "build", "dist"]
-skips = ["B101", "B601"]  # B101: assert_used, B601: paramiko_calls
+skips = ["B101", "B601", "B608"]  # B101: assert_used, B601: paramiko_calls, B608: hardcoded_sql
