@@ -601,7 +601,11 @@ class ToolRegistry:
         from .notebook_tools import NotebookEditTool, NotebookReadTool
         from .ping_tool import PingTool
         from .process_tool import ProcessMonitorTool
-        from .search_tool import SearchTool
+
+        try:
+            from .search_tool import SearchTool
+        except ImportError:
+            SearchTool = None
         from .session_tool import SessionTool
         from .shell_tools import ShellCommandTool
         from .sticker_tool import StickerRequestTool
@@ -657,9 +661,12 @@ class ToolRegistry:
             JsonYamlTool(),
             ProcessMonitorTool(),
             EnvironmentTool(),
-            SearchTool(),
             SessionTool(),
         ]
+
+        # Add SearchTool if available
+        if SearchTool is not None:
+            core_tools.append(SearchTool())
 
         for tool in core_tools:
             self.register(tool)
