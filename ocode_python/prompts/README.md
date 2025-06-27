@@ -121,7 +121,7 @@ sections.append(f"<new_section>\n{new_content}\n</new_section>")
 # Import from JSON
 with open("examples.json") as f:
     examples_data = json.load(f)
-    
+
 for data in examples_data:
     example = PromptExample(**data)
     repo.example_store.add_example(example)

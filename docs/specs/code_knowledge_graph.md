@@ -57,7 +57,7 @@ The graph will consist of nodes representing code entities and edges representin
     *   `CALLS` (Function -> Function)
     *   `INHERITS_FROM` (Class -> Class)
     *   `HAS_PARAMETER` (Function -> Parameter)
-    *   `RETURNS` (Function -> Class/Variable) - *Note: May require type inference.* 
+    *   `RETURNS` (Function -> Class/Variable) - *Note: May require type inference.*
 
 ### 3.2. New Service: `GraphBuilderService`
 

@@ -124,7 +124,9 @@ class TestHeuristicToolCheck:
         assert engine._heuristic_tool_check("What is in config.py?") is True
 
         # Tool pattern but hypothetical
-        assert engine._heuristic_tool_check("How would I list files in Python?") is False
+        assert (
+            engine._heuristic_tool_check("How would I list files in Python?") is False
+        )
 
     def test_performance(self, engine):
         """Test that heuristic is fast."""

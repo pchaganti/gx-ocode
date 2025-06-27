@@ -75,3 +75,93 @@ The output of AEA is a structured `FailureAnalysisReport` object, which is then 
 *   `confidence_score: float`
 *   `analysis_timestamp: datetime`
 *   `relevant_ckg_entities: [UUID]`
+
+## 3.2. Success Pattern Identification (SPI)
+
+SPI continuously monitors successful `Task` completions and `ExecutionAttempt` sequences to identify efficient, robust, and generalizable patterns of behavior. The goal is to extract `ProvenStrategy` objects that can be reused and optimized by the ETP system.
+
+### 3.2.1. Input Data & Preprocessing
+
+SPI consumes successful `ExecutionAttempt` logs and `Task` completion events from the PMA component. For each successful task, the full `ActionSequence` (ordered list of `ExecutionAttempt`s) is extracted.
+
+Preprocessing involves:
+
+*   **Parameterization:** Replacing specific values in `input_parameters` and `raw_command` with generic placeholders (e.g., file paths, variable names) to enable generalization.
+*   **Normalization:** Standardizing tool names and command formats.
+*   **Contextual Tagging:** Associating each `ExecutionAttempt` with relevant `CodeEntity` and `ProblemType` nodes from the CKG, providing semantic context.
+
+### 3.2.2. Sequence Mining & Pattern Extraction
+
+*   **Frequent Sequence Mining:** Algorithms like PrefixSpan, GSP (Generalized Sequential Pattern), or SPADE are applied to the preprocessed `ActionSequence` data. These algorithms identify frequently occurring sub-sequences of tool calls and plan steps across a large corpus of successful tasks.
+*   **Graph-Based Pattern Matching:** The Self-Improvement KG can be traversed to identify recurring subgraphs of `Tool` and `ExecutionAttempt` nodes that lead to successful outcomes for specific `ProblemType`s.
+*   **Performance-Aware Filtering:** Sequences are filtered and ranked based on their associated `resource_metrics` (e.g., lower `duration_ms`, lower `token_usage`, higher `success_rate`) to prioritize efficient patterns.
+
+### 3.2.3. Generalization & Abstraction (LLM-Assisted)
+
+Raw frequent sequences are often too specific. An LLM is used to generalize them into reusable `ProvenStrategy` objects:
+
+*   **Prompt Construction:** The LLM is provided with:
+    *   A frequent, high-performing `ActionSequence`.
+    *   The `Task` context and `ProblemType` it solved.
+    *   Relevant `CodeEntity` and `Environment` data.
+    *   Instructions to abstract the sequence into a parameterized `template_plan_fragment`, define its `applicability_conditions`, and provide a concise `description`.
+*   **Parameterization:** The LLM identifies variables within the sequence (e.g., file names, directory paths, specific values) and replaces them with generic parameters, defining their types and constraints.
+*   **Applicability Conditions:** The LLM infers the conditions under which the `ProvenStrategy` is likely to be successful (e.g., "applicable when a Python virtual environment needs to be activated," "for refactoring a specific type of class"). These conditions are crucial for the ETP system to select the right strategy.
+*   **Naming & Description:** The LLM generates a human-readable name and description for the `ProvenStrategy`.
+
+### 3.2.4. Output: `ProvenStrategy`
+
+The output of SPI is a structured `ProvenStrategy` object, which is then stored in the Self-Improvement KG and passed to the APR component. Key fields include:
+
+*   `strategy_id: UUID`
+*   `name: string`
+*   `description: string`
+*   `template_plan_fragment: json` (parameterized sequence of actions/tool calls)
+*   `applicability_conditions: json` (rules for when to use this strategy)
+*   `average_performance_metrics: json` (e.g., `avg_duration_ms`, `avg_token_usage`)
+*   `success_rate: float` (dynamically updated)
+*   `last_updated: datetime`
+*   `related_problem_types: [UUID]`
+
+## 3.3. Adaptive Plan Refinement (APR)
+
+APR is the component responsible for translating the insights from AEA and SPI into concrete, actionable improvements for the Explicit Task Planning (ETP) system. It ensures that the agent's planning capabilities evolve based on its operational experience.
+
+### 3.3.1. Input Data
+
+APR receives two primary types of input:
+
+*   **`FailureAnalysisReport` (from AEA):** Contains the inferred `root_cause` and `proposed_remediation_strategy_description` for a failed task.
+*   **`ProvenStrategy` (from SPI):** Contains generalized, high-performing `template_plan_fragment`s and their `applicability_conditions`.
+
+### 3.3.2. Failure-Driven Plan Modification
+
+When a `FailureAnalysisReport` is received, APR focuses on preventing recurrence:
+
+*   **Pre-condition Injection:** For a `root_cause` like "missing dependency," APR proposes adding a `pre-condition` step to relevant ETP plan templates. This pre-condition would involve checking for the dependency's presence and installing it if missing, *before* attempting the action that previously failed.
+*   **Error-Handling Sub-plan Generation:** For common `ErrorPattern`s, APR can generate or modify existing ETP sub-plans to include specific `retry_mechanisms` (e.g., exponential backoff for API rate limits), `fallback_strategies` (e.g., using a different tool if the primary one fails), or `diagnostic_steps` (e.g., running `ping` or `ls` to gather more information before retrying).
+*   **Tool Parameter Adjustment:** If the `root_cause` indicates incorrect tool parameter usage, APR can propose modifications to the ETP's logic for generating `tool_parameters` for specific `Tool` invocations.
+*   **Negative Examples for LLM Planning:** Failed `ActionSequence`s, especially those with clear `root_cause`s, are fed back to the ETP's LLM-based planning component as negative examples, teaching it to avoid similar pitfalls.
+
+### 3.3.3. Success-Driven Plan Optimization
+
+When a `ProvenStrategy` is received, APR focuses on improving efficiency and effectiveness:
+
+*   **Integration of Proven Strategies:** APR integrates `ProvenStrategy` objects into the ETP system's library of reusable plan fragments. This means:
+    *   **Direct Substitution:** If a `ProvenStrategy` is a more efficient alternative to an existing plan fragment, APR proposes replacing the old fragment with the new one.
+    *   **New Plan Fragments:** If the `ProvenStrategy` represents a novel, effective way to solve a `ProblemType`, it is added as a new option for the ETP planner.
+*   **Prioritization Adjustment:** The `success_rate` and `average_performance_metrics` of `ProvenStrategy` objects are used to adjust the ETP planner's internal scoring or weighting mechanisms. This biases the planner towards selecting empirically validated, high-performing strategies.
+*   **Contextual Plan Generation:** The `applicability_conditions` of `ProvenStrategy` objects are crucial. APR ensures the ETP planner understands these conditions, allowing it to select the most appropriate strategy based on the current `Task` and `Environment` context.
+
+### 3.3.4. Output: `PlanModificationProposal`
+
+The output of APR is a `PlanModificationProposal` object, which is then submitted to the Knowledge Base Integration (KBI) component for storage and potential HITL review. Key fields include:
+
+*   `proposal_id: UUID`
+*   `type: enum` (AddPrecondition, ModifyErrorHandling, ReplaceFragment, AdjustPriority)
+*   `target_plan_template_id: UUID`
+*   `modifications: json` (detailed description of changes to the plan structure)
+*   `rationale: string` (explaining why this change is proposed, linking to `FailureAnalysisReport` or `ProvenStrategy`)
+*   `source_report_id: UUID` (link to AEA report or SPI strategy)
+*   `proposed_by_agent_id: UUID`
+*   `timestamp: datetime`

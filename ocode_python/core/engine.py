@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
+from ..prompts.prompt_composer import PromptComposer
 from ..tools.base import Tool, ToolRegistry, ToolResult
 from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
-from ..prompts.prompt_composer import PromptComposer
 from .api_client import CompletionRequest, Message, OllamaAPIClient
 from .context_manager import ContextManager, ProjectContext
 from .orchestrator import AdvancedOrchestrator
@@ -238,12 +238,9 @@ class OCodeEngine:
         # This allows for easier maintenance and dynamic prompt construction
         return self.prompt_composer.build_system_prompt(
             tool_descriptions=tool_descriptions,
-            # Include all standard components by default
             include_components=None,
-            # No exclusions for the full system prompt
             exclude_components=None,
-            # No additional context needed for base prompt
-            additional_context=None
+            additional_context=None,
         )
 
     def _get_tool_descriptions_by_category(self) -> str:

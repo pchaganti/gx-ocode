@@ -6,12 +6,11 @@ This demonstrates how to create a specialized MCP server for database operations
 """
 
 import asyncio
-import json
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from ocode_python.mcp.protocol import MCPServer, MCPResource, MCPTool, MCPPrompt
+from ocode_python.mcp.protocol import MCPPrompt, MCPResource, MCPServer, MCPTool
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class DatabaseSpecialist(MCPServer):
         super().__init__(
             name="Database Specialist",
             version="1.0.0",
-            auth_token=auth_token or os.environ.get("MCP_AUTH_TOKEN")
+            auth_token=auth_token or os.environ.get("MCP_AUTH_TOKEN"),
         )
 
         # Register capabilities
@@ -35,138 +34,158 @@ class DatabaseSpecialist(MCPServer):
     def _register_resources(self):
         """Register database-related resources."""
         # Best practices document
-        self.register_resource(MCPResource(
-            uri="db://best-practices/indexing",
-            name="Database Indexing Best Practices",
-            description="Guidelines for optimal database indexing strategies",
-            mime_type="text/markdown"
-        ))
+        self.register_resource(
+            MCPResource(
+                uri="db://best-practices/indexing",
+                name="Database Indexing Best Practices",
+                description="Guidelines for optimal database indexing strategies",
+                mime_type="text/markdown",
+            )
+        )
 
         # SQL patterns
-        self.register_resource(MCPResource(
-            uri="db://patterns/common-queries",
-            name="Common SQL Query Patterns",
-            description="Frequently used SQL query patterns and optimizations",
-            mime_type="text/markdown"
-        ))
+        self.register_resource(
+            MCPResource(
+                uri="db://patterns/common-queries",
+                name="Common SQL Query Patterns",
+                description="Frequently used SQL query patterns and optimizations",
+                mime_type="text/markdown",
+            )
+        )
 
         # Schema design guide
-        self.register_resource(MCPResource(
-            uri="db://guides/schema-design",
-            name="Database Schema Design Guide",
-            description="Best practices for designing database schemas",
-            mime_type="text/markdown"
-        ))
+        self.register_resource(
+            MCPResource(
+                uri="db://guides/schema-design",
+                name="Database Schema Design Guide",
+                description="Best practices for designing database schemas",
+                mime_type="text/markdown",
+            )
+        )
 
     def _register_tools(self):
         """Register database tools."""
         # SQL formatter tool
-        self.register_tool(MCPTool(
-            name="format_sql",
-            description="Format and beautify SQL queries for better readability",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "SQL query to format"
+        self.register_tool(
+            MCPTool(
+                name="format_sql",
+                description="Format and beautify SQL queries for better readability",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "SQL query to format",
+                        },
+                        "dialect": {
+                            "type": "string",
+                            "enum": ["postgresql", "mysql", "sqlite", "sqlserver"],
+                            "default": "postgresql",
+                            "description": "SQL dialect for formatting",
+                        },
                     },
-                    "dialect": {
-                        "type": "string",
-                        "enum": ["postgresql", "mysql", "sqlite", "sqlserver"],
-                        "default": "postgresql",
-                        "description": "SQL dialect for formatting"
-                    }
+                    "required": ["query"],
                 },
-                "required": ["query"]
-            }
-        ))
+            )
+        )
 
         # Query analyzer tool
-        self.register_tool(MCPTool(
-            name="analyze_query",
-            description="Analyze SQL query for performance issues and optimization opportunities",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "SQL query to analyze"
+        self.register_tool(
+            MCPTool(
+                name="analyze_query",
+                description="Analyze SQL query for performance issues and optimization opportunities",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "SQL query to analyze",
+                        },
+                        "schema": {
+                            "type": "object",
+                            "description": "Optional database schema for deeper analysis",
+                            "properties": {
+                                "tables": {
+                                    "type": "object",
+                                    "description": "Table definitions",
+                                }
+                            },
+                        },
                     },
-                    "schema": {
-                        "type": "object",
-                        "description": "Optional database schema for deeper analysis",
-                        "properties": {
-                            "tables": {
-                                "type": "object",
-                                "description": "Table definitions"
-                            }
-                        }
-                    }
+                    "required": ["query"],
                 },
-                "required": ["query"]
-            }
-        ))
+            )
+        )
 
         # Schema validator tool
-        self.register_tool(MCPTool(
-            name="validate_schema",
-            description="Validate database schema design and suggest improvements",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "schema": {
-                        "type": "object",
-                        "description": "Database schema to validate"
-                    }
+        self.register_tool(
+            MCPTool(
+                name="validate_schema",
+                description="Validate database schema design and suggest improvements",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "schema": {
+                            "type": "object",
+                            "description": "Database schema to validate",
+                        }
+                    },
+                    "required": ["schema"],
                 },
-                "required": ["schema"]
-            }
-        ))
+            )
+        )
 
     def _register_prompts(self):
         """Register database-related prompts."""
         # Query optimization prompt
-        self.register_prompt(MCPPrompt(
-            name="optimize_query",
-            description="Guide for optimizing database queries",
-            arguments=[
-                {
-                    "name": "query",
-                    "description": "The SQL query to optimize",
-                    "required": True
-                },
-                {
-                    "name": "performance_metrics",
-                    "description": "Current performance metrics (execution time, rows scanned, etc.)",
-                    "required": False
-                }
-            ]
-        ))
+        self.register_prompt(
+            MCPPrompt(
+                name="optimize_query",
+                description="Guide for optimizing database queries",
+                arguments=[
+                    {
+                        "name": "query",
+                        "description": "The SQL query to optimize",
+                        "required": True,
+                    },
+                    {
+                        "name": "performance_metrics",
+                        "description": "Current performance metrics (execution time, rows scanned, etc.)",
+                        "required": False,
+                    },
+                ],
+            )
+        )
 
         # Schema design prompt
-        self.register_prompt(MCPPrompt(
-            name="design_schema",
-            description="Guide for designing a database schema",
-            arguments=[
-                {
-                    "name": "requirements",
-                    "description": "Business requirements for the database",
-                    "required": True
-                },
-                {
-                    "name": "constraints",
-                    "description": "Technical constraints (performance, scalability, etc.)",
-                    "required": False
-                }
-            ]
-        ))
+        self.register_prompt(
+            MCPPrompt(
+                name="design_schema",
+                description="Guide for designing a database schema",
+                arguments=[
+                    {
+                        "name": "requirements",
+                        "description": "Business requirements for the database",
+                        "required": True,
+                    },
+                    {
+                        "name": "constraints",
+                        "description": "Technical constraints (performance, scalability, etc.)",
+                        "required": False,
+                    },
+                ],
+            )
+        )
 
     async def start(self):
         """Start the MCP server and register handlers."""
         # Register resource handlers
-        self.set_resource_handler("db://best-practices/indexing", self._get_indexing_guide)
-        self.set_resource_handler("db://patterns/common-queries", self._get_query_patterns)
+        self.set_resource_handler(
+            "db://best-practices/indexing", self._get_indexing_guide
+        )
+        self.set_resource_handler(
+            "db://patterns/common-queries", self._get_query_patterns
+        )
         self.set_resource_handler("db://guides/schema-design", self._get_schema_guide)
 
         # Register tool handlers
@@ -380,15 +399,34 @@ CREATE TABLE categories (
 
     # Tool handlers
 
-    async def _format_sql(self, query: str, dialect: str = "postgresql") -> Dict[str, Any]:
+    async def _format_sql(
+        self, query: str, dialect: str = "postgresql"
+    ) -> Dict[str, Any]:
         """Format SQL query."""
         # Simple formatting implementation
         # In production, use sqlparse or similar library
 
         # Basic formatting rules
-        keywords = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER',
-                   'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
-                   'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP']
+        keywords = [
+            "SELECT",
+            "FROM",
+            "WHERE",
+            "JOIN",
+            "LEFT",
+            "RIGHT",
+            "INNER",
+            "GROUP BY",
+            "ORDER BY",
+            "HAVING",
+            "LIMIT",
+            "OFFSET",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "CREATE",
+            "ALTER",
+            "DROP",
+        ]
 
         formatted = query
 
@@ -398,31 +436,33 @@ CREATE TABLE categories (
             formatted = formatted.replace(keyword.capitalize(), keyword)
 
         # Add newlines before major clauses
-        for keyword in ['FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT']:
-            formatted = formatted.replace(f' {keyword}', f'\n{keyword}')
+        for keyword in ["FROM", "WHERE", "GROUP BY", "ORDER BY", "HAVING", "LIMIT"]:
+            formatted = formatted.replace(f" {keyword}", f"\n{keyword}")
 
         # Indent subqueries (basic)
-        lines = formatted.split('\n')
+        lines = formatted.split("\n")
         formatted_lines = []
         indent_level = 0
 
         for line in lines:
-            if '(' in line:
-                indent_level += line.count('(')
-            if ')' in line:
-                indent_level -= line.count(')')
+            if "(" in line:
+                indent_level += line.count("(")
+            if ")" in line:
+                indent_level -= line.count(")")
 
-            formatted_lines.append('  ' * max(0, indent_level) + line.strip())
+            formatted_lines.append("  " * max(0, indent_level) + line.strip())
 
-        formatted = '\n'.join(formatted_lines)
+        formatted = "\n".join(formatted_lines)
 
         return {
             "formatted_query": formatted,
             "dialect": dialect,
-            "line_count": len(formatted_lines)
+            "line_count": len(formatted_lines),
         }
 
-    async def _analyze_query(self, query: str, schema: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def _analyze_query(
+        self, query: str, schema: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """Analyze SQL query for performance issues."""
         issues = []
         suggestions = []
@@ -430,61 +470,74 @@ CREATE TABLE categories (
         query_upper = query.upper()
 
         # Check for SELECT *
-        if 'SELECT *' in query_upper:
-            issues.append({
-                "severity": "medium",
-                "type": "performance",
-                "message": "SELECT * can retrieve unnecessary columns",
-                "line": query_upper.find('SELECT *')
-            })
+        if "SELECT *" in query_upper:
+            issues.append(
+                {
+                    "severity": "medium",
+                    "type": "performance",
+                    "message": "SELECT * can retrieve unnecessary columns",
+                    "line": query_upper.find("SELECT *"),
+                }
+            )
             suggestions.append("Specify only the columns you need")
 
         # Check for missing WHERE in UPDATE/DELETE
-        if ('UPDATE' in query_upper or 'DELETE' in query_upper) and 'WHERE' not in query_upper:
-            issues.append({
-                "severity": "high",
-                "type": "safety",
-                "message": "UPDATE/DELETE without WHERE clause affects all rows",
-                "line": 0
-            })
+        if (
+            "UPDATE" in query_upper or "DELETE" in query_upper
+        ) and "WHERE" not in query_upper:
+            issues.append(
+                {
+                    "severity": "high",
+                    "type": "safety",
+                    "message": "UPDATE/DELETE without WHERE clause affects all rows",
+                    "line": 0,
+                }
+            )
             suggestions.append("Add a WHERE clause to limit affected rows")
 
         # Check for LIKE with leading wildcard
         import re
+
         if re.search(r"LIKE\s+['\"]%", query_upper):
-            issues.append({
-                "severity": "medium",
-                "type": "performance",
-                "message": "Leading wildcard in LIKE prevents index usage",
-                "line": 0
-            })
+            issues.append(
+                {
+                    "severity": "medium",
+                    "type": "performance",
+                    "message": "Leading wildcard in LIKE prevents index usage",
+                    "line": 0,
+                }
+            )
             suggestions.append("Consider full-text search or reverse the pattern")
 
         # Check for OR conditions
-        if ' OR ' in query_upper:
-            issues.append({
-                "severity": "low",
-                "type": "performance",
-                "message": "OR conditions may prevent optimal index usage",
-                "line": 0
-            })
+        if " OR " in query_upper:
+            issues.append(
+                {
+                    "severity": "low",
+                    "type": "performance",
+                    "message": "OR conditions may prevent optimal index usage",
+                    "line": 0,
+                }
+            )
             suggestions.append("Consider using UNION for better performance")
 
         # Check for NOT IN with subquery
-        if 'NOT IN' in query_upper and '(SELECT' in query_upper:
-            issues.append({
-                "severity": "medium",
-                "type": "performance",
-                "message": "NOT IN with subquery can be slow and has NULL handling issues",
-                "line": 0
-            })
+        if "NOT IN" in query_upper and "(SELECT" in query_upper:
+            issues.append(
+                {
+                    "severity": "medium",
+                    "type": "performance",
+                    "message": "NOT IN with subquery can be slow and has NULL handling issues",
+                    "line": 0,
+                }
+            )
             suggestions.append("Consider using NOT EXISTS or LEFT JOIN")
 
         return {
             "query": query,
             "issues": issues,
             "suggestions": suggestions,
-            "score": max(0, 100 - len(issues) * 20)  # Simple scoring
+            "score": max(0, 100 - len(issues) * 20),  # Simple scoring
         }
 
     async def _validate_schema(self, schema: Dict[str, Any]) -> Dict[str, Any]:
@@ -500,11 +553,13 @@ CREATE TABLE categories (
             # Check for primary key
             has_primary_key = any(col.get("primary_key") for col in columns.values())
             if not has_primary_key:
-                issues.append({
-                    "table": table_name,
-                    "type": "structure",
-                    "message": "Table lacks a primary key"
-                })
+                issues.append(
+                    {
+                        "table": table_name,
+                        "type": "structure",
+                        "message": "Table lacks a primary key",
+                    }
+                )
                 recommendations.append(f"Add a primary key to {table_name}")
 
             # Check for appropriate data types
@@ -513,12 +568,14 @@ CREATE TABLE categories (
 
                 # Check for VARCHAR without length
                 if data_type == "VARCHAR" and not col_info.get("length"):
-                    issues.append({
-                        "table": table_name,
-                        "column": col_name,
-                        "type": "data_type",
-                        "message": "VARCHAR without specified length"
-                    })
+                    issues.append(
+                        {
+                            "table": table_name,
+                            "column": col_name,
+                            "type": "data_type",
+                            "message": "VARCHAR without specified length",
+                        }
+                    )
 
                 # Check for TEXT when VARCHAR might be better
                 if data_type == "TEXT" and col_name.endswith(("_name", "_code", "_id")):
@@ -528,8 +585,9 @@ CREATE TABLE categories (
 
             # Check indexes
             indexes = table_info.get("indexes", [])
-            foreign_keys = [col for col, info in columns.items()
-                          if info.get("foreign_key")]
+            foreign_keys = [
+                col for col, info in columns.items() if info.get("foreign_key")
+            ]
 
             for fk in foreign_keys:
                 if not any(fk in idx.get("columns", []) for idx in indexes):
@@ -546,12 +604,14 @@ CREATE TABLE categories (
             "tables_analyzed": total_tables,
             "issues": issues,
             "recommendations": recommendations,
-            "score": score
+            "score": score,
         }
 
     # Prompt handlers
 
-    async def _optimize_query_prompt(self, query: str, performance_metrics: Dict = None) -> str:
+    async def _optimize_query_prompt(
+        self, query: str, performance_metrics: Dict = None
+    ) -> str:
         """Generate query optimization prompt."""
         prompt = f"""Please help me optimize this SQL query:
 
@@ -579,7 +639,9 @@ Please analyze the query and provide:
 
         return prompt
 
-    async def _design_schema_prompt(self, requirements: str, constraints: Dict = None) -> str:
+    async def _design_schema_prompt(
+        self, requirements: str, constraints: Dict = None
+    ) -> str:
         """Generate schema design prompt."""
         prompt = f"""Please help me design a database schema for the following requirements:
 
@@ -609,7 +671,7 @@ async def main():
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Create and start server

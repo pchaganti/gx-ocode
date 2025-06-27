@@ -130,7 +130,9 @@ class MCPProtocol:
 
     VERSION = "0.1.0"
 
-    def __init__(self, name: str, version: str = "1.0.0", auth_token: Optional[str] = None):
+    def __init__(
+        self, name: str, version: str = "1.0.0", auth_token: Optional[str] = None
+    ):
         """
         Initialize MCP protocol handler.
 
@@ -218,18 +220,18 @@ class MCPProtocol:
         """Guess MIME type from file extension."""
         ext = file_path.suffix.lower()
         mime_map = {
-            '.txt': 'text/plain',
-            '.md': 'text/markdown',
-            '.json': 'application/json',
-            '.py': 'text/x-python',
-            '.js': 'text/javascript',
-            '.html': 'text/html',
-            '.css': 'text/css',
-            '.xml': 'text/xml',
-            '.yaml': 'text/yaml',
-            '.yml': 'text/yaml',
+            ".txt": "text/plain",
+            ".md": "text/markdown",
+            ".json": "application/json",
+            ".py": "text/x-python",
+            ".js": "text/javascript",
+            ".html": "text/html",
+            ".css": "text/css",
+            ".xml": "text/xml",
+            ".yaml": "text/yaml",
+            ".yml": "text/yaml",
         }
-        return mime_map.get(ext, 'text/plain')
+        return mime_map.get(ext, "text/plain")
 
     async def handle_message(self, message: str) -> Optional[str]:
         """
@@ -384,15 +386,21 @@ class MCPProtocol:
         contents = []
 
         # Check if we have a handler for this resource
-        if hasattr(self, '_resource_handlers') and uri in self._resource_handlers:
+        if hasattr(self, "_resource_handlers") and uri in self._resource_handlers:
             handler = self._resource_handlers[uri]
             try:
-                content = await handler() if asyncio.iscoroutinefunction(handler) else handler()
-                contents.append({
-                    "uri": uri,
-                    "mimeType": resource.mime_type or "text/plain",
-                    "text": str(content)
-                })
+                content = (
+                    await handler()
+                    if asyncio.iscoroutinefunction(handler)
+                    else handler()
+                )
+                contents.append(
+                    {
+                        "uri": uri,
+                        "mimeType": resource.mime_type or "text/plain",
+                        "text": str(content),
+                    }
+                )
             except Exception as e:
                 raise ValueError(f"Error reading resource {uri}: {str(e)}")
         else:
@@ -400,25 +408,31 @@ class MCPProtocol:
             if uri.startswith("file://"):
                 try:
                     from pathlib import Path
+
                     file_path = Path(uri.replace("file://", ""))
                     if file_path.exists() and file_path.is_file():
                         content = file_path.read_text()
-                        contents.append({
-                            "uri": uri,
-                            "mimeType": resource.mime_type or self._guess_mime_type(file_path),
-                            "text": content
-                        })
+                        contents.append(
+                            {
+                                "uri": uri,
+                                "mimeType": resource.mime_type
+                                or self._guess_mime_type(file_path),
+                                "text": content,
+                            }
+                        )
                     else:
                         raise ValueError(f"File not found: {file_path}")
                 except Exception as e:
                     raise ValueError(f"Error reading file resource: {str(e)}")
             else:
                 # For other URI schemes, return placeholder
-                contents.append({
-                    "uri": uri,
-                    "mimeType": resource.mime_type or "text/plain",
-                    "text": f"Resource content for: {uri}"
-                })
+                contents.append(
+                    {
+                        "uri": uri,
+                        "mimeType": resource.mime_type or "text/plain",
+                        "text": f"Resource content for: {uri}",
+                    }
+                )
 
         return {"contents": contents}
 
@@ -445,50 +459,46 @@ class MCPProtocol:
 
         # Implementation for tool execution
         # Check if we have a handler for this tool
-        if hasattr(self, '_tool_handlers') and name in self._tool_handlers:
+        if hasattr(self, "_tool_handlers") and name in self._tool_handlers:
             handler = self._tool_handlers[name]
             try:
                 # Execute the tool handler
-                result = await handler(**arguments) if asyncio.iscoroutinefunction(handler) else handler(**arguments)
+                result = (
+                    await handler(**arguments)
+                    if asyncio.iscoroutinefunction(handler)
+                    else handler(**arguments)
+                )
 
                 # Format the result based on type
                 if isinstance(result, dict):
                     # Structured output
-                    content = [{
-                        "type": "text",
-                        "text": json.dumps(result, indent=2)
-                    }]
+                    content = [{"type": "text", "text": json.dumps(result, indent=2)}]
                 elif isinstance(result, str):
                     # Simple text output
-                    content = [{
-                        "type": "text",
-                        "text": result
-                    }]
+                    content = [{"type": "text", "text": result}]
                 else:
                     # Convert to string
-                    content = [{
-                        "type": "text",
-                        "text": str(result)
-                    }]
+                    content = [{"type": "text", "text": str(result)}]
 
                 return {"content": content}
             except Exception as e:
                 # Return error as content
                 return {
-                    "content": [{
-                        "type": "text",
-                        "text": f"Error executing tool {name}: {str(e)}"
-                    }],
-                    "isError": True
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Error executing tool {name}: {str(e)}",
+                        }
+                    ],
+                    "isError": True,
                 }
         else:
             # No handler registered
             return {
-                "content": [{
-                    "type": "text",
-                    "text": f"No handler registered for tool: {name}"
-                }],
-                "isError": True
+                "content": [
+                    {"type": "text", "text": f"No handler registered for tool: {name}"}
+                ],
+                "isError": True,
             }
 
     async def _handle_list_prompts(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -516,22 +526,22 @@ class MCPProtocol:
         messages = []
 
         # Check if we have a handler for this prompt
-        if hasattr(self, '_prompt_handlers') and name in self._prompt_handlers:
+        if hasattr(self, "_prompt_handlers") and name in self._prompt_handlers:
             handler = self._prompt_handlers[name]
             try:
                 # Execute the prompt handler
-                result = await handler(**arguments) if asyncio.iscoroutinefunction(handler) else handler(**arguments)
+                result = (
+                    await handler(**arguments)
+                    if asyncio.iscoroutinefunction(handler)
+                    else handler(**arguments)
+                )
 
                 # Handle different result types
                 if isinstance(result, str):
                     # Simple string prompt
-                    messages.append({
-                        "role": "user",
-                        "content": {
-                            "type": "text",
-                            "text": result
-                        }
-                    })
+                    messages.append(
+                        {"role": "user", "content": {"type": "text", "text": result}}
+                    )
                 elif isinstance(result, list):
                     # Multiple messages
                     for msg in result:
@@ -539,34 +549,34 @@ class MCPProtocol:
                             messages.append(msg)
                         else:
                             # Convert to standard format
-                            messages.append({
-                                "role": "user",
-                                "content": {
-                                    "type": "text",
-                                    "text": str(msg)
+                            messages.append(
+                                {
+                                    "role": "user",
+                                    "content": {"type": "text", "text": str(msg)},
                                 }
-                            })
+                            )
                 elif isinstance(result, dict) and "messages" in result:
                     # Pre-formatted response
                     messages = result["messages"]
                 else:
                     # Convert to string
-                    messages.append({
-                        "role": "user",
-                        "content": {
-                            "type": "text",
-                            "text": str(result)
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": {"type": "text", "text": str(result)},
                         }
-                    })
+                    )
             except Exception as e:
                 # Return error message
-                messages.append({
-                    "role": "system",
-                    "content": {
-                        "type": "text",
-                        "text": f"Error rendering prompt {name}: {str(e)}"
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": {
+                            "type": "text",
+                            "text": f"Error rendering prompt {name}: {str(e)}",
+                        },
                     }
-                })
+                )
         else:
             # Use prompt template if available
             template = prompt.description or f"Prompt: {name}"
@@ -574,18 +584,11 @@ class MCPProtocol:
             for arg_name, arg_value in arguments.items():
                 template = template.replace(f"{{{arg_name}}}", str(arg_value))
 
-            messages.append({
-                "role": "user",
-                "content": {
-                    "type": "text",
-                    "text": template
-                }
-            })
+            messages.append(
+                {"role": "user", "content": {"type": "text", "text": template}}
+            )
 
-        return {
-            "description": prompt.description,
-            "messages": messages
-        }
+        return {"description": prompt.description, "messages": messages}
 
     def _handle_set_log_level(self, params: Dict[str, Any]):
         """Handle logging/setLevel notification."""
@@ -597,11 +600,12 @@ class MCPProtocol:
             "info": logging.INFO,
             "warning": logging.WARNING,
             "error": logging.ERROR,
-            "critical": logging.CRITICAL
+            "critical": logging.CRITICAL,
         }
 
         if level.lower() in level_map:
             import logging
+
             logging.getLogger().setLevel(level_map[level.lower()])
             logging.info(f"Log level set to: {level}")
         else:
@@ -718,7 +722,7 @@ class MCPClient(MCPProtocol):
             request_id = request_data.get("id")
 
             # Store the future for this request ID
-            if not hasattr(self, '_pending_requests'):
+            if not hasattr(self, "_pending_requests"):
                 self._pending_requests = {}
             self._pending_requests[request_id] = response_future
 
@@ -735,7 +739,7 @@ class MCPClient(MCPProtocol):
             if request_id in self._pending_requests:
                 del self._pending_requests[request_id]
             raise TimeoutError(f"Request {request_id} timed out")
-        except Exception as e:
+        except Exception:
             # Clean up on error
             if request_id in self._pending_requests:
                 del self._pending_requests[request_id]

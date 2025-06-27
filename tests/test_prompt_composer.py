@@ -2,11 +2,15 @@
 Tests for the modular prompt composition system.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from ocode_python.prompts.prompt_composer import PromptComposer
 from ocode_python.prompts.prompt_repository import (
-    PromptRepository, PromptExample, PromptComponent
+    PromptComponent,
+    PromptExample,
+    PromptRepository,
 )
 
 
@@ -20,9 +24,7 @@ class TestPromptComposer:
         system_dir = tmp_path / "system"
         system_dir.mkdir()
 
-        (system_dir / "role.md").write_text(
-            "You are an expert AI coding assistant."
-        )
+        (system_dir / "role.md").write_text("You are an expert AI coding assistant.")
 
         (system_dir / "core_capabilities.md").write_text(
             "- Advanced code analysis\n- Tool orchestration"
@@ -61,9 +63,7 @@ class TestPromptComposer:
 
     def test_build_minimal_prompt(self, composer):
         """Test building a minimal prompt."""
-        prompt = composer.build_minimal_prompt(
-            tool_descriptions="- ls: List files"
-        )
+        prompt = composer.build_minimal_prompt(tool_descriptions="- ls: List files")
 
         # Should only include role and capabilities
         assert "<role>" in prompt
@@ -107,7 +107,7 @@ class TestPromptRepository:
             query="list files in current directory",
             response={"should_use_tools": True, "suggested_tools": ["ls"]},
             category="tool_use",
-            tags=["file_ops"]
+            tags=["file_ops"],
         )
 
         # Add example
@@ -128,22 +128,22 @@ class TestPromptRepository:
                 query="show me all Python files",
                 response={"should_use_tools": True},
                 category="tool_use",
-                tags=[]
+                tags=[],
             ),
             PromptExample(
                 id="",
                 query="list Python scripts in src",
                 response={"should_use_tools": True},
                 category="tool_use",
-                tags=[]
+                tags=[],
             ),
             PromptExample(
                 id="",
                 query="what is Python",
                 response={"should_use_tools": False},
                 category="knowledge",
-                tags=[]
-            )
+                tags=[],
+            ),
         ]
 
         for example in examples:
@@ -158,11 +158,7 @@ class TestPromptRepository:
     def test_performance_tracking(self, repository):
         """Test tracking example performance."""
         example = PromptExample(
-            id="perf1",
-            query="test query",
-            response={},
-            category="test",
-            tags=[]
+            id="perf1", query="test query", response={}, category="test", tags=[]
         )
 
         repository.example_store.add_example(example)
@@ -222,7 +218,7 @@ class TestPromptComposerWithRepository:
                 response={"should_use_tools": True, "suggested_tools": ["file_read"]},
                 category="tool_use",
                 tags=["file_ops"],
-                performance_score=0.9
+                performance_score=0.9,
             ),
             PromptExample(
                 id="",
@@ -230,8 +226,8 @@ class TestPromptComposerWithRepository:
                 response={"should_use_tools": True, "suggested_tools": ["file_read"]},
                 category="tool_use",
                 tags=["file_ops"],
-                performance_score=1.2
-            )
+                performance_score=1.2,
+            ),
         ]
 
         for ex in examples:
@@ -239,9 +235,7 @@ class TestPromptComposerWithRepository:
 
         # Get dynamic examples
         formatted = composer_with_repo.get_dynamic_examples(
-            "display configuration",
-            example_count=2,
-            strategy="similar"
+            "display configuration", example_count=2, strategy="similar"
         )
 
         # Should contain the examples
@@ -252,8 +246,7 @@ class TestPromptComposerWithRepository:
         """Test building adaptive prompts based on query type."""
         # Knowledge query - should get minimal prompt
         prompt = composer_with_repo.build_adaptive_prompt(
-            "What is recursion?",
-            query_type="knowledge"
+            "What is recursion?", query_type="knowledge"
         )
 
         assert "<role>" in prompt
@@ -265,7 +258,7 @@ class TestPromptComposerWithRepository:
         prompt = composer_with_repo.build_adaptive_prompt(
             "Delete all temp files",
             query_type="action",
-            context={"tool_descriptions": "- remove: Delete files"}
+            context={"tool_descriptions": "- remove: Delete files"},
         )
 
         assert "<workflow_patterns>" in prompt

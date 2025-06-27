@@ -9,18 +9,20 @@ prompt examples, templates, and components. It supports:
 - A/B testing support for prompt optimization
 """
 
+import hashlib
 import json
 import sqlite3
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, asdict
-from datetime import datetime
 from abc import ABC, abstractmethod
-import hashlib
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 # Optional imports for advanced similarity features
 try:
     import numpy as np
     from sklearn.metrics.pairwise import cosine_similarity
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -29,6 +31,7 @@ except ImportError:
 @dataclass
 class PromptExample:
     """Represents a single prompt example with metadata."""
+
     id: str
     query: str
     response: Dict[str, Any]
@@ -48,16 +51,17 @@ class PromptExample:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for storage."""
         data = asdict(self)
-        data['created_at'] = self.created_at.isoformat()
-        data['last_used'] = self.last_used.isoformat()
-        data['response'] = json.dumps(self.response)
-        data['tags'] = json.dumps(self.tags)
+        data["created_at"] = self.created_at.isoformat()
+        data["last_used"] = self.last_used.isoformat()
+        data["response"] = json.dumps(self.response)
+        data["tags"] = json.dumps(self.tags)
         return data
 
 
 @dataclass
 class PromptComponent:
     """Represents a reusable prompt component with versioning."""
+
     name: str
     content: str
     component_type: str  # system, analysis, workflow, etc.
@@ -89,7 +93,7 @@ class ExampleStore(ABC):
         self,
         category: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        limit: int = 10
+        limit: int = 10,
     ) -> List[PromptExample]:
         """Retrieve examples based on filters."""
         pass
@@ -116,7 +120,8 @@ class SQLiteExampleStore(ExampleStore):
     def _init_db(self):
         """Initialize database schema."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS examples (
                     id TEXT PRIMARY KEY,
                     query TEXT NOT NULL,
@@ -129,17 +134,23 @@ class SQLiteExampleStore(ExampleStore):
                     last_used TEXT NOT NULL,
                     embedding BLOB
                 )
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_category ON examples(category)
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_performance ON examples(performance_score)
-            """)
+            """
+            )
 
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS components (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
@@ -152,26 +163,36 @@ class SQLiteExampleStore(ExampleStore):
                     updated_at TEXT NOT NULL,
                     UNIQUE(name, version)
                 )
-            """)
+            """
+            )
 
     def add_example(self, example: PromptExample) -> str:
         """Add a new example to the database."""
         if not example.id:
             # Generate ID from query hash
-            example.id = hashlib.md5(example.query.encode()).hexdigest()[:12]
+            example.id = hashlib.md5(example.query.encode(), usedforsecurity=False).hexdigest()[:12]
 
         with sqlite3.connect(self.db_path) as conn:
             data = example.to_dict()
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR REPLACE INTO examples
                 (id, query, response, category, tags, performance_score,
                  usage_count, created_at, last_used)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                data['id'], data['query'], data['response'],
-                data['category'], data['tags'], data['performance_score'],
-                data['usage_count'], data['created_at'], data['last_used']
-            ))
+            """,
+                (
+                    data["id"],
+                    data["query"],
+                    data["response"],
+                    data["category"],
+                    data["tags"],
+                    data["performance_score"],
+                    data["usage_count"],
+                    data["created_at"],
+                    data["last_used"],
+                ),
+            )
 
         return example.id
 
@@ -179,7 +200,7 @@ class SQLiteExampleStore(ExampleStore):
         self,
         category: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        limit: int = 10
+        limit: int = 10,
     ) -> List[PromptExample]:
         """Retrieve examples based on filters."""
         query = "SELECT * FROM examples WHERE 1=1"
@@ -205,15 +226,15 @@ class SQLiteExampleStore(ExampleStore):
             examples = []
             for row in cursor:
                 example = PromptExample(
-                    id=row['id'],
-                    query=row['query'],
-                    response=json.loads(row['response']),
-                    category=row['category'],
-                    tags=json.loads(row['tags']),
-                    performance_score=row['performance_score'],
-                    usage_count=row['usage_count'],
-                    created_at=datetime.fromisoformat(row['created_at']),
-                    last_used=datetime.fromisoformat(row['last_used'])
+                    id=row["id"],
+                    query=row["query"],
+                    response=json.loads(row["response"]),
+                    category=row["category"],
+                    tags=json.loads(row["tags"]),
+                    performance_score=row["performance_score"],
+                    usage_count=row["usage_count"],
+                    created_at=datetime.fromisoformat(row["created_at"]),
+                    last_used=datetime.fromisoformat(row["last_used"]),
                 )
                 examples.append(example)
 
@@ -246,15 +267,15 @@ class SQLiteExampleStore(ExampleStore):
             examples = []
             for row in cursor:
                 example = PromptExample(
-                    id=row['id'],
-                    query=row['query'],
-                    response=json.loads(row['response']),
-                    category=row['category'],
-                    tags=json.loads(row['tags']),
-                    performance_score=row['performance_score'],
-                    usage_count=row['usage_count'],
-                    created_at=datetime.fromisoformat(row['created_at']),
-                    last_used=datetime.fromisoformat(row['last_used'])
+                    id=row["id"],
+                    query=row["query"],
+                    response=json.loads(row["response"]),
+                    category=row["category"],
+                    tags=json.loads(row["tags"]),
+                    performance_score=row["performance_score"],
+                    usage_count=row["usage_count"],
+                    created_at=datetime.fromisoformat(row["created_at"]),
+                    last_used=datetime.fromisoformat(row["last_used"]),
                 )
                 examples.append(example)
 
@@ -263,13 +284,16 @@ class SQLiteExampleStore(ExampleStore):
     def update_performance(self, example_id: str, score: float):
         """Update the performance score of an example."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 UPDATE examples
                 SET performance_score = ?,
                     usage_count = usage_count + 1,
                     last_used = ?
                 WHERE id = ?
-            """, (score, datetime.now().isoformat(), example_id))
+            """,
+                (score, datetime.now().isoformat(), example_id),
+            )
 
     def add_component(self, component: PromptComponent) -> int:
         """Add or update a prompt component."""
@@ -277,32 +301,42 @@ class SQLiteExampleStore(ExampleStore):
             # Check if component exists
             existing = conn.execute(
                 "SELECT id, version FROM components WHERE name = ? ORDER BY version DESC LIMIT 1",
-                (component.name,)
+                (component.name,),
             ).fetchone()
 
             if existing:
                 component.version = existing[1] + 1
 
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO components
                 (name, content, component_type, version, active, metadata, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                component.name, component.content, component.component_type,
-                component.version, component.active, json.dumps(component.metadata),
-                component.created_at.isoformat(), component.updated_at.isoformat()
-            ))
+            """,
+                (
+                    component.name,
+                    component.content,
+                    component.component_type,
+                    component.version,
+                    component.active,
+                    json.dumps(component.metadata),
+                    component.created_at.isoformat(),
+                    component.updated_at.isoformat(),
+                ),
+            )
 
             # Deactivate previous versions
             if existing:
                 conn.execute(
                     "UPDATE components SET active = 0 WHERE name = ? AND version < ?",
-                    (component.name, component.version)
+                    (component.name, component.version),
                 )
 
             return conn.lastrowid
 
-    def get_component(self, name: str, version: Optional[int] = None) -> Optional[PromptComponent]:
+    def get_component(
+        self, name: str, version: Optional[int] = None
+    ) -> Optional[PromptComponent]:
         """Get a prompt component by name and optional version."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -310,25 +344,24 @@ class SQLiteExampleStore(ExampleStore):
             if version:
                 cursor = conn.execute(
                     "SELECT * FROM components WHERE name = ? AND version = ?",
-                    (name, version)
+                    (name, version),
                 )
             else:
                 cursor = conn.execute(
-                    "SELECT * FROM components WHERE name = ? AND active = 1",
-                    (name,)
+                    "SELECT * FROM components WHERE name = ? AND active = 1", (name,)
                 )
 
             row = cursor.fetchone()
             if row:
                 return PromptComponent(
-                    name=row['name'],
-                    content=row['content'],
-                    component_type=row['component_type'],
-                    version=row['version'],
-                    active=bool(row['active']),
-                    metadata=json.loads(row['metadata']) if row['metadata'] else {},
-                    created_at=datetime.fromisoformat(row['created_at']),
-                    updated_at=datetime.fromisoformat(row['updated_at'])
+                    name=row["name"],
+                    content=row["content"],
+                    component_type=row["component_type"],
+                    version=row["version"],
+                    active=bool(row["active"]),
+                    metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+                    created_at=datetime.fromisoformat(row["created_at"]),
+                    updated_at=datetime.fromisoformat(row["updated_at"]),
                 )
 
         return None
@@ -352,7 +385,7 @@ class PromptRepository:
         """Import examples from a markdown or JSON file."""
         content = file_path.read_text()
 
-        if file_path.suffix == '.json':
+        if file_path.suffix == ".json":
             examples_data = json.loads(content)
         else:
             # Parse markdown format
@@ -361,45 +394,38 @@ class PromptRepository:
         for example_data in examples_data:
             example = PromptExample(
                 id="",  # Will be generated
-                query=example_data['query'],
-                response=example_data['response'],
+                query=example_data["query"],
+                response=example_data["response"],
                 category=category,
-                tags=example_data.get('tags', [])
+                tags=example_data.get("tags", []),
             )
             self.example_store.add_example(example)
 
     def _parse_markdown_examples(self, content: str) -> List[Dict[str, Any]]:
         """Parse examples from markdown format."""
         examples = []
-        lines = content.strip().split('\n')
+        lines = content.strip().split("\n")
 
         i = 0
         while i < len(lines):
-            if lines[i].startswith('Query:'):
+            if lines[i].startswith("Query:"):
                 query = lines[i][6:].strip().strip('"')
                 i += 1
 
-                if i < len(lines) and lines[i].startswith('Response:'):
+                if i < len(lines) and lines[i].startswith("Response:"):
                     response_line = lines[i][9:].strip()
                     try:
                         response = json.loads(response_line)
-                    except:
+                    except Exception:
                         response = {"raw": response_line}
 
-                    examples.append({
-                        'query': query,
-                        'response': response,
-                        'tags': []
-                    })
+                    examples.append({"query": query, "response": response, "tags": []})
             i += 1
 
         return examples
 
     def get_examples_for_prompt(
-        self,
-        query: str,
-        category: Optional[str] = None,
-        strategy: str = "similar"
+        self, query: str, category: Optional[str] = None, strategy: str = "similar"
     ) -> List[PromptExample]:
         """Get relevant examples for building a prompt.
 
@@ -423,9 +449,7 @@ class PromptRepository:
     def update_component(self, name: str, content: str, component_type: str):
         """Update a prompt component with versioning."""
         component = PromptComponent(
-            name=name,
-            content=content,
-            component_type=component_type
+            name=name, content=content, component_type=component_type
         )
         self.example_store.add_component(component)
 
@@ -463,9 +487,15 @@ def migrate_existing_examples():
 
     # Add programmatically generated examples
     common_queries = [
-        ("fix the bug in main.py", {"should_use_tools": True, "suggested_tools": ["file_read", "file_edit"]}),
+        (
+            "fix the bug in main.py",
+            {"should_use_tools": True, "suggested_tools": ["file_read", "file_edit"]},
+        ),
         ("what is recursion", {"should_use_tools": False, "suggested_tools": []}),
-        ("analyze project structure", {"should_use_tools": True, "suggested_tools": ["architect", "find"]}),
+        (
+            "analyze project structure",
+            {"should_use_tools": True, "suggested_tools": ["architect", "find"]},
+        ),
         # ... hundreds more examples
     ]
 
@@ -475,6 +505,6 @@ def migrate_existing_examples():
             query=query,
             response=response,
             category="tool_decision",
-            tags=["common"]
+            tags=["common"],
         )
         repo.example_store.add_example(example)

@@ -7,18 +7,20 @@ improves maintainability and allows for dynamic prompt construction based
 on query requirements.
 """
 
-import os
 import json
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
 from functools import lru_cache
-from .prompt_repository import PromptRepository, PromptExample
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
+
+from .prompt_repository import PromptRepository
 
 
 class PromptComposer:
     """Composes system prompts from modular components."""
 
-    def __init__(self, prompts_dir: Optional[Path] = None, use_repository: bool = False):
+    def __init__(
+        self, prompts_dir: Optional[Path] = None, use_repository: bool = False
+    ):
         """Initialize the prompt composer.
 
         Args:
@@ -53,16 +55,15 @@ class PromptComposer:
             "response_strategies",
             "error_handling",
             "output_guidelines",
-            "thinking_framework"
+            "thinking_framework",
         ]
 
-        self.analysis_components = [
-            "decision_criteria",
-            "tool_usage_criteria"
-        ]
+        self.analysis_components = ["decision_criteria", "tool_usage_criteria"]
 
     @lru_cache(maxsize=128)
-    def load_component(self, component_name: str, component_type: str = "system") -> str:
+    def load_component(
+        self, component_name: str, component_type: str = "system"
+    ) -> str:
         """Load a prompt component from file with caching.
 
         Args:
@@ -94,7 +95,7 @@ class PromptComposer:
         if not file_path.exists():
             raise FileNotFoundError(f"Component file not found: {file_path}")
 
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read().strip()
 
         # Cache the content
@@ -107,7 +108,7 @@ class PromptComposer:
         tool_descriptions: str,
         include_components: Optional[Set[str]] = None,
         exclude_components: Optional[Set[str]] = None,
-        additional_context: Optional[Dict[str, str]] = None
+        additional_context: Optional[Dict[str, str]] = None,
     ) -> str:
         """Build a complete system prompt from components.
 
@@ -141,12 +142,16 @@ class PromptComposer:
         # Add core capabilities
         if "core_capabilities" in components_to_include:
             capabilities = self.load_component("core_capabilities")
-            sections.append(f"<core_capabilities>\n{capabilities}\n</core_capabilities>")
+            sections.append(
+                f"<core_capabilities>\n{capabilities}\n</core_capabilities>"
+            )
 
         # Add task analysis framework
         if "task_analysis_framework" in components_to_include:
             framework = self.load_component("task_analysis_framework")
-            sections.append(f"<task_analysis_framework>\n{framework}\n</task_analysis_framework>")
+            sections.append(
+                f"<task_analysis_framework>\n{framework}\n</task_analysis_framework>"
+            )
 
         # Add available tools section
         sections.append(f"<available_tools>\n{tool_descriptions}\n</available_tools>")
@@ -155,7 +160,9 @@ class PromptComposer:
         if "decision_criteria" in components_to_include:
             try:
                 criteria = self.load_component("decision_criteria", "analysis")
-                sections.append(f"<decision_criteria>\n{criteria}\n</decision_criteria>")
+                sections.append(
+                    f"<decision_criteria>\n{criteria}\n</decision_criteria>"
+                )
             except FileNotFoundError:
                 pass  # Skip if not available
 
@@ -167,7 +174,9 @@ class PromptComposer:
         # Add response strategies
         if "response_strategies" in components_to_include:
             strategies = self.load_component("response_strategies")
-            sections.append(f"<response_strategies>\n{strategies}\n</response_strategies>")
+            sections.append(
+                f"<response_strategies>\n{strategies}\n</response_strategies>"
+            )
 
         # Add error handling
         if "error_handling" in components_to_include:
@@ -209,7 +218,7 @@ class PromptComposer:
             include_components={"role", "core_capabilities"},
             additional_context={
                 "instruction": "Execute the user's request efficiently using available tools."
-            }
+            },
         )
 
     def build_analysis_prompt(self, query: str, tool_names: List[str]) -> str:
@@ -289,7 +298,7 @@ Respond with ONLY a JSON object following this exact format:
         self,
         query: str,
         context: Optional[Dict[str, Any]] = None,
-        query_type: Optional[str] = None
+        query_type: Optional[str] = None,
     ) -> str:
         """Build an adaptive system prompt based on query analysis.
 
@@ -312,7 +321,7 @@ Respond with ONLY a JSON object following this exact format:
                 "role",
                 "core_capabilities",
                 "response_strategies",
-                "output_guidelines"
+                "output_guidelines",
             }
         elif query_type == "action":
             # Tool-focused components for action queries
@@ -320,7 +329,7 @@ Respond with ONLY a JSON object following this exact format:
                 "role",
                 "core_capabilities",
                 "workflow_patterns",
-                "error_handling"
+                "error_handling",
             }
         elif query_type == "complex":
             # All components for complex queries
@@ -332,7 +341,7 @@ Respond with ONLY a JSON object following this exact format:
                 "core_capabilities",
                 "task_analysis_framework",
                 "response_strategies",
-                "thinking_framework"
+                "thinking_framework",
             }
 
         # Get tool descriptions if needed
@@ -344,14 +353,11 @@ Respond with ONLY a JSON object following this exact format:
         return self.build_system_prompt(
             tool_descriptions=tool_descriptions,
             include_components=include_components,
-            additional_context=context
+            additional_context=context,
         )
 
     def get_dynamic_examples(
-        self,
-        query: str,
-        example_count: int = 5,
-        strategy: str = "similar"
+        self, query: str, example_count: int = 5, strategy: str = "similar"
     ) -> str:
         """Get dynamically selected examples from the repository.
 
@@ -372,30 +378,25 @@ Respond with ONLY a JSON object following this exact format:
 
         # Get examples from repository
         examples = self.repository.get_examples_for_prompt(
-            query=query,
-            strategy=strategy
+            query=query, strategy=strategy
         )[:example_count]
 
         # Format examples
         formatted_examples = []
         for example in examples:
             formatted = f'Query: "{example.query}"\n'
-            formatted += f'Response: {json.dumps(example.response)}'
+            formatted += f"Response: {json.dumps(example.response)}"
             formatted_examples.append(formatted)
 
             # Track usage for performance metrics
             self.repository.track_example_performance(
-                example.id,
-                success=True  # Will be updated based on actual results
+                example.id, success=True  # Will be updated based on actual results
             )
 
         return "\n\n".join(formatted_examples)
 
     def build_analysis_prompt_dynamic(
-        self,
-        query: str,
-        tool_names: List[str],
-        use_dynamic_examples: bool = True
+        self, query: str, tool_names: List[str], use_dynamic_examples: bool = True
     ) -> str:
         """Build analysis prompt with dynamic example selection.
 
@@ -412,19 +413,16 @@ Respond with ONLY a JSON object following this exact format:
         """
         # Load static components
         tool_usage_criteria = self._load_or_default(
-            "tool_usage_criteria", "analysis",
-            "Analyze the query to determine if tools are needed."
+            "tool_usage_criteria",
+            "analysis",
+            "Analyze the query to determine if tools are needed.",
         )
 
         tool_categories = self._load_or_default(
-            "tool_categories", "analysis",
-            "Tools are available for various operations."
+            "tool_categories", "analysis", "Tools are available for various operations."
         )
 
-        thinking_questions = self._load_or_default(
-            "thinking_questions", "analysis",
-            ""
-        )
+        thinking_questions = self._load_or_default("thinking_questions", "analysis", "")
 
         # Get examples - dynamic or static
         if use_dynamic_examples and self.repository:
@@ -469,10 +467,7 @@ Respond with ONLY a JSON object following this exact format:
 </instructions>"""
 
     def _load_or_default(
-        self,
-        component_name: str,
-        component_type: str,
-        default: str
+        self, component_name: str, component_type: str, default: str
     ) -> str:
         """Load component with fallback to default."""
         try:
