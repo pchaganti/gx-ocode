@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from ..utils.timeout_handler import TimeoutError, with_timeout
+from ..utils.retry_handler import NETWORK_RETRY, retry_async
 from .base import (
     ErrorHandler,
     ErrorType,
@@ -195,6 +196,11 @@ class MCPTool(Tool):
             # This is where we would actually spawn the MCP server process
             # and establish communication via stdio or other transport
 
+            @retry_async(
+                max_attempts=3,
+                base_delay=1.0,
+                retryable_exceptions=(ConnectionError, OSError, TimeoutError)
+            )
             async def _perform_connection():
                 connection_info = {
                     "name": server_name,
@@ -477,9 +483,17 @@ class MCPTool(Tool):
 
         # Simulate tool execution
         try:
-            # Use timeout for tool execution
+            # Use timeout and retry for tool execution
+            @retry_async(
+                max_attempts=2,
+                base_delay=0.5,
+                retryable_exceptions=(ConnectionError, OSError, TimeoutError)
+            )
+            async def _execute_tool():
+                return await self._simulate_tool_call(server_name, tool_name, tool_arguments)
+            
             result = await with_timeout(
-                self._simulate_tool_call(server_name, tool_name, tool_arguments),
+                _execute_tool(),
                 timeout=timeout,
                 operation=f"mcp_tool_call({server_name}.{tool_name})",
             )
