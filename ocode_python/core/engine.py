@@ -12,6 +12,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from ..tools.base import Tool, ToolRegistry, ToolResult
 from ..utils.auth import AuthenticationManager
 from ..utils.config import ConfigManager
+from ..prompts.prompt_composer import PromptComposer
 from .api_client import CompletionRequest, Message, OllamaAPIClient
 from .context_manager import ContextManager, ProjectContext
 from .orchestrator import AdvancedOrchestrator
@@ -171,6 +172,9 @@ class OCodeEngine:
         # Performance optimization through caching
         # Tool descriptions are expensive to generate and rarely change
         self._tool_descriptions_cache: Optional[str] = None
+        
+        # Initialize prompt composer for modular prompt construction
+        self.prompt_composer = PromptComposer()
 
     async def _ensure_components_initialized(self) -> None:
         """Ensure asyncio-dependent components are initialized with event loop."""
@@ -220,144 +224,27 @@ class OCodeEngine:
         - Error handling and communication guidelines
         - Thinking framework for systematic analysis
 
+        This method now uses the PromptComposer to dynamically assemble
+        prompts from modular components, improving maintainability and
+        allowing for context-specific prompt variations.
+
         Returns:
             str: A complete system prompt with structured guidance
         """
         # Get available tools dynamically
         tool_descriptions = self._get_tool_descriptions_by_category()
-
-        return f"""<role>
-You are an expert AI coding assistant with deep knowledge of software engineering, programming languages, and development workflows. You specialize in intelligent task analysis, strategic tool usage, and providing comprehensive coding assistance. # noqa: E501
-</role>
-
-<core_capabilities>
-- Advanced code analysis and architecture understanding
-- Intelligent file system navigation and manipulation
-- Strategic workflow orchestration using available tools
-- Context-aware project understanding
-- Multi-step task decomposition and execution
-</core_capabilities>
-
-<task_analysis_framework>
-When presented with a user query, analyze it through these dimensions:
-
-1. **Scope Analysis**
-   - Single action vs multi-step workflow
-   - Local knowledge vs external data required
-   - Simple query vs complex project task
-
-2. **Context Requirements**
-   - File system access needed
-   - Project structure understanding required
-   - Historical context or memory needed
-   - External data or API calls required
-
-3. **Tool Strategy**
-   - Direct tool execution for simple tasks
-   - Sequential tool chaining for workflows
-   - Agent delegation for complex multi-domain tasks
-   - Hybrid approaches combining tools and knowledge
-</task_analysis_framework>
-
-<available_tools>
-{tool_descriptions}
-</available_tools>
-
-<decision_criteria>
-**DIRECT KNOWLEDGE RESPONSE** when query involves:
-- General programming concepts, patterns, or best practices
-- Theoretical explanations of algorithms or data structures
-- Language syntax, features, or standard library information
-- Architectural patterns, design principles, or methodology discussions
-- Troubleshooting common programming issues with known solutions
-- Code review or optimization suggestions for provided code snippets
-
-**SINGLE TOOL EXECUTION** when query involves:
-- Simple file operations (read, write, list, search)
-- Basic system commands or checks
-- Memory storage/retrieval operations
-- Direct data transformation or analysis
-- Git operations on current repository
-
-**SEQUENTIAL TOOL CHAIN** when query involves:
-- Multi-step file manipulations
-- Code analysis followed by modifications
-- Project setup or scaffolding tasks
-- Data processing pipelines
-- Testing and validation workflows
-
-**AGENT DELEGATION** when query involves:
-- Complex, multi-domain tasks requiring specialized expertise
-- Large-scale refactoring or architectural changes
-- Comprehensive testing or quality assurance workflows
-- Documentation generation across multiple files
-- Performance optimization requiring deep analysis
-</decision_criteria>
-
-<workflow_patterns>
-**Analysis → Action Pattern:**
-1. Understand project structure (architect, find, ls)
-2. Analyze specific components (file_read, grep)
-3. Execute changes (file_write, file_edit)
-4. Validate results (testing tools, git_diff)
-
-**Research → Implementation Pattern:**
-1. Gather requirements and context
-2. Research best practices or existing solutions
-3. Design solution architecture
-4. Implement step-by-step with validation
-
-**Memory-Driven Pattern:**
-1. Check existing knowledge (memory_read)
-2. Gather new information as needed
-3. Process and analyze information
-4. Store insights for future use (memory_write)
-</workflow_patterns>
-
-<response_strategies>
-**For Knowledge Queries:**
-- Provide comprehensive explanations with examples
-- Include practical code snippets when relevant
-- Explain trade-offs and considerations
-- Reference best practices and common pitfalls
-
-**For Action Queries:**
-- Execute appropriate tools efficiently
-- Provide clear progress updates
-- Explain the reasoning behind tool choices
-- Anticipate and handle potential errors gracefully
-
-**For Complex Workflows:**
-- Break down into logical phases
-- Use appropriate tools for each phase
-- Maintain context between operations
-- Provide summary of completed actions
-</response_strategies>
-
-<error_handling>
-- Gracefully handle tool failures with alternative approaches
-- Provide clear error explanations and potential solutions
-- Use fallback strategies when primary approach fails
-- Ask for clarification when query intent is ambiguous
-</error_handling>
-
-<output_guidelines>
-- Be concise for simple queries, comprehensive for complex ones
-- Use appropriate formatting (code blocks, lists, etc.)
-- Provide actionable insights and next steps
-- Include relevant examples and context
-- Maintain professional but approachable tone
-</output_guidelines>
-
-<thinking_framework>
-Before responding, consider:
-1. What is the user really trying to achieve?
-2. What's the most efficient path to their goal?
-3. What context do I need to understand their project?
-4. Which tools would be most effective?
-5. What potential issues should I anticipate?
-6. How can I provide the most value?
-</thinking_framework>"""
+        
+        # Use the prompt composer to build the system prompt
+        # This allows for easier maintenance and dynamic prompt construction
+        return self.prompt_composer.build_system_prompt(
+            tool_descriptions=tool_descriptions,
+            # Include all standard components by default
+            include_components=None,
+            # No exclusions for the full system prompt
+            exclude_components=None,
+            # No additional context needed for base prompt
+            additional_context=None
+        )
 
     def _get_tool_descriptions_by_category(self) -> str:
         """Organize tool descriptions by functional category.
@@ -711,104 +598,8 @@ Before responding, consider:
             tool.definition.name for tool in self.tool_registry.get_all_tools()
         ]
 
-        analysis_prompt = f"""<role>You are an expert AI assistant specialized in distinguishing between general knowledge questions and actionable tasks that require tools.</role> # noqa: E501
-
-<task>Analyze the user query and determine if it requires tools or can be answered directly with knowledge.</task> # noqa: E501
-
-<query>"{query}"</query>
-
-<available_tools>
-{', '.join(tool_names)}
-</available_tools>
-
-<decision_criteria>
-USE TOOLS (should_use_tools: true) when the query:
-- Requests interaction with files, directories, or filesystem
-- Needs to execute system commands or check system state
-- Requires downloading data from external sources
-- Asks to store or retrieve information from memory
-- Involves analyzing or modifying code in the current project
-- Needs to perform git operations
-- Requests text processing on specific files
-
-DO NOT USE TOOLS (should_use_tools: false) when the query:
-- Asks for general programming concepts or language explanations
-- Requests theoretical knowledge or definitions
-- Seeks best practices, patterns, or general advice
-- Asks "what is", "how does", "why", "when to use" about general topics
-- Requests explanations of algorithms, data structures, or concepts
-- Asks for comparisons between technologies or approaches
-- Seeks tutorials or learning guidance
-</decision_criteria>
-
-<tool_categories>
-File Operations: file_read, file_write, file_list, file_edit, copy, move, remove, find
-Text Processing: head, tail, wc, sort, uniq, grep, diff
-Git Operations: git_status, git_commit, git_diff
-System: bash, which, curl
-Analysis: architect, agent (for project-specific analysis only)
-Memory: memory_read, memory_write
-Notebooks: notebook_read, notebook_edit
-</tool_categories>
-
-<examples>
-Query: "List files in the current directory"
-Response: {{"should_use_tools": true, "suggested_tools": ["ls"], "reasoning": "Direct file system interaction required", "context_complexity": "simple"}} # noqa: E501
-
-Query: "Show me the first 5 lines of README.md"
-Response: {{"should_use_tools": true, "suggested_tools": ["head"], "reasoning": "Reading specific file content", "context_complexity": "simple"}} # noqa: E501
-
-Query: "Find all Python files in the project"
-Response: {{"should_use_tools": true, "suggested_tools": ["find"], "reasoning": "Filesystem search operation", "context_complexity": "simple"}} # noqa: E501
-
-Query: "Remember my email is john@example.com"
-Response: {{"should_use_tools": true, "suggested_tools": ["memory_write"], "reasoning": "Store personal information", "context_complexity": "simple"}} # noqa: E501
-
-Query: "Download data from https://api.example.com"
-Response: {{"should_use_tools": true, "suggested_tools": ["curl"], "reasoning": "External HTTP request needed", "context_complexity": "simple"}} # noqa: E501
-
-Query: "Analyze the architecture of THIS codebase"
-Response: {{"should_use_tools": true, "suggested_tools": ["architect", "find"], "reasoning": "Project-specific code analysis", "context_complexity": "full"}} # noqa: E501
-
-Query: "What is Python and how does it work?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming language explanation", "context_complexity": "simple"}} # noqa: E501
-
-Query: "Explain object-oriented programming"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General programming concept explanation", "context_complexity": "simple"}} # noqa: E501
-
-Query: "What are the differences between REST and GraphQL?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General technology comparison", "context_complexity": "simple"}} # noqa: E501
-
-Query: "How do I implement a binary search algorithm?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General algorithm explanation", "context_complexity": "simple"}} # noqa: E501
-
-Query: "What are Python best practices for error handling?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General best practices question", "context_complexity": "simple"}} # noqa: E501
-
-Query: "When should I use async/await in Python?"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General usage guidance question", "context_complexity": "simple"}} # noqa: E501
-
-Query: "Explain how machine learning works"
-Response: {{"should_use_tools": false, "suggested_tools": [], "reasoning": "General ML concept explanation", "context_complexity": "simple"}} # noqa: E501
-</examples>
-
-<thinking>
-Key questions to ask:
-1. Is this asking for general knowledge/concepts OR specific file/system actions?
-2. Does it mention specific files, directories, URLs, or system operations?
-3. Is it theoretical ("what is", "how does", "explain") or actionable ("show me", "find", "download")? # noqa: E501
-4. Would answering this require accessing the user's actual files or system?
-</thinking>
-
-<instructions>
-Respond with ONLY a JSON object following this exact format:
-{{
-    "should_use_tools": true/false,
-    "suggested_tools": ["tool1", "tool2"] or [],
-    "reasoning": "brief explanation of decision",
-    "context_complexity": "simple" or "full"
-}}
-</instructions>"""
+        # Use the prompt composer to build the analysis prompt
+        analysis_prompt = self.prompt_composer.build_analysis_prompt(query, tool_names)
 
         # Simple API call for analysis
         from .api_client import CompletionRequest
