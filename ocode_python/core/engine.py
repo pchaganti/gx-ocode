@@ -1067,7 +1067,7 @@ When a user asks you to perform an action, call the appropriate function."""
 
         # Convert camelCase to snake_case
         # e.g., "memoryWrite" -> "memory_write", "gitStatus" -> "git_status"
-        snake_case = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", function_name)
+        snake_case = re.sub(r"([a-z0 - 9])([A-Z])", r"\1_\2", function_name)
         return snake_case.lower()
 
     async def _execute_tool_call(

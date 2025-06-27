@@ -1335,7 +1335,7 @@ class ArchitectTool(Tool):
             path, language, 2, include_patterns, exclude_patterns
         )
 
-        # Score different aspects (0-100)
+        # Score different aspects (0 - 100)
         scores = {}
 
         # Structure score

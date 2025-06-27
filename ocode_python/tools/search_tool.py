@@ -31,11 +31,11 @@ class SearchResult:
 
 class SearchTool(Tool):
     """Tool for performing web searches to ground AI responses."""
-    
+
     def __init__(self):
         super().__init__()
         self._session: Optional[aiohttp.ClientSession] = None
-    
+
     @property
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
@@ -62,7 +62,7 @@ class SearchTool(Tool):
                 "required": ["query"]
             }
         )
-    
+
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
         if self._session is None or self._session.closed:
@@ -78,12 +78,12 @@ class SearchTool(Tool):
                 timeout=aiohttp.ClientTimeout(total=30)
             )
         return self._session
-    
+
     async def _search_duckduckgo(self, query: str, max_results: int = 5) -> List[SearchResult]:
         """Perform search using DuckDuckGo API."""
         try:
             session = await self._get_session()
-            
+
             # DuckDuckGo Instant Answer API
             params = {
                 'q': query,
@@ -91,12 +91,12 @@ class SearchTool(Tool):
                 'no_html': '1',
                 'skip_disambig': '1'
             }
-            
+
             async with session.get('https://api.duckduckgo.com/', params=params) as response:
                 if response.status == 200:
                     data = await response.json()
                     results = []
-                    
+
                     # Extract instant answer if available
                     if data.get('Abstract'):
                         results.append(SearchResult(
@@ -105,7 +105,7 @@ class SearchTool(Tool):
                             snippet=data.get('Abstract', ''),
                             source='DuckDuckGo'
                         ))
-                    
+
                     # Extract related topics
                     for topic in data.get('RelatedTopics', [])[:max_results]:
                         if isinstance(topic, dict) and 'Text' in topic:
@@ -115,32 +115,32 @@ class SearchTool(Tool):
                                 snippet=topic.get('Text', ''),
                                 source='DuckDuckGo'
                             ))
-                    
+
                     return results[:max_results]
-            
+
         except Exception as e:
             logger.warning(f"DuckDuckGo search failed: {e}")
-        
+
         return []
-    
+
     async def _search_html_scraping(self, query: str, max_results: int = 5) -> List[SearchResult]:
         """Fallback search using HTML scraping."""
         try:
             session = await self._get_session()
-            
+
             # Use DuckDuckGo HTML search as fallback
             search_url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-            
+
             async with session.get(search_url) as response:
                 if response.status == 200:
                     html = await response.text()
                     soup = BeautifulSoup(html, 'html.parser')
-                    
+
                     results = []
                     for link in soup.find_all('a', class_='result__a')[:max_results]:
                         title = link.get_text(strip=True)
                         url = link.get('href', '')
-                        
+
                         # Find snippet in parent container
                         snippet = ""
                         parent = link.find_parent('div', class_='result')
@@ -148,7 +148,7 @@ class SearchTool(Tool):
                             snippet_elem = parent.find('a', class_='result__snippet')
                             if snippet_elem:
                                 snippet = snippet_elem.get_text(strip=True)
-                        
+
                         if title and url:
                             results.append(SearchResult(
                                 title=title,
@@ -156,25 +156,25 @@ class SearchTool(Tool):
                                 snippet=snippet,
                                 source='DuckDuckGo HTML'
                             ))
-                    
+
                     return results
-                    
+
         except Exception as e:
             logger.warning(f"HTML scraping search failed: {e}")
-        
+
         return []
-    
+
     async def _enhance_with_content(self, results: List[SearchResult], include_snippets: bool) -> List[SearchResult]:
         """Enhance search results with page content if requested."""
         if not include_snippets:
             return results
-        
+
         enhanced_results = []
         session = await self._get_session()
-        
+
         for result in results:
             enhanced_result = result
-            
+
             # If snippet is empty or very short, try to fetch content
             if len(result.snippet) < 50 and result.url:
                 try:
@@ -182,25 +182,25 @@ class SearchTool(Tool):
                         if response.status == 200:
                             html = await response.text()
                             soup = BeautifulSoup(html, 'html.parser')
-                            
+
                             # Remove script and style elements
                             for script in soup(["script", "style"]):
                                 script.decompose()
-                            
+
                             # Get text content
                             text = soup.get_text()
-                            
+
                             # Clean up text and create snippet
                             lines = (line.strip() for line in text.splitlines())
                             chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
                             text = ' '.join(chunk for chunk in chunks if chunk)
-                            
+
                             # Create snippet (first 200 characters)
                             if len(text) > 200:
                                 snippet = text[:200] + "..."
                             else:
                                 snippet = text
-                            
+
                             enhanced_result = SearchResult(
                                 title=result.title,
                                 url=result.url,
@@ -208,35 +208,35 @@ class SearchTool(Tool):
                                 timestamp=result.timestamp,
                                 source=result.source
                             )
-                            
+
                 except Exception as e:
                     logger.debug(f"Failed to enhance content for {result.url}: {e}")
-            
+
             enhanced_results.append(enhanced_result)
-        
+
         return enhanced_results
-    
+
     async def execute(self, query: str, max_results: int = 5, include_snippets: bool = True) -> ToolResult:
         """Execute web search and return results."""
         try:
             # Try primary search method
             results = await self._search_duckduckgo(query, max_results)
-            
+
             # Fallback to HTML scraping if needed
             if not results:
                 results = await self._search_html_scraping(query, max_results)
-            
+
             if not results:
                 return ToolResult(
                     success=False,
                     content="No search results found for the query.",
                     metadata={"query": query, "results_count": 0}
                 )
-            
+
             # Enhance results with content if requested
             if include_snippets:
                 results = await self._enhance_with_content(results, include_snippets)
-            
+
             # Format results for output
             formatted_results = []
             for i, result in enumerate(results, 1):
@@ -249,9 +249,9 @@ class SearchTool(Tool):
                 }
                 if result.timestamp:
                     formatted_result["timestamp"] = result.timestamp
-                
+
                 formatted_results.append(formatted_result)
-            
+
             # Create summary text
             summary_lines = [f"Search results for '{query}':\n"]
             for result in formatted_results:
@@ -260,7 +260,7 @@ class SearchTool(Tool):
                 if result['snippet']:
                     summary_lines.append(f"   Summary: {result['snippet']}")
                 summary_lines.append("")
-            
+
             return ToolResult(
                 success=True,
                 content="\n".join(summary_lines),
@@ -270,7 +270,7 @@ class SearchTool(Tool):
                     "results": formatted_results
                 }
             )
-            
+
         except Exception as e:
             logger.error(f"Search execution failed: {e}", exc_info=True)
             return ToolResult(
@@ -278,7 +278,7 @@ class SearchTool(Tool):
                 content=f"Search failed: {str(e)}",
                 metadata={"query": query, "error": str(e)}
             )
-    
+
     async def cleanup(self):
         """Clean up resources."""
         if self._session and not self._session.closed:

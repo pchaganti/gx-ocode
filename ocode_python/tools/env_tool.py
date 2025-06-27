@@ -418,4 +418,4 @@ class EnvironmentTool(Tool):
     def _is_valid_var_name(self, name: str) -> bool:
         """Check if a variable name is valid."""
         # Must start with letter or underscore, followed by letters, numbers, or underscores  # noqa: E501
-        return bool(re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name))
+        return bool(re.match(r"^[A-Za-z_][A-Za-z0 - 9_]*$", name))

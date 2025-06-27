@@ -668,7 +668,7 @@ class ContextManager:
         Performance:
             - Cache hit (memory): ~1μs
             - Cache hit (persistent): ~100μs
-            - Full analysis: ~1-10ms depending on file size and complexity
+            - Full analysis: ~1 - 10ms depending on file size and complexity
         """
         if self._should_ignore(path) or not path.is_file():
             return None
@@ -916,7 +916,7 @@ class ContextManager:
         Returns:
             Dictionary with categorization details if multi-action detected:
             - category: Type of multi-action workflow
-            - confidence: Confidence score (0.0-1.0)
+            - confidence: Confidence score (0.0 - 1.0)
             - suggested_tools: List of tools needed
             - workflow: Suggested execution strategy
             - primary_tools: Main tools for the task
@@ -1149,8 +1149,8 @@ class ContextManager:
 
         Context Strategies:
         - none: No project context needed
-        - minimal: Basic context (1-3 files)
-        - targeted: Focused context (5-10 files)
+        - minimal: Basic context (1 - 3 files)
+        - targeted: Focused context (5 - 10 files)
         - full: Comprehensive context (up to max_files)
 
         Args:
@@ -1159,7 +1159,7 @@ class ContextManager:
         Returns:
             Dictionary containing:
             - category: Primary category of the query
-            - confidence: Confidence score (0.0-1.0)
+            - confidence: Confidence score (0.0 - 1.0)
             - suggested_tools: List of recommended tools
             - context_strategy: Required context depth
             - multi_action: Boolean indicating complex workflow
@@ -1732,10 +1732,10 @@ class ContextManager:
             ValueError: If max_files is negative.
 
         Performance Characteristics:
-            - Small projects (<100 files): ~100-500ms
-            - Medium projects (100-1000 files): ~500ms-2s
-            - Large projects (1000+ files): ~2-5s
-            - Cache hit ratio: 80-95% for subsequent runs
+            - Small projects (<100 files): ~100 - 500ms
+            - Medium projects (100 - 1000 files): ~500ms-2s
+            - Large projects (1000+ files): ~2 - 5s
+            - Cache hit ratio: 80 - 95% for subsequent runs
         """
         # Validate inputs
         if max_files < 0:

@@ -67,7 +67,7 @@ class NotebookReadTool(Tool):
                 ToolParameter(
                     name="cell_range",
                     type="string",
-                    description="Cell range to read (e.g., '1-5' or '3,5,7')",
+                    description="Cell range to read (e.g., '1 - 5' or '3,5,7')",
                     required=False,
                     default=None,
                 ),
@@ -226,7 +226,7 @@ class NotebookReadTool(Tool):
         for part in cell_range.split(","):
             part = part.strip()
             if "-" in part:
-                # Range like "1-5"
+                # Range like "1 - 5"
                 start, end = part.split("-")
                 start_idx = max(0, int(start.strip()) - 1)  # Convert to 0-based
                 end_idx = min(total_cells, int(end.strip()))  # Inclusive

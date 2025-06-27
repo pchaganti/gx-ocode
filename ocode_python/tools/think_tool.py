@@ -447,9 +447,9 @@ class ThinkTool(Tool):
 
         # Risk assessment framework
         risk_assessment["assessment_criteria"] = {
-            "probability": "Likelihood of occurrence (1-5 scale)",
-            "impact": "Severity of consequences (1-5 scale)",
-            "detectability": "Ease of early detection (1-5 scale)",
+            "probability": "Likelihood of occurrence (1 - 5 scale)",
+            "impact": "Severity of consequences (1 - 5 scale)",
+            "detectability": "Ease of early detection (1 - 5 scale)",
         }
 
         # Risk levels

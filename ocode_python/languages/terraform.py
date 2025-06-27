@@ -208,7 +208,7 @@ class TerraformAnalyzer(LanguageAnalyzer):
             locals_content = match.group(1)
 
             # Extract individual local variables
-            local_var_pattern = r"([a-zA-Z_][a-zA-Z0-9_]*)\s*="
+            local_var_pattern = r"([a-zA-Z_][a-zA-Z0 - 9_]*)\s*="
             for var_match in re.finditer(local_var_pattern, locals_content):
                 var_name = var_match.group(1)
                 var_line = line_num + locals_content[: var_match.start()].count("\n")
@@ -248,7 +248,7 @@ class TerraformAnalyzer(LanguageAnalyzer):
             )
 
         # Extract terraform required_providers
-        provider_pattern = r'required_providers\s*\{[^}]*([a-zA-Z_][a-zA-Z0-9_-]*)\s*=\s*\{[^}]*source\s*=\s*"([^"]+)"'  # noqa: E501
+        provider_pattern = r'required_providers\s*\{[^}]*([a-zA-Z_][a-zA-Z0 - 9_-]*)\s*=\s*\{[^}]*source\s*=\s*"([^"]+)"'  # noqa: E501
         for match in re.finditer(provider_pattern, content, re.DOTALL):
             line_num = content[: match.start()].count("\n") + 1
             provider_name = match.group(1)

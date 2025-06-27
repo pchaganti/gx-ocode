@@ -55,7 +55,7 @@ class YAMLAnalyzer(LanguageAnalyzer):
                 continue
 
             # Extract keys (key: value or key:)
-            key_match = re.match(r"^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$", line)
+            key_match = re.match(r"^(\s*)([a-zA-Z_][a-zA-Z0 - 9_-]*)\s*:\s*(.*)$", line)
             if key_match:
                 indent = key_match.group(1)
                 key = key_match.group(2)
@@ -86,7 +86,7 @@ class YAMLAnalyzer(LanguageAnalyzer):
 
             # Extract array items with keys
             array_key_match = re.match(
-                r"^(\s*)-\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$", line
+                r"^(\s*)-\s*([a-zA-Z_][a-zA-Z0 - 9_-]*)\s*:\s*(.*)$", line
             )
             if array_key_match:
                 indent = array_key_match.group(1)
@@ -110,7 +110,7 @@ class YAMLAnalyzer(LanguageAnalyzer):
         anchors_aliases = []
 
         # Extract anchors (&anchor)
-        anchor_pattern = r"&([a-zA-Z_][a-zA-Z0-9_-]*)"
+        anchor_pattern = r"&([a-zA-Z_][a-zA-Z0 - 9_-]*)"
         for match in re.finditer(anchor_pattern, content):
             line_num = content[: match.start()].count("\n") + 1
             anchor_name = match.group(1)
@@ -127,7 +127,7 @@ class YAMLAnalyzer(LanguageAnalyzer):
             )
 
         # Extract aliases (*alias)
-        alias_pattern = r"\*([a-zA-Z_][a-zA-Z0-9_-]*)"
+        alias_pattern = r"\*([a-zA-Z_][a-zA-Z0 - 9_-]*)"
         for match in re.finditer(alias_pattern, content):
             line_num = content[: match.start()].count("\n") + 1
             alias_name = match.group(1)
@@ -151,7 +151,7 @@ class YAMLAnalyzer(LanguageAnalyzer):
 
         # Look for file references in values
         file_patterns = [
-            r'(?:file|path|include|template|source)\s*:\s*["\']?([^"\'\s]+\.[a-zA-Z0-9]+)["\']?',  # noqa: E501
+            r'(?:file|path|include|template|source)\s*:\s*["\']?([^"\'\s]+\.[a-zA-Z0 - 9]+)["\']?',  # noqa: E501
             r'["\']([^"\']*\.(yaml|yml|json|xml|properties|env))["\']',
         ]
 

@@ -37,13 +37,13 @@ async def run_setup_wizard():
     try:
         onboarding = OnboardingManager()
         config = await onboarding.run_onboarding()
-        
+
         if config:
             console.print("\n[green]✓ Setup completed successfully![/green]")
             console.print("[dim]You can now start using OCode with 'ocode'[/dim]")
         else:
             console.print("[dim]Setup was cancelled or skipped.[/dim]")
-            
+
     except Exception as e:
         console.print(f"[red]Setup failed: {e}[/red]")
         console.print("[dim]You can try running 'ocode --setup' again.[/dim]")
@@ -182,17 +182,17 @@ def cli(
         # Explicit setup request
         asyncio.run(run_setup_wizard())
         return
-    
+
     # Check for first run and offer onboarding
     config_dir = Path.home() / ".ocode"
     config_file = config_dir / "config.json"
-    
+
     if not config_file.exists() and ctx.invoked_subcommand is None:
         # First run - offer onboarding
         console.print(
             "[cyan]🎉 Welcome to OCode![/cyan] It looks like this is your first time here.\n"
         )
-        
+
         if click.confirm("Would you like to run the setup wizard?", default=True):
             asyncio.run(run_setup_wizard())
             return
@@ -408,7 +408,7 @@ def auth(
         console.print("2. Username/Password")
         console.print("3. Cancel\n")
 
-        choice = input("Select option (1-3): ").strip()
+        choice = input("Select option (1 - 3): ").strip()
 
         if choice == "1":
             # API Key authentication
@@ -660,7 +660,7 @@ async def interactive_mode(options: dict):
 
 
 @cli.command()
-@click.option("--action", type=click.Choice(["list", "load", "delete", "cleanup"]), 
+@click.option("--action", type=click.Choice(["list", "load", "delete", "cleanup"]),
               default="list", help="Session action to perform")
 @click.option("--session-id", help="Session ID for load/delete operations")
 @click.option("--days", type=int, default=30, help="Days for cleanup operation")
@@ -669,41 +669,41 @@ def sessions(action: str, session_id: Optional[str], days: int):
     from ..core.session import SessionManager
     from ..core.checkpoint import CheckpointManager
     from rich.table import Table
-    
+
     session_manager = SessionManager()
     checkpoint_manager = CheckpointManager()
-    
+
     if action == "list":
         # List recent sessions
         sessions = asyncio.run(session_manager.list_sessions(limit=10))
-        
+
         if not sessions:
             console.print("[dim]No sessions found.[/dim]")
             return
-        
+
         table = Table(title="Recent Sessions")
         table.add_column("ID", style="cyan")
         table.add_column("Created", style="dim")
         table.add_column("Messages", style="yellow")
         table.add_column("Preview")
-        
+
         for session in sessions:
             import time
             created = time.strftime('%Y-%m-%d %H:%M', time.localtime(session['created_at']))
             preview = session.get('preview', '')[:50] + ('...' if len(session.get('preview', '')) > 50 else '')
-            
+
             table.add_row(
                 session['id'][:8] + "...",
                 created,
                 str(session['message_count']),
                 preview
             )
-        
+
         console.print(table)
-        
+
         # Also show checkpoints
         checkpoints = asyncio.run(checkpoint_manager.list_checkpoints(limit=5))
-        
+
         if checkpoints:
             console.print("\n")
             checkpoint_table = Table(title="Recent Checkpoints")
@@ -711,56 +711,56 @@ def sessions(action: str, session_id: Optional[str], days: int):
             checkpoint_table.add_column("Session", style="magenta")
             checkpoint_table.add_column("Created", style="dim")
             checkpoint_table.add_column("Description")
-            
+
             for checkpoint in checkpoints:
-                import time
-                created = time.strftime('%Y-%m-%d %H:%M', time.localtime(checkpoint['timestamp']))
-                
+                import time as time_module
+                created = time_module.strftime('%Y-%m-%d %H:%M', time_module.localtime(checkpoint['timestamp']))
+
                 checkpoint_table.add_row(
                     checkpoint['id'][:8] + "...",
                     checkpoint['session_id'][:8] + "...",
                     created,
                     checkpoint.get('description', '')[:40] + ('...' if len(checkpoint.get('description', '')) > 40 else '')
                 )
-            
+
             console.print(checkpoint_table)
-    
+
     elif action == "load":
         if not session_id:
             console.print("[red]Error:[/red] Session ID required for load operation")
             return
-        
+
         session = asyncio.run(session_manager.load_session(session_id))
         if not session:
             console.print(f"[red]Error:[/red] Session {session_id} not found")
             return
-        
+
         console.print(f"[green]✓[/green] Session loaded: {len(session.messages)} messages")
-        
+
         # Show recent messages
         recent = session.messages[-3:] if len(session.messages) > 3 else session.messages
         for msg in recent:
             role_icon = "👤" if msg.role == "user" else "🤖"
             content = msg.content[:100] + "..." if len(msg.content) > 100 else msg.content
             console.print(f"{role_icon} [bold]{msg.role}:[/bold] {content}")
-    
+
     elif action == "delete":
         if not session_id:
             console.print("[red]Error:[/red] Session ID required for delete operation")
             return
-        
+
         if click.confirm(f"Delete session {session_id}?"):
             success = asyncio.run(session_manager.delete_session(session_id))
             if success:
                 console.print(f"[green]✓[/green] Session {session_id} deleted")
             else:
                 console.print(f"[red]✗[/red] Failed to delete session {session_id}")
-    
+
     elif action == "cleanup":
         sessions_deleted = asyncio.run(session_manager.cleanup_old_sessions(days))
         checkpoints_deleted = asyncio.run(checkpoint_manager.cleanup_old_checkpoints(days))
-        
-        console.print(f"[green]✓[/green] Cleanup completed:")
+
+        console.print("[green]✓[/green] Cleanup completed:")
         console.print(f"  Sessions deleted: {sessions_deleted}")
         console.print(f"  Checkpoints deleted: {checkpoints_deleted}")
 
