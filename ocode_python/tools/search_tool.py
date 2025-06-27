@@ -70,8 +70,7 @@ class SearchTool(Tool):
             headers = {
                 "User-Agent": "OCode-CLI/1.0 (Web Search Tool)",
                 "Accept": (
-                    "text/html,application/xhtml+xml,application/xml;"
-                    "q=0.9,*/*;q=0.8"
+                    "text/html,application/xhtml+xml,application/xml;" "q=0.9,*/*;q=0.8"
                 ),
                 "Accept-Language": "en-US,en;q=0.5",
                 "Accept-Encoding": "gzip, deflate",

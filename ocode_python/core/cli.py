@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+
 from ..ui.components import ThemedPanel
 from ..ui.theme import get_themed_console
 from ..utils.auth import AuthenticationManager

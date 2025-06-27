@@ -457,8 +457,8 @@ async def export_checkpoint_to_markdown(
     lines = [
         f"# OCode Checkpoint: {checkpoint.id}",
         f"Session: {checkpoint.session_id}",
-        f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', "
-        f"time.localtime(checkpoint.timestamp))}",
+        f"Created: "
+        f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(checkpoint.timestamp))}",
         "",
     ]
 
