@@ -17,9 +17,12 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from ..tools.base import ResourceLock, ToolRegistry, ToolResult
+
+if TYPE_CHECKING:
+    from .error_recovery import ErrorRecoveryModule, FailureContext
 
 # Constants for retry and timing behavior
 DEFAULT_MAX_RETRIES = 3
@@ -239,25 +242,35 @@ class SideEffectBroker:
 
 
 class RetryManager:
-    """Manages retry logic with exponential backoff."""
+    """Manages retry logic with exponential backoff and intelligent error recovery."""
 
     def __init__(
         self,
         max_retries: int = DEFAULT_MAX_RETRIES,
         base_delay: float = DEFAULT_BASE_DELAY,
+        error_recovery_module: Optional["ErrorRecoveryModule"] = None,
     ):
         self.max_retries = max_retries
         self.base_delay = base_delay
+        self.error_recovery_module = error_recovery_module
 
     async def execute_with_retry(
-        self, task: CommandTask, executor_func, side_effect_broker: SideEffectBroker
+        self, 
+        task: CommandTask, 
+        executor_func, 
+        side_effect_broker: SideEffectBroker,
+        tool_registry: Optional[ToolRegistry] = None,
+        original_goal: Optional[str] = None,
+        execution_context: Optional[Dict[str, Any]] = None
     ) -> ToolResult:
-        """Execute a task with retry logic."""
+        """Execute a task with retry logic and intelligent error recovery."""
         last_error = None
+        last_result = None
 
         for attempt in range(self.max_retries + 1):
             try:
                 result = await executor_func(task)
+                last_result = result
 
                 if result and result.success:
                     return result  # type: ignore[no-any-return]
@@ -268,6 +281,37 @@ class RetryManager:
                         await asyncio.sleep(delay)
                         task.retry_count += 1
                         continue
+
+                # Traditional retries failed, try intelligent recovery
+                if (self.error_recovery_module and 
+                    tool_registry and 
+                    original_goal and 
+                    result and not result.success):
+                    
+                    logging.info(f"Attempting intelligent error recovery for {task.tool_name}")
+                    
+                    # Prepare execution context
+                    context = execution_context or {}
+                    context.update({
+                        "retry_count": task.retry_count,
+                        "working_dir": getattr(task, "working_dir", None),
+                        "attempt_number": attempt
+                    })
+                    
+                    # Attempt recovery
+                    recovery_result = await self.error_recovery_module.attempt_recovery(
+                        original_goal=original_goal,
+                        failed_command=task,
+                        tool_result=result,
+                        execution_context=context,
+                        tool_registry=tool_registry
+                    )
+                    
+                    if recovery_result and recovery_result.success:
+                        logging.info(f"Error recovery successful for {task.tool_name}")
+                        return recovery_result
+                    else:
+                        logging.warning(f"Error recovery failed for {task.tool_name}")
 
                 return result or ToolResult(success=False, output="", error="No result")
 
@@ -288,10 +332,16 @@ class RetryManager:
                     success=False, output="", error=f"Non-retryable error: {str(e)}"
                 )
 
+        # All retries and recovery attempts failed
+        final_error = f"Max retries exceeded. Last error: {last_error}"
+        if last_result:
+            # Include the last tool result error for more context
+            final_error = f"Max retries exceeded. Last error: {last_result.error or last_error}"
+            
         return ToolResult(
             success=False,
             output="",
-            error=f"Max retries exceeded. Last error: {last_error}",
+            error=final_error,
         )
 
     def _is_retryable_error(self, error: Optional[str]) -> bool:
@@ -489,15 +539,23 @@ class AdvancedOrchestrator:
     """Advanced orchestrator with all improvements integrated."""
 
     def __init__(
-        self, tool_registry: ToolRegistry, max_concurrent: int = DEFAULT_MAX_CONCURRENT
+        self, 
+        tool_registry: ToolRegistry, 
+        max_concurrent: int = DEFAULT_MAX_CONCURRENT,
+        error_recovery_module: Optional["ErrorRecoveryModule"] = None
     ):
         self.tool_registry = tool_registry
         self.command_queue = CommandQueue()
         self.side_effect_broker = SideEffectBroker()
-        self.retry_manager = RetryManager()
+        self.retry_manager = RetryManager(error_recovery_module=error_recovery_module)
         self.concurrent_executor = ConcurrentToolExecutor(max_concurrent)
         self.running = False
         self._worker_task: Optional[asyncio.Task] = None
+        self.current_goal: Optional[str] = None  # Track current high-level goal
+
+    def set_current_goal(self, goal: str) -> None:
+        """Set the current high-level goal for error recovery context."""
+        self.current_goal = goal
 
     async def start(self) -> None:
         """Start the orchestrator worker."""
@@ -589,6 +647,9 @@ class AdvancedOrchestrator:
                             t, self.tool_registry, self.side_effect_broker
                         ),
                         self.side_effect_broker,
+                        tool_registry=self.tool_registry,
+                        original_goal=self.current_goal,
+                        execution_context={"worker_mode": True}
                     )
 
                     await self.command_queue.mark_completed(task.task_id, result)
@@ -625,6 +686,9 @@ class AdvancedOrchestrator:
                 t, self.tool_registry, self.side_effect_broker
             ),
             self.side_effect_broker,
+            tool_registry=self.tool_registry,
+            original_goal=self.current_goal,
+            execution_context={"direct_execution": True}
         )
 
     def get_metrics(self) -> Dict[str, Any]:

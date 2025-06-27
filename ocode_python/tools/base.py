@@ -138,12 +138,14 @@ class ToolResult:
         output: The primary output content (empty string if failed)
         error: Error message if execution failed (None if successful)
         metadata: Additional structured data about the execution
+        recovery_context: Information about error recovery attempts
     """
 
     success: bool
     output: str
     error: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    recovery_context: Optional[Dict[str, Any]] = None
 
     def __str__(self) -> str:
         """String representation of the tool result.
